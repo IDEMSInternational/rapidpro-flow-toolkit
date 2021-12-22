@@ -2,8 +2,8 @@ import unittest
 import json
 
 from parsers.common.rowparser import RowParser
-from parsers.common.tests.mock_cell_parser import MockCellParser
-from parsers.common.tests.models import FromWrong
+from .mock_cell_parser import MockCellParser
+from .models import FromWrong
 
 
 output_instance = {
