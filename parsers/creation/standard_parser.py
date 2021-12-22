@@ -1,9 +1,9 @@
 import csv
 import json
 
-from constants import nodes_map
-from models import RapidProGotoNode, RapidProNode, ConditionalRapidProNode, RapidProExit, SaveNameCollection
-from utils import generate_uuid, find_node_with_row_id_only
+from .constants import nodes_map
+from .standard_parser_models import RapidProGotoNode, RapidProNode, ConditionalRapidProNode, RapidProExit, SaveNameCollection
+from .utils import generate_uuid, find_node_with_row_id_only
 
 debug = True
 
@@ -136,13 +136,9 @@ class RapidProParser:
         print([node.__class__ for node in all_nodes if node.type != 'go_to'])
 
 
-if __name__ == '__main__':
-    sheets = ['example_story1', 'example_media']
+def parse_sheet(sheet_path):
+    sheet_reader = ReadSheetFromFile(sheet_path)
+    sheet_reader.read_csv()
 
-    for sheet_name in sheets:
-        path = '/Users/ehmadzubair/Documents/cogent-labs/software-projects/conversation-parser-project/test-spreadsheet - example_media.csv'
-        sheet_reader = ReadSheetFromFile(path)
-        sheet_reader.read_csv()
-
-        parser = RapidProParser()
-        parser.run()
+    parser = RapidProParser()
+    parser.run()
