@@ -95,6 +95,7 @@ class BasicNode(BaseNode):
         self.validate()
         return {
             "uuid": self.uuid,
+            "actions": [],
             "actions": [action.render() for action in self.actions],
             "exits": [self.default_exit.render()]
         }
@@ -119,6 +120,7 @@ class SwitchRouterNode(BaseNode):
     def render(self):
         return {
             "uuid": self.uuid,
+            "actions": [],
             "router": self.router.render(),
             "exits": [exit.render() for exit in self.router.get_exits()]
         }
@@ -143,6 +145,7 @@ class RandomRouterNode(BaseNode):
     def render(self):
         return {
             "uuid": self.uuid,
+            "actions": [],
             "router": self.router.render(),
             "exits": self.router.get_exits()
         }
