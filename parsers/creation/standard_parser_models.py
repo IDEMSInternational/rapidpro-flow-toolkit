@@ -1,5 +1,8 @@
-from constants import excel_to_json_type_map, nodes_map
-from utils import generate_uuid, find_node
+from collections import defaultdict
+
+from .constants import excel_to_json_type_map, nodes_map
+from parsers.common.cellparser import get_separators
+from .utils import generate_uuid, find_node
 
 
 class RapidProNodeAction:
@@ -382,3 +385,48 @@ class SaveNameCollection(RapidProNode):
     def get_nodes(self):
         return [node for node in
                 [self.base_node, self.save_name_conditional_node, self.save_name_node, self.conditional_node] if node]
+
+
+class Row:
+    def __init__(self, row_dict):
+        self.row = row_dict
+
+    def __getitem__(self, key):
+        return getattr(self.row, key)
+
+    def __setitem__(self, key, value):
+        setattr(self.row, key, value)
+
+    def get_conditions(self):
+        conditions = []
+
+        s1, _, _ = get_separators(self.row['condition'])
+        condition_values = self.row['condition'].split(s1)
+
+        s1, _, _ = get_separators(self.row['condition_var'])
+        condition_var_values = self.row['condition_var'].split(s1)
+
+        s1, _, _ = get_separators(self.row['condition_type'])
+        condition_type_values = self.row['condition_type'].split(s1)
+
+        s1, _, _ = get_separators(self.row['condition_name'])
+        condition_name_values = self.row['condition_name'].split(s1)
+
+        max_length = max(len(condition_values), len(condition_var_values), len(condition_type_values),
+                         len(condition_name_values))
+
+        for i in range(0, max_length):
+            condition = defaultdict()
+            for key, value_lst in [('condition', condition_values), ('condition_var', condition_var_values),
+                                   ('condition_type', condition_type_values),
+                                   ('condition_name', condition_name_values)]:
+                try:
+                    condition[key] = value_lst[i]
+                except IndexError:
+                    condition[key] = None
+            conditions.append(condition)
+
+        return conditions
+
+    def has_conditions(self):
+        return bool(self.row['condition'])

@@ -1,0 +1,13 @@
+row_id,type,from,condition,condition_var,condition_type,condition_name,condition:1,condition:2,condition:3,condition:4,condition:5,save_name,message_text,choice:1,choice:2,choice:3,choice:4,choice:5,choice:6,choice:7,choice:8,choice:9,choice:10,image,audio,video,obj_name,obj_id,node_name,_nodeId,no_response,_ui_type,_ui_position
+1,wait_for_response,start,,,,,,,,,,Result_wfr,,,,,,,,,,,,,,,,,A,bb408455-d8f5-4377-a901-717ade84688b,,wait_for_response,340;
+2,start_new_flow,1;1,a;b,,has_any_word;has_any_word,A;B,condition;a|condition_type;has_any_word|condition_name;A,condition;b|condition_type;has_any_word|condition_name;B,,,,,test loop and multiple conditions,,,,,,,,,,,,,,A,c1a32f07-ff0f-4b8b-a700-360c13f53914,B,3ecfb56f-627b-4afe-8448-a14eaccfbe0e,,split_by_subflow,360;180
+3,split_by_value,2,Complete,,,,,,,,,,expression,,,,,,,,,,,,,,,,C,1bf341f3-e043-4024-88bd-271bb61f6f1e,,split_by_expression,400;360
+4,split_by_value,3,a,expression,has_any_word,A,,,,,,,@contact.name,,,,,,,,,,,,,,,,D,7dca0b72-ec99-49c9-95ae-681bf9e65cba,,split_by_contact_field,400;480
+5,split_by_value,4,a,@contact.name,has_any_word,A,,,,,,,@results.result_wfr,,,,,,,,,,,,,,,,E,95f465cd-6794-4ff4-b926-e94afd341ebf,,split_by_run_result,400;620
+6,split_by_group,5,a,@results.result_wfr,has_any_word,A,,,,,,,test group,,,,,,,,,,,,,,B,8224bfe2-acec-434f-bc7c-14c584fc4bc8,F,bac467c9-e699-4211-bc70-3440414fd301,,split_by_groups,360;740
+7,wait_for_response,6,test group,,,,,,,,,Result,,,,,,,,,,,,,,,,,G,deda75fc-d136-4666-b7c5-f8a23b4a2cd8,300,wait_for_response,380;880
+8,split_random,7,a,,has_any_word,A,,,,,,,,,,,,,,,,,,,,,,,H,37538d9a-7920-474e-aeea-69037a39f111,,split_by_random,280;1060
+9,send_message,8,1,,,,,,,,,,b1,,,,,,,,,,,,,,,,I,8e97560c-a019-44bd-b65d-ae9e025e97cc,,execute_actions,120;1180
+10,send_message,8;8,2;3,,,,,,,,,,b2 b3,,,,,,,,,,,,,,,,J,224f6caa-fd25-47d3-96a9-3d43506b7878,,execute_actions,340;1280
+11,send_message,7,,,,,,,,,,,other option message,,,,,,,,,,,,,,,,K,acf35dbd-e737-469d-95c3-798544bfbfe5,,execute_actions,600;1060
+12,send_message,2,Expired,,,,,,,,,,expired flow,,,,,,,,,,,,,,,,L,5beeda91-eeca-4287-a48e-7eebf5f3a7e7,,execute_actions,740;300
