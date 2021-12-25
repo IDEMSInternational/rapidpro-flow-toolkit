@@ -1,5 +1,6 @@
 from rapidpro.utils import generate_new_uuid
 
+
 # TODO: Check enter flow
 # Node classification:
 # - Action-only node (for various actions)
@@ -24,12 +25,15 @@ class Action:
 
 class SendMessageAction(Action):
     # TODO: Don't use mutable default values (bad things will happen)
-    def __init__(self, text, attachments=[], quick_replies=[], all_urns=None):
+    def __init__(self, text, attachments=None, quick_replies=None, all_urns=None):
         super().__init__('send_msg')
         self.text = text
-        self.attachments = attachments
-        self.quick_replies = quick_replies
+        self.attachments = attachments or list()
+        self.quick_replies = quick_replies or list()
         self.all_urns = all_urns
+
+    def add_attachment(self, attachment):
+        self.attachments.append(attachment)
 
     def add_quick_reply(self, quick_reply):
         self.quick_replies.append(quick_reply)
@@ -53,11 +57,14 @@ class SendMessageAction(Action):
 
 
 class SetContactFieldAction(Action):
-    def __init__(self, field_key, field_name, value):
+    def __init__(self, field_name, value):
         super().__init__('set_contact_field')
-        self.field_key = field_key
+        self.field_key = self._get_field_key(field_name)
         self.field_name = field_name
         self.value = value
+
+    def _get_field_key(self, field_name):
+        return field_name.strip().replace(' ', '_')
 
     def render(self):
         return {
@@ -71,49 +78,52 @@ class SetContactFieldAction(Action):
         }
 
 
-class GenericGroupAction(Action):
-    def __init__(self, type, group_names):
-        super().__init__(type)
-        self.groups = [{
-            'name': group_name  # We add group UUIDs during the validation step
-        } for group_name in group_names]
+class Group:
+    def __init__(self, name):
+        self.name = name
+        self.uuid = generate_new_uuid()
 
-    def add_group(self, group_name):
-        self.groups.append({
-            'name': group_name
-        })
+    def render(self):
+        return {
+            'name': self.name,
+            'uuid': self.uuid
+        }
+
+
+class GenericGroupAction(Action):
+    def __init__(self, type, groups):
+        super().__init__(type)
+        self.groups = groups
 
     def render(self):
         return NotImplementedError
 
 
 class AddContactGroupAction(GenericGroupAction):
-    def __init__(self, group_names):
-        super().__init__('add_contact_groups', group_names)
+    def __init__(self, groups):
+        super().__init__('add_contact_groups', groups)
 
-    def add_group(self, group_name):
-        self.groups.append({
-            'name': group_name
-        })
+    def add_group(self, group):
+        self.groups.append(group)
 
     def render(self):
         return {
             "type": self.type,
             "uuid": self.uuid,
-            "groups": self.groups,
+            "groups": [group.render() for group in self.groups],
         }
 
 
 class RemoveContactGroupAction(GenericGroupAction):
-    def __init__(self, group_names, all_groups=None):
-        super().__init__('remove_contact_groups', group_names)
+    def __init__(self, groups, all_groups=None):
+        super().__init__('remove_contact_groups', groups)
         self.all_groups = all_groups
 
     def render(self):
         render_dict = {
             "type": self.type,
             "uuid": self.uuid,
-            "groups": self.groups,
+            "groups": [group.render() for group in self.groups],
         }
         if self.all_groups:
             render_dict.update({
@@ -153,4 +163,3 @@ class EnterFlowAction(Action):
             "uuid": self.uuid,
             "flow": self.flow
         }
-

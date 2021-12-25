@@ -41,7 +41,8 @@ class BaseNode:
         self.default_exit = None
         self.exits = []
 
-    def add_default_exit(self, destination_uuid):
+    def update_default_exit(self, destination_uuid):
+        # TODO: Think of any caveats to storing a node rather than a UUID
         self.default_exit = Exit(destination_uuid=destination_uuid)
 
     def _add_exit(self, exit):
@@ -55,6 +56,12 @@ class BaseNode:
 
     def validate(self):
         raise NotImplementedError
+
+    def get_last_action(self):
+        try:
+            return self.actions[-1]
+        except IndexError:
+            return None
 
     def render(self):
         raise NotImplementedError
@@ -113,7 +120,7 @@ class SwitchRouterNode(BaseNode):
         return {
             "uuid": self.uuid,
             "router": self.router.render(),
-            "exits": self.router.get_exits()
+            "exits": [exit.render() for exit in self.router.get_exits()]
         }
 
 
