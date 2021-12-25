@@ -65,6 +65,12 @@ class BaseRouter:
 
         return category if category else self._add_category(category_name, destination_uuid, is_default)
 
+    def update_or_create_category(self, category_name, destination_uuid, is_default=False):
+        category = self.get_or_create_category(category_name, destination_uuid, is_default)
+        category.destination_uuid
+
+        return category if category else self._add_category(category_name, destination_uuid, is_default)
+
     def get_exits(self):
         return [c.get_exit() for c in self.categories]
 
@@ -90,8 +96,11 @@ class SwitchRouter(BaseRouter):
         return category
 
     def set_operand(self, operand):
-        if self.operand and self.operand != operand:
+        if not operand:
+            return
+        if self.operand and operand and self.operand != operand:
             logger.warning(f'Overwriting operand from {self.operand} -> {operand}')
+
         self.operand = operand
 
     def validate(self):

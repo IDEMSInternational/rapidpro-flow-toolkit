@@ -11,7 +11,7 @@ class TestNodes(unittest.TestCase):
         self.basic_node.add_action(SendMessageAction(text='test_image_message', attachments=['image:image url']))
         self.basic_node.add_action(SendMessageAction(text='test_audio_message', attachments=['audio:audio url']))
 
-        self.basic_node.add_default_exit('test_destination_uuid')
+        self.basic_node.update_default_exit('test_destination_uuid')
 
     def test_basic_node(self):
         render_output = self.basic_node.render()
