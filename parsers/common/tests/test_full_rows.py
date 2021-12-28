@@ -21,10 +21,10 @@ input1 = {
 output1_exp = RowData(**{
     'row_id' : '1',
     'type' : 'send_message',
-    'conditional_from' : [
+    'edges' : [
         {
-            'row_id': 'start',
-            'condition': {'value':'3', 'var':'@fields.name', 'type':'has_phrase', 'name':''},
+            'from_': 'start',
+            'condition': {'value':'3', 'variable':'@fields.name', 'type':'has_phrase', 'name':''},
         }
     ],
     'mainarg_message_text' : 'Text of message',
@@ -46,14 +46,14 @@ input2 = {
 output2_exp = RowData(**{
     'row_id' : '1',
     'type' : 'send_message',
-    'conditional_from' : [
+    'edges' : [
         {
-            'row_id': 'start',
-            'condition': {'value':'3', 'var':'@fields.name', 'type':'has_phrase', 'name':''},
+            'from_': 'start',
+            'condition': {'value':'3', 'variable':'@fields.name', 'type':'has_phrase', 'name':''},
         },
         {
-            'row_id': 'start',
-            'condition': {'value':'5', 'var':'@fields.name', 'type':'has_phrase', 'name':''},
+            'from_': 'start',
+            'condition': {'value':'5', 'variable':'@fields.name', 'type':'has_phrase', 'name':''},
         },
     ],
     'mainarg_message_text' : 'Text of message',
@@ -78,14 +78,14 @@ input3 = {
 output3_exp = RowData(**{
     'row_id' : '1',
     'type' : 'send_message',
-    'conditional_from' : [
+    'edges' : [
         {
-            'row_id': 'start',
-            'condition': {'value':'3', 'var':'@fields.name', 'type':'has_phrase', 'name':''},
+            'from_': 'start',
+            'condition': {'value':'3', 'variable':'@fields.name', 'type':'has_phrase', 'name':''},
         },
         {
-            'row_id': '5',
-            'condition': {'value':'3', 'var':'@fields.name', 'type':'has_phrase', 'name':''},
+            'from_': '5',
+            'condition': {'value':'3', 'variable':'@fields.name', 'type':'has_phrase', 'name':''},
         },
     ],
     'mainarg_message_text' : 'Text of message',
@@ -102,12 +102,12 @@ input4 = {
 output4_exp = RowData(**{
     'row_id' : '1',
     'type' : 'add_to_group',
-    'conditional_from' : [
+    'edges' : [
         {
-            'row_id': 'start',
+            'from_': 'start',
         },
     ],
-    'mainarg_group' : 'Group Name',
+    'mainarg_groups' : ['Group Name'],
 })
 
 
@@ -121,9 +121,9 @@ input5 = {
 output5_exp = RowData(**{
     'row_id' : '1',
     'type' : 'go_to',
-    'conditional_from' : [
+    'edges' : [
         {
-            'row_id': 'start',
+            'from_': 'start',
         },
     ],
     'mainarg_destination_row_ids' : ['5', '2', '3'],
@@ -133,7 +133,7 @@ output5_exp = RowData(**{
 input6 = {
     'row_id' : '1',
     'type' : 'send_message',
-    'conditional_from' : [
+    'edges' : [
         ['start', ['5']],
         ['start', ['3', '@fields.name', 'has_phrase']]
     ],
@@ -143,14 +143,14 @@ input6 = {
 output6_exp = RowData(**{
     'row_id' : '1',
     'type' : 'send_message',
-    'conditional_from' : [
+    'edges' : [
         {
-            'row_id': 'start',
+            'from_': 'start',
             'condition': {'value':'5'},
         },
         {
-            'row_id': 'start',
-            'condition': {'value':'3', 'var':'@fields.name', 'type':'has_phrase', 'name':''},
+            'from_': 'start',
+            'condition': {'value':'3', 'variable':'@fields.name', 'type':'has_phrase', 'name':''},
         },
     ],
     'mainarg_message_text' : 'Text of message',
