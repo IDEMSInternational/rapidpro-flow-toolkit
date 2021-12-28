@@ -24,4 +24,8 @@ def get_object_from_cell_value(value):
 
 class CellParser:
     def parse(self, value):
-        return get_object_from_cell_value(value)
+        # TODO: Implement properly
+        if ';' in value:
+            return value.split(';')
+        else:
+            return value
