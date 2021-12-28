@@ -24,7 +24,6 @@ class Action:
 
 
 class SendMessageAction(Action):
-    # TODO: Don't use mutable default values (bad things will happen)
     def __init__(self, text, attachments=None, quick_replies=None, all_urns=None):
         super().__init__('send_msg')
         self.text = text
@@ -133,7 +132,7 @@ class RemoveContactGroupAction(GenericGroupAction):
 
 
 class SetRunResultAction(Action):
-    def __init__(self, name, value, category):
+    def __init__(self, name, value, category=''):
         super().__init__('set_run_result')
         self.name = name
         self.value = value

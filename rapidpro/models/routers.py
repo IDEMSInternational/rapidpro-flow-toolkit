@@ -30,7 +30,7 @@ class BaseRouter:
 
     def _add_category(self, category_name, destination_uuid, is_default):
         if self._has_default_category() and is_default:
-            logger.warning(f'Overwriting default category for Router {self.uuid}')
+            logger.warning(f'Overwriting default category {category_name} for Router')
 
         category = RouterCategory(category_name, destination_uuid, is_default)
 
