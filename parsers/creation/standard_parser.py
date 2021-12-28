@@ -6,6 +6,7 @@ from rapidpro.models.actions import SendMessageAction, SetContactFieldAction, Ad
 from rapidpro.models.containers import Container
 from rapidpro.models.nodes import BaseNode, BasicNode, SwitchRouterNode
 from parsers.common.cellparser import get_object_from_cell_value, get_separators
+from .standard_models import Condition
 
 
 class Parser:
@@ -132,23 +133,30 @@ class Parser:
         existing_node = self.node_name_to_node_map.get(node_name)
 
         if node_name and existing_node:
-            existing_node.add_action(row_action)
-            self.row_id_to_node_map[row.row_id] = existing_node
-        else:
-            new_node = self.get_row_node(row)
+            # If we want to add an action to an existing node of a given name,
+            # there must be exactly one unconditional edge, and the
+            # from_ row_id has to match.
+            if len(row.edges) == 1 and row.edges[0].condition == Condition() and self.row_id_to_node_map.get(row.edges[0].from_) == existing_node:
+                existing_node.add_action(row_action)
+                self.row_id_to_node_map[row.row_id] = existing_node
+                return
+            else:
+                print(f'Cannot merge rows using node name {node_name} into a single node.')
 
-            if row_action:
-                new_node.add_action(row_action)
+        new_node = self.get_row_node(row)
 
-            from_row_ids = [edge.from_ for edge in row.edges]
+        if row_action:
+            new_node.add_action(row_action)
 
-            for from_id in from_row_ids:
-                if from_id != 'start':
-                    from_nodes = [self.row_id_to_node_map[row_id] for row_id in from_row_ids]
-                    for node in from_nodes:
-                        node.update_default_exit(new_node.uuid)
+        from_row_ids = [edge.from_ for edge in row.edges]
 
-            self.container.add_node(new_node)
+        for from_id in from_row_ids:
+            if from_id != 'start':
+                from_nodes = [self.row_id_to_node_map[row_id] for row_id in from_row_ids]
+                for node in from_nodes:
+                    node.update_default_exit(new_node.uuid)
 
-            self.row_id_to_node_map[row.row_id] = new_node
-            self.node_name_to_node_map[self.get_node_name(row)] = new_node
+        self.container.add_node(new_node)
+
+        self.row_id_to_node_map[row.row_id] = new_node
+        self.node_name_to_node_map[self.get_node_name(row)] = new_node
