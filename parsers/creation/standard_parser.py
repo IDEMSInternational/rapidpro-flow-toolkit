@@ -4,9 +4,79 @@ from collections import defaultdict
 from rapidpro.models.actions import SendMessageAction, SetContactFieldAction, AddContactGroupAction, \
     RemoveContactGroupAction, SetRunResultAction, Group
 from rapidpro.models.containers import Container
-from rapidpro.models.nodes import BaseNode, BasicNode, SwitchRouterNode
+from rapidpro.models.nodes import BaseNode, BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
+from rapidpro.models.routers import SwitchRouter, RandomRouter
 from parsers.common.cellparser import get_object_from_cell_value, get_separators
 from .standard_models import Condition
+
+
+class NodeGroup:
+    def __init__(self, node):
+        '''node: first node in the group'''
+        self.nodes = [node]
+
+    def entry_node(self):
+        return self.nodes[0]
+
+    def exit_node(self):
+        return self.nodes[-1]
+
+    def add_exit(self, destination_uuid, condition):
+        created_node = None
+        exit_node = self.exit_node()
+        # Unconditional/default case edge
+        if condition == Condition() and not isinstance(exit_node, RandomRouterNode):
+            # For BasicNode, this updates the default exit.
+            # For SwitchRouterNode, this updates the exit of the default category.
+            # For EnterFlowNode, this should throw an error.
+            exit_node.update_default_exit(destination_uuid)
+            return
+
+        # Completed/Expired edge from start_new_flow
+        if isinstance(exit_node, EnterFlowNode):
+            if condition.variable.lower() in ['complete', 'completed']:
+                exit_node.update_completed_exit(destination_uuid)
+            elif condition.variable.lower() == 'expired':
+                exit_node.update_expired_exit(destination_uuid)
+            else:
+                raise ValueError("Condition from start_new_flow must be 'Completed' or 'Expired'.")
+
+        # We have a non-trivial condition. Fill in default values if necessary
+        if not condition.variable:
+            # TODO: Check if the source node has a save_name, and use that instead
+            wait_for_message = True
+            variable = '@input.text'
+        else:
+            wait_for_message = False
+            variable = condition.variable
+
+        if isinstance(exit_node, BasicNode):
+            # We have a basic node, but a non-trivial condition.
+            old_exit_node = exit_node
+            old_destination = old_exit_node.default_exit.destination_uuid
+            exit_node = SwitchRouterNode(variable, wait_for_message=wait_for_message)
+            exit_node.update_default_exit(old_destination)
+            old_exit_node.update_default_exit(exit_node.uuid)
+            self.nodes.append(exit_node)
+            created_node = exit_node
+
+        # Add an outgoing edge to the router
+        if isinstance(exit_node.router, SwitchRouter):
+            exit_node.add_choice(
+                comparison_variable=variable,
+                comparison_type=condition.type or 'has_any_word',
+                comparison_arguments=[condition.value],
+                category_name=condition.name,
+                destination_uuid=destination_uuid,
+                is_default=False
+            )
+        else:  # Random router
+            exit_node.add_choice(
+                category_name=condition.name or condition.value,
+                destination_uuid=destination_uuid
+            )
+
+        return created_node
 
 
 class Parser:
@@ -19,7 +89,7 @@ class Parser:
         for row in self.data_rows:
             self.sheet_map[row.row_id] = row
 
-        self.row_id_to_node_map = defaultdict()
+        self.row_id_to_nodegroup = defaultdict()
         self.node_name_to_node_map = defaultdict()
         self.group_name_to_group_map = defaultdict()
 
@@ -79,20 +149,11 @@ class Parser:
             return node
         elif row.type in ['start_new_flow']:
             node = SwitchRouterNode(operand='@input.text')
-            for edge in row.edges:
-                condition = edge.condition
-                if condition.value:
-                    node.add_choice(
-                        comparison_variable=condition.variable or '@input.text',
-                        comparison_type=condition.type or 'has_any_word',
-                        comparison_arguments=[condition.value],
-                        category_name=condition.name or 'Other',
-                        category_destination_uuid=None,
-                        is_default=True
-                    )
             return node
-
         else:
+            # TODO.
+            # I believe it's possible to store the random router value
+            # --> implement save name
             return BasicNode()
 
     def get_object_name(self, row):
@@ -100,32 +161,6 @@ class Parser:
 
     def get_node_name(self, row):
         return row.node_uuid or row.node_name
-
-    def _get_last_node(self):
-        try:
-            return self.container.nodes[-1]
-        except IndexError:
-            return None
-
-    def _find_destination_node_row_id(self, origin_row_id, condition):
-        for row_id, row in self.sheet_map.items():
-            separator_1, _, _ = get_separators(row['from'])
-            for from_row_id in row['from'].split(separator_1):
-                if from_row_id == origin_row_id and row['condition'] == condition:
-                    return self.row_id_to_node_map()
-
-    def _find_node_with_conditional_exit(self, row_id, condition):
-        row = self.sheet_map[row_id]
-        condition_columns = [key for key in row.keys() if key.startswith('condition:')]
-        for column_name in condition_columns:
-            if row[column_name]:
-                condition_obj = get_object_from_cell_value(row[column_name])
-                if condition_obj['condition'] == condition:
-                    pass
-
-        valid_conditions = [get_object_from_cell_value(row[column_name]) for column_name in condition_columns if
-                            row[column_name]]
-        return valid_conditions
 
     def _parse_row(self, row):
         row_action = self.get_row_action(row)
@@ -136,27 +171,24 @@ class Parser:
             # If we want to add an action to an existing node of a given name,
             # there must be exactly one unconditional edge, and the
             # from_ row_id has to match.
-            if len(row.edges) == 1 and row.edges[0].condition == Condition() and self.row_id_to_node_map.get(row.edges[0].from_) == existing_node:
+            if len(row.edges) == 1 and row.edges[0].condition == Condition() and self.row_id_to_nodegroup.get(row.edges[0].from_).entry_node() == existing_node:
                 existing_node.add_action(row_action)
-                self.row_id_to_node_map[row.row_id] = existing_node
+                self.row_id_to_nodegroup[row.row_id] = self.row_id_to_nodegroup[row.edges[0].from_]
                 return
             else:
                 print(f'Cannot merge rows using node name {node_name} into a single node.')
 
         new_node = self.get_row_node(row)
-
         if row_action:
             new_node.add_action(row_action)
 
-        from_row_ids = [edge.from_ for edge in row.edges]
-
-        for from_id in from_row_ids:
-            if from_id != 'start':
-                from_nodes = [self.row_id_to_node_map[row_id] for row_id in from_row_ids]
-                for node in from_nodes:
-                    node.update_default_exit(new_node.uuid)
+        for edge in row.edges:
+            if edge.from_ != 'start':
+                from_node_group = self.row_id_to_nodegroup[edge.from_]
+                created_node = from_node_group.add_exit(new_node.uuid, edge.condition)
+                if created_node:
+                    self.container.add_node(created_node)                    
 
         self.container.add_node(new_node)
-
-        self.row_id_to_node_map[row.row_id] = new_node
+        self.row_id_to_nodegroup[row.row_id] = NodeGroup(new_node)
         self.node_name_to_node_map[self.get_node_name(row)] = new_node

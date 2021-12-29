@@ -4,7 +4,7 @@ import unittest
 # from parsers.creation.standard_parser_models import Row
 from parsers.creation.standard_parser import Parser
 from parsers.creation.utils import get_cell_type_for_column_header, CellType
-from tests.utils import get_dict_from_csv, find_destination_uuid, Context
+from tests.utils import get_dict_from_csv, find_destination_uuid, Context, find_node_by_uuid
 
 from parsers.common.rowparser import RowParser
 from parsers.creation.standard_models import RowData
@@ -81,39 +81,61 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(node_0['exits'][0]['destination_uuid'], node_1['uuid'])
         self.assertEqual(node_1['exits'][0]['destination_uuid'], None)
 
-    # def test_only_conditional(self):
-    #     data_row1 = get_start_row()
-    #     data_row3 = get_conditional_node_from_1()
-    #     parser = Parser(None, data_rows=[data_row1, data_row3], flow_name='only_conditional')
-    #     parser.parse()
-    #     render_output = parser.container.render()
-    #     # print(json.dumps(render_output, indent=2))
+    def test_only_conditional(self):
+        data_row1 = get_start_row()
+        data_row3 = get_conditional_node_from_1()
+        parser = Parser(None, data_rows=[data_row1, data_row3], flow_name='only_conditional')
+        parser.parse()
+        render_output = parser.container.render()
 
-    #     self.assertEqual(len(render_output['nodes']), 3)
-    #     node_0 = render_output['nodes'][0]
-    #     node_1 = render_output['nodes'][1]
-    #     node_2 = render_output['nodes'][2]
-    #     node_2_actions = node_1['actions']
+        self.assertEqual(len(render_output['nodes']), 3)
+        node_0 = render_output['nodes'][0]
+        node_1 = render_output['nodes'][1]
+        node_2 = render_output['nodes'][2]
+        node_2_actions = node_2['actions']
 
-    #     cond_destionation = find_destination_uuid(node_0, Context(variables={'@fields.name':3}))
-    #     default_destionation = find_destination_uuid(node_0, Context(variables={'@fields.name':5}))
+        self.assertEqual(node_2_actions[0]['text'], 'Message if @fields.name == 3')
+        self.assertEqual(len(node_1['exits']), 2)
+        self.assertIsNone(node_0.get('router'))
+        self.assertIsNotNone(node_1.get('router'))
+        self.assertEqual(node_0['exits'][0]['destination_uuid'], node_1['uuid'])
+        self.assertEqual(node_1['exits'][0]['destination_uuid'], node_2['uuid'])
+        self.assertEqual(node_1['exits'][1]['destination_uuid'], None)
+        self.assertEqual(node_2['exits'][0]['destination_uuid'], None)
 
-    #     self.assertEqual(node_2_actions[0]['text'], 'Message if @fields.name == 3')
-    #     self.assertEqual(len(node_1['exits']), 2)
-    #     self.assertIsNone(node_0.get('router'))
-    #     self.assertIsNotNone(node_1.get('router'))
-    #     self.assertEqual(node_1['exits'][0]['destination_uuid'], node_1['uuid'])
-    #     self.assertEqual(node_1['exits'][1]['destination_uuid'], None)
-    #     self.assertEqual(node_2['exits'][0]['destination_uuid'], None)
+    def test_split1(self):
+        data_row1 = get_start_row()
+        data_row2 = get_unconditional_node_from_1()
+        data_row3 = get_conditional_node_from_1()
+        data_rows = [data_row1, data_row2, data_row3]
+        self.check_split(data_rows)
 
+    def test_split2(self):
+        data_row1 = get_start_row()
+        data_row2 = get_unconditional_node_from_1()
+        data_row3 = get_conditional_node_from_1()
+        data_rows = [data_row1, data_row3, data_row2]
+        self.check_split(data_rows)
 
-    # def test_split(self):
-    #     data_row1 = get_start_row()
-    #     data_row2 = get_unconditional_node_from_1()
-    #     data_row3 = get_conditional_node_from_1()
-    #     parser = Parser(None, data_rows=[data_row1, data_row2, data_row3], flow_name='split')
-    #     parser.parse()
-    #     render_output = parser.container.render()
+    def check_split(self, data_rows):
+        parser = Parser(None, data_rows=data_rows, flow_name='split')
+        parser.parse()
+        render_output = parser.container.render()
+
+        node_start = render_output['nodes'][0]
+        node_switch = find_node_by_uuid(render_output, node_start['exits'][0]['destination_uuid'])
+        default_destination = find_destination_uuid(node_switch, Context(variables={'@fields.name':'5'}))
+        node_2 = find_node_by_uuid(render_output, default_destination)
+        cond_destination = find_destination_uuid(node_switch, Context(variables={'@fields.name':'3'}))
+        node_3 = find_node_by_uuid(render_output, cond_destination)
+        node_2_actions = node_2['actions']
+        node_3_actions = node_3['actions']
+
+        self.assertEqual(node_3_actions[0]['text'], 'Message if @fields.name == 3')
+        self.assertEqual(node_2_actions[0]['text'], 'Unconditional message')
+        self.assertEqual(len(node_switch['exits']), 2)
+        self.assertIsNone(node_start.get('router'))
+        self.assertIsNotNone(node_switch.get('router'))
 
 
     def test_no_switch_node_rows(self):
