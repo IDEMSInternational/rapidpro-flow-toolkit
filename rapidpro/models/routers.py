@@ -1,6 +1,5 @@
 import logging
 import string
-from random import random
 
 from rapidpro.models.common import Exit
 from rapidpro.utils import generate_new_uuid
@@ -12,9 +11,11 @@ class BaseRouter:
     def __init__(self, result_name=None):
         self.type = None
         self.categories = []
-        self.default_category_uuid = None
+        self.default_category = None
         self.cases = []
         self.result_name = result_name
+        # Indicates that a default category has been added by the user
+        self.has_explicit_default_category = False
 
     def set_result_name(self, result_name):
         self.result_name = result_name
@@ -24,21 +25,18 @@ class BaseRouter:
         if result:
             return result[0]
 
-    def _has_default_category(self):
-        result = [c for c in self.categories if c.is_default]
-        return bool(result)
-
     def _add_category(self, category_name, destination_uuid, is_default):
-        if self._has_default_category() and is_default:
-            logger.warning(f'Overwriting default category {category_name} for Router')
-
-        category = RouterCategory(category_name, destination_uuid, is_default)
-
         if is_default:
-            self.default_category_uuid = category.uuid
-
-        self.categories.append(category)
-        return self.categories[-1]
+            if self.has_explicit_default_category:
+                logger.warning(f'Overwriting default category {category_name} for Router')
+            self.default_category.update_destination_uuid(destination_uuid)
+            self.default_category.update_name(category_name)
+            self.has_explicit_default_category = True
+            return self.default_category
+        else:
+            category = RouterCategory(category_name, destination_uuid)
+            self.categories.append(category)
+            return self.categories[-1]
 
     def _get_case_or_none(self, comparison_type, arguments, category_uuid):
         for case in self.cases:
@@ -72,7 +70,7 @@ class BaseRouter:
         return category if category else self._add_category(category_name, destination_uuid, is_default)
 
     def get_exits(self):
-        return [c.get_exit() for c in self.categories]
+        return [c.get_exit() for c in self.get_categories()]
 
     def render(self):
         raise NotImplementedError
@@ -80,20 +78,33 @@ class BaseRouter:
 
 class SwitchRouter(BaseRouter):
 
-    def __init__(self, operand, result_name, wait_for_message):
+    def __init__(self, operand, result_name=None, wait_for_message=False):
         super().__init__(result_name)
         self.type = 'switch'
         self.operand = operand
         self.wait_for_message = wait_for_message
+        # Add an implicit default category
+        category = RouterCategory('Other', None)
+        self.default_category = category
 
     def add_choice(self, comparison_variable, comparison_type, comparison_arguments, category_name,
-                   category_destination_uuid, is_default=False):
-        category = self.get_or_create_category(category_name, category_destination_uuid, is_default)
+                   destination_uuid, is_default=False):
+        if not category_name:
+            # TODO: Sensible defaults
+            category_name = categoryNameFromComparisonArguments(comparison_arguments)
+        category = self.get_or_create_category(category_name, destination_uuid, is_default)
         if not is_default:
             self.get_or_create_case(comparison_type, comparison_arguments, category.name)
 
         self.set_operand(comparison_variable)
         return category
+
+    def get_categories(self):
+        return self.categories + [self.default_category]
+
+    def update_default_exit(self, destination_uuid):
+        self.default_category.update_destination_uuid(destination_uuid)
+        self.has_explicit_default_category = True
 
     def set_operand(self, operand):
         if not operand:
@@ -113,8 +124,8 @@ class SwitchRouter(BaseRouter):
             "type": self.type,
             "operand": self.operand,
             "cases": [case.render() for case in self.cases],
-            "categories": [category.render() for category in self.categories],
-            "default_category_uuid": self.default_category_uuid
+            "categories": [category.render() for category in self.get_categories()],
+            "default_category_uuid": self.default_category.uuid
         }
         if self.wait_for_message:
             render_dict.update({
@@ -131,8 +142,13 @@ class RandomRouter(BaseRouter):
         super().__init__(result_name)
         self.type = 'random'
 
-    def add_choice(self, category_name, destination_uuid, is_default=False):
-        self.get_or_create_category(category_name, destination_uuid, is_default)
+    def add_choice(self, category_name=None, destination_uuid=None):
+        if not category_name:
+            category = f'Bucket {len(self.categories) + 2}'
+        self.get_or_create_category(category_name, destination_uuid, is_default=False)
+
+    def get_categories(self):
+        return self.categories
 
     def render(self):
         return {
@@ -142,20 +158,24 @@ class RandomRouter(BaseRouter):
 
 
 class RouterCategory:
-    def __init__(self, name, destination_uuid, is_default=False):
+    def __init__(self, name, destination_uuid):
         """
         :param name: Name of the category
         :param destination_uuid: The UUID of the node that this category should point to
-        :param is_default: is this the default category?
         """
         self.uuid = generate_new_uuid()
         self.name = name
         self.exit_uuid = generate_new_uuid()
         self.destination_uuid = destination_uuid
-        self.is_default = is_default
 
     def get_exit(self):
         return Exit(exit_uuid=self.exit_uuid, destination_uuid=self.destination_uuid)
+
+    def update_destination_uuid(self, uuid):
+        self.destination_uuid = uuid
+
+    def update_name(self, name):
+        self.name = name 
 
     def render(self):
         return {
@@ -168,8 +188,7 @@ class RouterCategory:
 def categoryNameFromComparisonArguments(comparison_arguments):
     # TODO: Implement something sensible
     # Make it a router class method and ensure uniqueness
-    return '_'.join([str(a) for a in comparison_arguments]) + '_' + \
-           ''.join(random.choice(string.ascii_letters) for _ in range(10))
+    return '_'.join([str(a).title() for a in comparison_arguments])
 
 
 class RouterCase:

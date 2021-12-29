@@ -28,8 +28,8 @@ from rapidpro.utils import generate_new_uuid
 
 
 class BaseNode:
-    def __init__(self):
-        self.uuid = generate_new_uuid()
+    def __init__(self, uuid=None):
+        self.uuid = uuid or generate_new_uuid()
         self.actions = []
         self.router = None
 
@@ -38,12 +38,13 @@ class BaseNode:
         # if has_basic_exit is True, we will render a (very basic) exit which
         # points to default_exit_uuid
         self.has_basic_exit = True
-        self.default_exit = None
-        self.exits = []
+        self.default_exit = Exit(destination_uuid=None)
+        self.exits = [self.default_exit]
 
     def update_default_exit(self, destination_uuid):
         # TODO: Think of any caveats to storing a node rather than a UUID
         self.default_exit = Exit(destination_uuid=destination_uuid)
+        self.exits = [self.default_exit]
 
     def _add_exit(self, exit):
         self.exits.append(exit)
@@ -63,13 +64,16 @@ class BaseNode:
         except IndexError:
             return None
 
+    def _get_exits(self):
+        return self.exits
+
     def render(self):
-        raise NotImplementedError
+        self.validate()
         # recursively render the elements of the node
         fields = {
             'uuid': self.uuid,
             'actions': [action.render() for action in self.actions],
-            'exits': [exit.render() for exit in self.exits],
+            'exits': [exit.render() for exit in self._get_exits()],
         }
         if self.router is not None:
             fields.update({
@@ -91,45 +95,33 @@ class BasicNode(BaseNode):
         if not self.default_exit:
             raise ValueError('default_exit must be set for BasicNode')
 
-    def render(self):
-        self.validate()
-        return {
-            "uuid": self.uuid,
-            "actions": [],
-            "actions": [action.render() for action in self.actions],
-            "exits": [self.default_exit.render()]
-        }
-
 
 class SwitchRouterNode(BaseNode):
 
-    def __init__(self, operand, result_name=None, wait_for_message=False):
-        super().__init__()
+    def __init__(self, operand, result_name=None, wait_for_message=False, uuid=None):
+        super().__init__(uuid)
         self.router = SwitchRouter(operand, result_name, wait_for_message)
         self.has_basic_exit = False
 
     def add_choice(self, **kwargs):
         self.router.add_choice(**kwargs)
 
-    def validate(self):
-        if self.has_basic_exit or self.default_exit_uuid:
-            raise ValueError('Default exits are not supported in SwitchRouterNode')
+    def update_default_exit(self, destination_uuid):
+        self.router.update_default_exit(destination_uuid)
 
+    def validate(self):
+        if self.has_basic_exit:
+            raise ValueError('Basic exits are not supported in SwitchRouterNode')
         self.router.validate()
 
-    def render(self):
-        return {
-            "uuid": self.uuid,
-            "actions": [],
-            "router": self.router.render(),
-            "exits": [exit.render() for exit in self.router.get_exits()]
-        }
+    def _get_exits(self):
+        return self.router.get_exits()
 
 
 class RandomRouterNode(BaseNode):
 
-    def __init__(self, operand, result_name=None, wait_for_message=False):
-        super().__init__()
+    def __init__(self, operand, result_name=None, wait_for_message=False, uuid=None):
+        super().__init__(uuid)
         self.router = RandomRouter(operand, result_name, wait_for_message)
         self.has_basic_exit = False
 
@@ -142,18 +134,13 @@ class RandomRouterNode(BaseNode):
 
         self.router.validate()
 
-    def render(self):
-        return {
-            "uuid": self.uuid,
-            "actions": [],
-            "router": self.router.render(),
-            "exits": self.router.get_exits()
-        }
+    def _get_exits(self):
+        return self.router.get_exits()
 
 
 class EnterFlowNode(BaseNode):
-    def __init__(self, flow_name, complete_destination_uuid, expired_destination_uuid):
-        super().__init__()
+    def __init__(self, flow_name, complete_destination_uuid=None, expired_destination_uuid=None, uuid=None):
+        super().__init__(uuid)
 
         self.add_action(EnterFlowAction(flow_name))
 
@@ -161,21 +148,27 @@ class EnterFlowNode(BaseNode):
 
         self.add_choice(comparison_variable='@child.run.status', comparison_type='has_only_text',
                         comparison_arguments='completed', category_name='Complete',
-                        category_destination_uuid=complete_destination_uuid)
+                        destination_uuid=complete_destination_uuid)
         self.add_choice(comparison_variable='@child.run.status', comparison_type='has_only_text',
                         comparison_arguments='expired', category_name='Expired',
-                        category_destination_uuid=expired_destination_uuid, is_default=True)
+                        destination_uuid=expired_destination_uuid, is_default=True)
 
     def add_choice(self, **kwargs):
+        # TODO: validate the input
         self.router.add_choice(**kwargs)
+
+    def update_default_exit(self, destination_uuid):
+        raise ValueError("EnterFlowNode does not support default exits.")
+
+    def update_completed_exit(self, destination_uuid):
+        self.router.update_default_exit(destination_uuid)
+
+    def update_expired_exit(self, destination_uuid):
+        self.router.update_default_exit(destination_uuid)
 
     def validate(self):
         pass
 
-    def render(self):
-        return {
-            "uuid": self.uuid,
-            "actions": [action.render() for action in self.actions],
-            "router": self.router.render(),
-            "exits": self.router.get_exits()
-        }
+    def _get_exits(self):
+        return self.router.get_exits()
+
