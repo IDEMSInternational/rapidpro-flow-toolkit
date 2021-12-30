@@ -107,7 +107,7 @@ class SwitchRouterNode(BaseNode):
         self.router.add_choice(**kwargs)
 
     def update_default_exit(self, destination_uuid):
-        self.router.update_default_exit(destination_uuid)
+        self.router.update_default_category(destination_uuid)
 
     def validate(self):
         if self.has_basic_exit:
@@ -145,13 +145,15 @@ class EnterFlowNode(BaseNode):
         self.add_action(EnterFlowAction(flow_name))
 
         self.router = SwitchRouter(operand='@child.run.status', result_name=None, wait_for_message=False)
+        self.router.default_category.update_name('Expired')
 
         self.add_choice(comparison_variable='@child.run.status', comparison_type='has_only_text',
-                        comparison_arguments='completed', category_name='Complete',
+                        comparison_arguments=['completed'], category_name='Complete',
                         destination_uuid=complete_destination_uuid)
         self.add_choice(comparison_variable='@child.run.status', comparison_type='has_only_text',
-                        comparison_arguments='expired', category_name='Expired',
+                        comparison_arguments=['expired'], category_name='Expired',
                         destination_uuid=expired_destination_uuid, is_default=True)
+        # TODO: Ensure no warnings about overwriting default category
 
     def add_choice(self, **kwargs):
         # TODO: validate the input
@@ -161,10 +163,11 @@ class EnterFlowNode(BaseNode):
         raise ValueError("EnterFlowNode does not support default exits.")
 
     def update_completed_exit(self, destination_uuid):
-        self.router.update_default_exit(destination_uuid)
+        category = self.router._get_category_or_none('Complete')
+        category.update_destination_uuid(destination_uuid)
 
     def update_expired_exit(self, destination_uuid):
-        self.router.update_default_exit(destination_uuid)
+        self.router.update_default_category(destination_uuid)
 
     def validate(self):
         pass
