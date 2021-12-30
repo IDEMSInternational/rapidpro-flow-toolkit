@@ -21,6 +21,7 @@ class TestStandardParser(unittest.TestCase):
         parser = Parser(None, data_rows=self.rows, flow_name=flow_name)
         parser.parse()
         output_flow = parser.container.render()
+        # print(json.dumps(output_flow, indent=2))
 
         with open("tests/output/all_test_flows.json", 'r') as file:
             output_exp = json.load(file)
@@ -37,18 +38,18 @@ class TestStandardParser(unittest.TestCase):
     def test_no_switch_nodes(self):
         self.run_example('input/no_switch_nodes.csv', 'no_switch_nodes', Context())
 
-    # def test_switch_nodes(self):
-    #     context = Context(inputs=['b', 'Expired'])
-    #     self.run_example('input/switch_nodes.csv', 'switch_nodes', context)
+    def test_switch_nodes(self):
+        context = Context(inputs=['b', 'expired'])
+        self.run_example('input/switch_nodes.csv', 'switch_nodes', context)
 
-    #     context = Context(inputs=['a', 'Complete', '1'],
-    #             random_choices=[0],
-    #             variables = {
-    #                 "expression" : 'a',
-    #                 "@contact.name" : 'a',
-    #                 "@results.result_wfr" : 'a',
-    #             })
-    #     self.run_example('input/switch_nodes.csv', 'switch_nodes', context)
+        context = Context(inputs=['a', 'completed', '1'],
+                random_choices=[0],
+                variables = {
+                    "expression" : 'a',
+                    "@contact.name" : 'a',
+                    "@results.result_wfr" : 'a',
+                })
+        self.run_example('input/switch_nodes.csv', 'switch_nodes', context)
 
     # def test_loop_from_start(self):
     #     context = Context(inputs=['b'])

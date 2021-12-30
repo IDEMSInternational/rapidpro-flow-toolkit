@@ -34,12 +34,13 @@ class NodeGroup:
 
         # Completed/Expired edge from start_new_flow
         if isinstance(exit_node, EnterFlowNode):
-            if condition.variable.lower() in ['complete', 'completed']:
+            if condition.value.lower() in ['complete', 'completed']:
                 exit_node.update_completed_exit(destination_uuid)
-            elif condition.variable.lower() == 'expired':
+            elif condition.value.lower() == 'expired':
                 exit_node.update_expired_exit(destination_uuid)
             else:
                 raise ValueError("Condition from start_new_flow must be 'Completed' or 'Expired'.")
+            return
 
         # We have a non-trivial condition. Fill in default values if necessary
         if not condition.variable:
@@ -148,7 +149,7 @@ class Parser:
             node.update_default_exit(None)
             return node
         elif row.type in ['start_new_flow']:
-            node = SwitchRouterNode(operand='@input.text')
+            node = EnterFlowNode(row.mainarg_flow_name)
             return node
         else:
             # TODO.
