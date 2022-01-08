@@ -1,9 +1,7 @@
 import json
 import unittest
 
-# from parsers.creation.standard_parser_models import Row
 from parsers.creation.standard_parser import Parser
-from parsers.creation.utils import get_cell_type_for_column_header, CellType
 from tests.utils import get_dict_from_csv, find_destination_uuid, Context, find_node_by_uuid
 
 from parsers.common.rowparser import RowParser
@@ -223,15 +221,6 @@ class TestParsing(unittest.TestCase):
         self.assertEqual('result value', node_4_actions[0]['value'])
 
         self.assertIsNone(node_4['exits'][0]['destination_uuid'])
-
-    def test_cell_type_from_condition_header(self):
-        self.assertEqual(CellType.OBJECT, get_cell_type_for_column_header('condition:0'))
-        self.assertEqual(CellType.OBJECT, get_cell_type_for_column_header('condition:1'))
-        self.assertEqual(CellType.OBJECT, get_cell_type_for_column_header('condition:10'))
-        self.assertEqual(CellType.OBJECT, get_cell_type_for_column_header('condition:100'))
-
-    def test_cell_type_from_other_header(self):
-        self.assertEqual(CellType.TEXT, get_cell_type_for_column_header('condition_type'))
 
     def test_switch_node_rows(self):
         rows = get_dict_from_csv('input/switch_nodes.csv')
