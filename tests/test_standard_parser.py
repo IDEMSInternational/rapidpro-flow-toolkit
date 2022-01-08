@@ -18,7 +18,7 @@ class TestStandardParser(unittest.TestCase):
         rows = get_dict_from_csv(filename)
         self.rows = [self.row_parser.parse_row(row) for row in rows]
 
-        parser = Parser(None, data_rows=self.rows, flow_name=flow_name)
+        parser = Parser(data_rows=self.rows, flow_name=flow_name)
         parser.parse()
         output_flow = parser.container.render()
         # print(json.dumps(output_flow, indent=2))

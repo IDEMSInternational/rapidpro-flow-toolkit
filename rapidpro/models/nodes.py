@@ -52,6 +52,14 @@ class BaseNode:
     def add_action(self, action):
         self.actions.append(action)
 
+    def record_global_uuids(self, uuid_dict):
+        for action in self.actions:
+            action.record_global_uuids(uuid_dict)
+
+    def assign_global_uuids(self, uuid_dict):
+        for action in self.actions:
+            action.assign_global_uuids(uuid_dict)
+
     def add_choice(self):
         raise NotImplementedError
 
@@ -108,6 +116,14 @@ class SwitchRouterNode(BaseNode):
 
     def update_default_exit(self, destination_uuid):
         self.router.update_default_category(destination_uuid)
+
+    def record_global_uuids(self, uuid_dict):
+        super().record_global_uuids(uuid_dict)
+        self.router.record_global_uuids(uuid_dict)
+
+    def assign_global_uuids(self, uuid_dict):
+        super().assign_global_uuids(uuid_dict)
+        self.router.assign_global_uuids(uuid_dict)
 
     def validate(self):
         if self.has_basic_exit:

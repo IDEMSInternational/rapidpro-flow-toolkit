@@ -52,7 +52,7 @@ class TestParsing(unittest.TestCase):
         self.row_parser = RowParser(RowData, CellParser())
 
     def test_send_message(self):
-        parser = Parser(None, data_rows=[get_start_row()], flow_name='send_message')
+        parser = Parser(data_rows=[get_start_row()], flow_name='send_message')
         parser.parse()
         render_output = parser.container.render()
 
@@ -67,7 +67,7 @@ class TestParsing(unittest.TestCase):
     def test_linear(self):
         data_row1 = get_start_row()
         data_row2 = get_unconditional_node_from_1()
-        parser = Parser(None, data_rows=[data_row1, data_row2], flow_name='linear')
+        parser = Parser(data_rows=[data_row1, data_row2], flow_name='linear')
         parser.parse()
         render_output = parser.container.render()
 
@@ -84,7 +84,7 @@ class TestParsing(unittest.TestCase):
     def test_only_conditional(self):
         data_row1 = get_start_row()
         data_row3 = get_conditional_node_from_1()
-        parser = Parser(None, data_rows=[data_row1, data_row3], flow_name='only_conditional')
+        parser = Parser(data_rows=[data_row1, data_row3], flow_name='only_conditional')
         parser.parse()
         render_output = parser.container.render()
 
@@ -118,7 +118,7 @@ class TestParsing(unittest.TestCase):
         self.check_split(data_rows)
 
     def check_split(self, data_rows):
-        parser = Parser(None, data_rows=data_rows, flow_name='split')
+        parser = Parser(data_rows=data_rows, flow_name='split')
         parser.parse()
         render_output = parser.container.render()
 
@@ -141,7 +141,7 @@ class TestParsing(unittest.TestCase):
     def test_no_switch_node_rows(self):
         rows = get_dict_from_csv('input/no_switch_nodes.csv')
         no_switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
-        parser = Parser(None, data_rows=no_switch_node_rows, flow_name='no_switch_node')
+        parser = Parser(data_rows=no_switch_node_rows, flow_name='no_switch_node')
         parser.parse()
         render_output = parser.container.render()
 
@@ -236,7 +236,7 @@ class TestParsing(unittest.TestCase):
     def test_switch_node_rows(self):
         rows = get_dict_from_csv('input/switch_nodes.csv')
         switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
-        parser = Parser(None, data_rows=switch_node_rows, flow_name='switch_node')
+        parser = Parser(data_rows=switch_node_rows, flow_name='switch_node')
         parser.parse()
 
         render_output = parser.container.render()

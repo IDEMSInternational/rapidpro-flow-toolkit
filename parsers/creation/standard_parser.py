@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from rapidpro.models.actions import SendMessageAction, SetContactFieldAction, AddContactGroupAction, \
     RemoveContactGroupAction, SetRunResultAction, Group
-from rapidpro.models.containers import Container
+from rapidpro.models.containers import FlowContainer
 from rapidpro.models.nodes import BaseNode, BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
 from rapidpro.models.routers import SwitchRouter, RandomRouter
 from parsers.common.cellparser import get_object_from_cell_value, get_separators
@@ -53,7 +53,7 @@ class NodeGroup:
                 # Should such defaults be initialized as part of the data model?
                 condition_type = 'has_group'
                 # TODO: Validation step that fills in group/flow uuids
-                comparison_arguments = ['fake-group-uuid', condition.value]
+                comparison_arguments = [None, condition.value]
         elif condition.variable:
             variable = condition.variable
         else:
@@ -94,8 +94,8 @@ class NodeGroup:
 
 class Parser:
 
-    def __init__(self, container, data_rows, flow_name=None):
-        self.container = container or Container(flow_name=flow_name)
+    def __init__(self, data_rows, flow_name=None, container=None):
+        self.container = container or FlowContainer(flow_name=flow_name)
         self.data_rows = data_rows
 
         self.sheet_map = defaultdict()
@@ -104,7 +104,6 @@ class Parser:
 
         self.row_id_to_nodegroup = defaultdict()
         self.node_name_to_node_map = defaultdict()
-        self.group_name_to_group_map = defaultdict()
 
     def parse(self):
         for row in self.data_rows:
@@ -143,16 +142,12 @@ class Parser:
             print(f'Row type {row.type} not implemented')
 
     def _get_or_create_group(self, name, uuid=None):
-        # TODO: Implement this properly via a validation step
         # TODO: support lists of groups
-        existing_group = self.group_name_to_group_map.get(name)
-        if existing_group:
-            return existing_group
-
-        new_group = Group(name=name, uuid=uuid)
-        self.group_name_to_group_map[name] = new_group
-
-        return new_group
+        if not uuid:
+        # This shouldn't be necessary, but we keep it until we
+        # have tests checking for group UUIDs.
+            uuid = None
+        return Group(name=name, uuid=uuid)
 
     def get_row_node(self, row):
         if row.type in ['send_message', 'save_value', 'add_to_group', 'remove_from_group', 'save_flow_result']:
@@ -229,3 +224,11 @@ class Parser:
         self.container.add_node(new_node)
         self.row_id_to_nodegroup[row.row_id] = NodeGroup(new_node, row.type)
         self.node_name_to_node_map[self.get_node_name(row)] = new_node
+
+    def get_flow(self):
+        '''
+        Referenced groups or other flows may have a UUID which is None.
+        Add the flow to a RapidProContainer and run update_global_uuids
+        to fill in these missing UUIDs in a consistent way.
+        '''
+        return self.container

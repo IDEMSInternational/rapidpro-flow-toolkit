@@ -118,6 +118,16 @@ class SwitchRouter(BaseRouter):
 
         self.operand = operand
 
+    def record_global_uuids(self, uuid_dict):
+        for case in self.cases:
+            if case.type == 'has_group':
+                uuid_dict.record_group_uuid(case.arguments[1], case.arguments[0])
+
+    def assign_global_uuids(self, uuid_dict):
+        for case in self.cases:
+            if case.type == 'has_group':
+                case.arguments[0] = uuid_dict.get_group_uuid(case.arguments[1])
+
     def validate(self):
         # TODO: Add validation
         pass
