@@ -44,7 +44,7 @@ class TestActions(unittest.TestCase):
         self.assertIsNone(rpc.flows[0].nodes[0].actions[0].groups[0].uuid)
         self.assertEqual(rpc.flows[0].nodes[0].actions[0].groups[1].uuid, 'fake-uuid')
         self.assertIsNone(rpc.flows[0].nodes[1].actions[0].flow['uuid'])
-        rpc.update_global_uuids(UUIDDict())
+        rpc.update_global_uuids()
         self.assertIsNotNone(rpc.flows[0].nodes[0].actions[0].groups[0].uuid)
         self.assertEqual(rpc.flows[0].nodes[0].actions[0].groups[1].uuid, 'fake-uuid')
         self.assertIsNotNone(rpc.flows[0].nodes[1].actions[0].flow['uuid'])
@@ -53,7 +53,7 @@ class TestActions(unittest.TestCase):
         rpc = RapidProContainer(groups=[Group('No UUID Group', 'ABCD')])
         rpc.add_flow(get_flow_with_group_and_flow_node())
         self.assertIsNone(rpc.flows[0].nodes[0].actions[0].groups[0].uuid)
-        rpc.update_global_uuids(UUIDDict())
+        rpc.update_global_uuids()
         self.assertEqual(rpc.flows[0].nodes[0].actions[0].groups[0].uuid, 'ABCD')
 
     def test_assign_group_clash(self):
@@ -62,13 +62,13 @@ class TestActions(unittest.TestCase):
         self.assertEqual(rpc.flows[0].nodes[0].actions[0].groups[1].uuid, 'fake-uuid')
         with self.assertRaises(ValueError):
             # ValueError: Group/Flow UUID Group has multiple uuids: fake-uuid and ABCD
-            rpc.update_global_uuids(UUIDDict())
+            rpc.update_global_uuids()
 
     def test_consistency(self):
         rpc = RapidProContainer()
         rpc.add_flow(get_flow_with_group_and_flow_node())
         rpc.add_flow(get_has_group_flow())
-        rpc.update_global_uuids(UUIDDict())
+        rpc.update_global_uuids()
         self.assertEqual(rpc.flows[1].uuid, rpc.flows[0].nodes[1].actions[0].flow['uuid'])
         self.assertEqual(rpc.flows[1].nodes[0].router.cases[0].arguments[0], rpc.flows[0].nodes[0].actions[0].groups[0].uuid)
         self.assertEqual(rpc.flows[1].nodes[0].router.cases[1].arguments[0], 'fake-uuid')

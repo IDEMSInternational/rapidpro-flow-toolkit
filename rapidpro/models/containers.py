@@ -14,7 +14,9 @@ class RapidProContainer:
     def add_flow(self, flow):
         self.flows.append(flow)
 
-    def update_global_uuids(self, uuid_dict):
+    def update_global_uuids(self, uuid_dict=None):
+        if uuid_dict is None:
+            uuid_dict = UUIDDict()
         # Prefill with existings flows and groups
         for group in self.groups:
             uuid_dict.record_group_uuid(group.name, group.uuid)
@@ -72,7 +74,8 @@ class FlowContainer:
             "name": self.name,
             "language": self.language,
             "type": self.type,
-            "nodes": [node.render() for node in self.nodes]
+            "nodes": [node.render() for node in self.nodes],
+            "spec_version": "13.1.0"
         }
 
 
