@@ -160,9 +160,9 @@ class Parser:
             # TODO: Support timeout and timeout category
             return SwitchRouterNode('@input.text', result_name=row.save_name, wait_for_message=True)
         elif row.type in ['split_by_value']:
-            return SwitchRouterNode(row.mainarg_expression, result_name=row.save_name, wait_for_message=True)
+            return SwitchRouterNode(row.mainarg_expression, result_name=row.save_name, wait_for_message=False)
         elif row.type in ['split_by_group']:
-            return SwitchRouterNode('@contact.groups', result_name=row.save_name, wait_for_message=True)
+            return SwitchRouterNode('@contact.groups', result_name=row.save_name, wait_for_message=False)
         elif row.type in ['split_random']:
             return RandomRouterNode(result_name=row.save_name)
         else:
