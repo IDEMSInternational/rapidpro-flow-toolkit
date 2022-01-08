@@ -34,7 +34,6 @@ class TestStandardParser(unittest.TestCase):
         actions_exp = traverse_flow(flow_exp, copy.deepcopy(context))
         self.assertEqual(actions, actions_exp)
 
-
     def test_no_switch_nodes(self):
         self.run_example('input/no_switch_nodes.csv', 'no_switch_nodes', Context())
 
@@ -42,8 +41,14 @@ class TestStandardParser(unittest.TestCase):
         context = Context(inputs=['b', 'expired'])
         self.run_example('input/switch_nodes.csv', 'switch_nodes', context)
 
-        context = Context(inputs=['a', 'completed', '1'],
-                random_choices=[0],
+        context = Context(inputs=['a', 'completed'],
+                variables = {
+                    "expression" : 'not a',
+                })
+        self.run_example('input/switch_nodes.csv', 'switch_nodes', context)
+
+        context = Context(inputs=['a', 'completed'],
+                group_names=['wrong group'],
                 variables = {
                     "expression" : 'a',
                     "@contact.name" : 'a',
@@ -51,9 +56,68 @@ class TestStandardParser(unittest.TestCase):
                 })
         self.run_example('input/switch_nodes.csv', 'switch_nodes', context)
 
-    # def test_loop_from_start(self):
-    #     context = Context(inputs=['b'])
-    #     self.run_example('input/loop_from_start.csv', 'loop_from_start', context)
+        context = Context(inputs=['a', 'completed', 'other'],
+                group_names=['test group'],
+                variables = {
+                    "expression" : 'a',
+                    "@contact.name" : 'a',
+                    "@results.result_wfr" : 'a',
+                })
+        self.run_example('input/switch_nodes.csv', 'switch_nodes', context)
 
-    #     context = Context(inputs=['a', 'b'])
-    #     self.run_example('input/loop_from_start.csv', 'loop_from_start', context)
+        context = Context(inputs=['a', 'completed', 'a'],
+                random_choices=[0],
+                group_names=['test group'],
+                variables = {
+                    "expression" : 'a',
+                    "@contact.name" : 'a',
+                    "@results.result_wfr" : 'a',
+                })
+        self.run_example('input/switch_nodes.csv', 'switch_nodes', context)
+
+        context = Context(inputs=['a', 'completed', 'a'],
+                random_choices=[2],
+                group_names=['test group'],
+                variables = {
+                    "expression" : 'a',
+                    "@contact.name" : 'a',
+                    "@results.result_wfr" : 'a',
+                })
+        self.run_example('input/switch_nodes.csv', 'switch_nodes', context)
+
+    def test_loop_from_start(self):
+        context = Context(inputs=['b'])
+        self.run_example('input/loop_from_start.csv', 'loop_from_start', context)
+
+        context = Context(inputs=['a', 'b'])
+        self.run_example('input/loop_from_start.csv', 'loop_from_start', context)
+
+    def test_rejoin(self):
+        context = Context(random_choices=[0])
+        self.run_example('input/rejoin.csv', 'rejoin', context)
+
+        context = Context(random_choices=[1])
+        self.run_example('input/rejoin.csv', 'rejoin', context)
+
+        context = Context(random_choices=[2])
+        self.run_example('input/rejoin.csv', 'rejoin', context)
+
+    def test_loop_and_multiple_conditions(self):
+        context = Context(inputs=['adfgyh'], random_choices=[0])
+        self.run_example('input/loop_and_multiple_conditions.csv', 'loop_and_multiple_conditions', context)
+
+        context = Context(inputs=['other'], random_choices=[0])
+        self.run_example('input/loop_and_multiple_conditions.csv', 'loop_and_multiple_conditions', context)
+
+        context = Context(random_choices=[1])
+        self.run_example('input/loop_and_multiple_conditions.csv', 'loop_and_multiple_conditions', context)
+
+        context = Context(inputs=['other'], random_choices=[2])
+        self.run_example('input/loop_and_multiple_conditions.csv', 'loop_and_multiple_conditions', context)
+
+        context = Context(inputs=['b', 'a'], random_choices=[2])
+        self.run_example('input/loop_and_multiple_conditions.csv', 'loop_and_multiple_conditions', context)
+
+        context = Context(inputs=['b', 'b', 'c'], random_choices=[2])
+        self.run_example('input/loop_and_multiple_conditions.csv', 'loop_and_multiple_conditions', context)
+

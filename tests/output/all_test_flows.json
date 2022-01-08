@@ -202,17 +202,17 @@
               {
                 "uuid": "cf2f6d6b-2705-4596-a9b9-7cca78f70242",
                 "name": "Bucket 1",
-                "exit_uuid": "bf8a647b-8ec6-4126-a799-2126659f04d3"
+                "exit_uuid": "819b7662-5b48-49a9-98e7-5673671480ee"
               },
               {
                 "uuid": "ad1a7a70-3a6f-426d-a7e9-fa898f542ded",
                 "name": "Bucket 2",
-                "exit_uuid": "819b7662-5b48-49a9-98e7-5673671480ee"
+                "exit_uuid": "ce6cfcea-1fa5-46c7-bf85-ce32a9df928c"
               },
               {
                 "uuid": "00745237-e043-49bf-9fd3-5069c4a5d183",
                 "name": "Bucket 3",
-                "exit_uuid": "ce6cfcea-1fa5-46c7-bf85-ce32a9df928c"
+                "exit_uuid": "bf8a647b-8ec6-4126-a799-2126659f04d3"
               }
             ]
           },
