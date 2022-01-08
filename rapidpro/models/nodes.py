@@ -120,16 +120,16 @@ class SwitchRouterNode(BaseNode):
 
 class RandomRouterNode(BaseNode):
 
-    def __init__(self, operand, result_name=None, wait_for_message=False, uuid=None):
+    def __init__(self, result_name=None, uuid=None):
         super().__init__(uuid)
-        self.router = RandomRouter(operand, result_name, wait_for_message)
+        self.router = RandomRouter(result_name)
         self.has_basic_exit = False
 
     def add_choice(self, **kwargs):
         self.router.add_choice(**kwargs)
 
     def validate(self):
-        if self.has_basic_exit or self.default_exit_uuid:
+        if self.has_basic_exit:
             raise ValueError('Default exits are not supported in SwitchRouterNode')
 
         self.router.validate()
@@ -153,7 +153,8 @@ class EnterFlowNode(BaseNode):
         self.add_choice(comparison_variable='@child.run.status', comparison_type='has_only_text',
                         comparison_arguments=['expired'], category_name='Expired',
                         destination_uuid=expired_destination_uuid, is_default=True)
-        # TODO: Ensure no warnings about overwriting default category
+        # Suppress the warning about overwriting default category
+        self.router.has_explicit_default_category = False
 
     def add_choice(self, **kwargs):
         # TODO: validate the input

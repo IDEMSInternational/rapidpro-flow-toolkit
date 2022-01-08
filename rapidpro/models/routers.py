@@ -82,6 +82,7 @@ class SwitchRouter(BaseRouter):
         category_name = '_'.join([str(a).title() for a in comparison_arguments])
         while self._get_category_or_none(category_name):
             category_name += "_alt"
+        return category_name
 
     def add_choice(self, comparison_variable, comparison_type, comparison_arguments, category_name,
                    destination_uuid, is_default=False):
@@ -103,7 +104,8 @@ class SwitchRouter(BaseRouter):
         self.default_category.update_destination_uuid(destination_uuid)
         if category_name:
             self.default_category.update_name(category_name)
-        self.has_explicit_default_category = True
+        if destination_uuid or category_name:
+            self.has_explicit_default_category = True
 
     def get_categories(self):
         return self.categories + [self.default_category]
@@ -135,11 +137,14 @@ class SwitchRouter(BaseRouter):
                     "type": "msg",
                 }
             })
+        if self.result_name:
+            render_dict.update({
+                "result_name": self.result_name
+            })
         return render_dict
 
 
 class RandomRouter(BaseRouter):
-    # Wait for message and operand are not required in RandomRouter
     def __init__(self, result_name=None):
         super().__init__(result_name)
         self.type = 'random'
@@ -152,11 +157,20 @@ class RandomRouter(BaseRouter):
     def get_categories(self):
         return self.categories
 
+    def validate(self):
+        # TODO: Add validation
+        pass
+
     def render(self):
-        return {
+        render_dict = {
             "type": self.type,
             "categories": [category.render() for category in self.categories]
         }
+        if self.result_name:
+            render_dict.update({
+                "result_name": self.result_name
+            })
+        return render_dict
 
 
 class RouterCategory:

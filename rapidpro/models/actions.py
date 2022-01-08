@@ -78,9 +78,9 @@ class SetContactFieldAction(Action):
 
 
 class Group:
-    def __init__(self, name):
+    def __init__(self, name, uuid=None):
         self.name = name
-        self.uuid = generate_new_uuid()
+        self.uuid = uuid or generate_new_uuid()
 
     def render(self):
         return {
