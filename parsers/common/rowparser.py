@@ -159,7 +159,7 @@ class RowParser:
             assert is_parser_model_type(model)
             key = model.header_name_to_field_name(field_name)
             if not key in model.__fields__:
-                raise ValueError(f"Field {key} doesn't exist in target type.")
+                raise ValueError(f"Field {key} doesn't exist in target type {model}.")
             child_model = model.__fields__[key].outer_type_
             # TODO: how does ModelField.outer_type_ and ModelField.type_
             # deal with nested lists, e.g. List[List[str]]?
@@ -184,7 +184,7 @@ class RowParser:
             # recurse
             return self.find_entry(child_model, output_field[key], field_path[1:])
 
-    def parse_entry(self, column_name, value):
+    def parse_entry(self, column_name, value, value_is_parsed=False):
         # This creates/populates a field in self.output
         # The field is determined by column_name, its value by value
         field_path = column_name.split(':')
@@ -197,7 +197,7 @@ class RowParser:
         # Ideally we would return a pointer to the destination field.
         # The model of field[key] is model, and thus value should also be interpreted
         # as being of type model.
-        if is_list_type(model) or is_parser_model_type(model):
+        if is_list_type(model) or is_parser_model_type(model) and not value_is_parsed:
             # If the expected type of the value is list/object,
             # parse the cell content as such.
             # Otherwise leave it as a string
@@ -228,19 +228,24 @@ class RowParser:
         # Note: So far, no nested asterisks are supported.
         asterisk_list_lengths = defaultdict(lambda: 1)
         for k,v in data.items():
-            if '*' in k and type(v) == list:
+            if '*' in k:
                 prefix = k.split('*')[0]
-                asterisk_list_lengths[prefix] = max(asterisk_list_lengths[prefix], len(v))
+                parsed_v = self.cell_parser.parse(v)
+                if isinstance(parsed_v, list):
+                    asterisk_list_lengths[prefix] = max(asterisk_list_lengths[prefix], len(parsed_v))
+                    # No else case needed because then the implied list length is 1, i.e. the default value
         # Process each entry
         for k,v in data.items():
             if '*' in k:
                 # Process each prefix:*:suffix column entry by assigning the individual
                 # list values to prefix:1:suffix, prefix:2:suffix, etc
                 prefix = k.split('*')[0]
-                if type(v) != list:
-                    v = [v]*asterisk_list_lengths[prefix]
-                for i, elem in enumerate(v):
-                    self.parse_entry(k.replace('*', str(i+1)), elem)
+                parsed_v = self.cell_parser.parse(v)
+                if not isinstance(parsed_v, list):
+                    # If there was only one entry, we assume it is used for the entire list
+                    parsed_v = [parsed_v]*asterisk_list_lengths[prefix]
+                for i, elem in enumerate(parsed_v):
+                    self.parse_entry(k.replace('*', str(i+1)), elem, value_is_parsed=True)
             else:
                 # Normal, non-* column entry.
                 self.parse_entry(k,v)

@@ -16,6 +16,12 @@ class Action:
         self.uuid = generate_new_uuid()
         self.type = type
 
+    def record_global_uuids(self, uuid_dict):
+        pass
+
+    def assign_global_uuids(self, uuid_dict):
+        pass
+
     def render(self):
         return {
             'uuid': self.uuid,
@@ -24,7 +30,6 @@ class Action:
 
 
 class SendMessageAction(Action):
-    # TODO: Don't use mutable default values (bad things will happen)
     def __init__(self, text, attachments=None, quick_replies=None, all_urns=None):
         super().__init__('send_msg')
         self.text = text
@@ -79,9 +84,15 @@ class SetContactFieldAction(Action):
 
 
 class Group:
-    def __init__(self, name):
+    def __init__(self, name, uuid=None):
         self.name = name
-        self.uuid = generate_new_uuid()
+        self.uuid = uuid
+
+    def record_uuid(self, uuid_dict):
+        uuid_dict.record_group_uuid(self.name, self.uuid)
+
+    def assign_uuid(self, uuid_dict):
+        self.uuid = uuid_dict.get_group_uuid(self.name)
 
     def render(self):
         return {
@@ -94,6 +105,14 @@ class GenericGroupAction(Action):
     def __init__(self, type, groups):
         super().__init__(type)
         self.groups = groups
+
+    def record_global_uuids(self, uuid_dict):
+        for group in self.groups:
+            group.record_uuid(uuid_dict)
+
+    def assign_global_uuids(self, uuid_dict):
+        for group in self.groups:
+            group.assign_uuid(uuid_dict)
 
     def render(self):
         return NotImplementedError
@@ -133,7 +152,7 @@ class RemoveContactGroupAction(GenericGroupAction):
 
 
 class SetRunResultAction(Action):
-    def __init__(self, name, value, category):
+    def __init__(self, name, value, category=''):
         super().__init__('set_run_result')
         self.name = name
         self.value = value
@@ -150,12 +169,18 @@ class SetRunResultAction(Action):
 
 
 class EnterFlowAction(Action):
-    def __init__(self, flow_name):
+    def __init__(self, flow_name, uuid=None):
         super().__init__('enter_flow')
         self.flow = {
             'name': flow_name,
-            'uuid': generate_new_uuid()
+            'uuid': uuid
         }
+
+    def record_global_uuids(self, uuid_dict):
+        uuid_dict.record_flow_uuid(self.flow["name"], self.flow["uuid"])
+
+    def assign_global_uuids(self, uuid_dict):
+        self.flow["uuid"] = uuid_dict.get_flow_uuid(self.flow["name"])
 
     def render(self):
         return {
