@@ -5,9 +5,6 @@ import csv
 import os
 
 from parsers.creation.standard_parser import Parser
-from parsers.common.rowparser import RowParser
-from parsers.creation.standard_models import RowData
-from parsers.common.cellparser import CellParser
 from rapidpro.models.containers import RapidProContainer
 
 def get_dict_from_csv(filename):
@@ -29,16 +26,14 @@ def main():
     if args.logfile:
         logging.basicConfig(filename=args.logfile, level=logging.WARNING, filemode='w')
 
-    # This functionality shouldn't be in main.py, but be done by a separate component.
+    # This functionality shouldn't be in main.py, but be done by a dedicated master sheet parser.
     rpc = RapidProContainer()
     sheets = get_dict_from_csv(args.input)
     for sheet in sheets:
         if sheet['status'] != 'released' or sheet['flow_type'] != 'flow':
             continue
         rows = get_dict_from_csv(os.path.join(os.path.dirname(args.input), sheet['sheet_name'] + '.csv'))
-        row_parser = RowParser(RowData, CellParser())
-        rows = [row_parser.parse_row(row) for row in rows]
-        parser = Parser(data_rows=rows, flow_name=sheet['flow_name'])
+        parser = Parser(rows=rows, flow_name=sheet['flow_name'])
         parser.parse()
         rpc.add_flow(parser.get_flow())
     rpc.update_global_uuids()

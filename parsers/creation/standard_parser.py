@@ -6,9 +6,10 @@ from rapidpro.models.actions import SendMessageAction, SetContactFieldAction, Ad
 from rapidpro.models.containers import FlowContainer
 from rapidpro.models.nodes import BaseNode, BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
 from rapidpro.models.routers import SwitchRouter, RandomRouter
-from parsers.common.cellparser import get_object_from_cell_value, get_separators
+from parsers.common.cellparser import CellParser
+from parsers.common.rowparser import RowParser
+from parsers.creation.standard_models import RowData
 from .standard_models import Condition
-
 
 class NodeGroup:
     def __init__(self, node, row_type):
@@ -94,9 +95,10 @@ class NodeGroup:
 
 class Parser:
 
-    def __init__(self, data_rows, flow_name=None, container=None):
+    def __init__(self, rows, flow_name=None, container=None):
         self.container = container or FlowContainer(flow_name=flow_name)
-        self.data_rows = data_rows
+        row_parser = RowParser(RowData, CellParser())
+        self.data_rows = [row_parser.parse_row(row) for row in rows]
 
         self.sheet_map = defaultdict()
         for row in self.data_rows:

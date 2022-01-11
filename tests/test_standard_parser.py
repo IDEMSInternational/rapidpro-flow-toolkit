@@ -4,9 +4,6 @@ import copy
 
 from .utils import traverse_flow, Context, get_dict_from_csv
 from parsers.creation.standard_parser import Parser
-from parsers.common.rowparser import RowParser
-from parsers.creation.standard_models import RowData
-from parsers.common.cellparser import CellParser
 
 
 class TestStandardParser(unittest.TestCase):
@@ -14,11 +11,8 @@ class TestStandardParser(unittest.TestCase):
         pass
 
     def run_example(self, filename, flow_name, context):
-        self.row_parser = RowParser(RowData, CellParser())
         rows = get_dict_from_csv(filename)
-        self.rows = [self.row_parser.parse_row(row) for row in rows]
-
-        parser = Parser(data_rows=self.rows, flow_name=flow_name)
+        parser = Parser(rows=rows, flow_name=flow_name)
         parser.parse()
         output_flow = parser.container.render()
         # print(json.dumps(output_flow, indent=2))
