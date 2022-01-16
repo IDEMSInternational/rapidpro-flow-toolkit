@@ -31,6 +31,14 @@ class RapidProContainer:
             flow.assign_global_uuids(uuid_dict)
         # TODO: Update self.groups
 
+    def merge(self, container):
+        '''Merge another RapidPro container into this one.
+
+        Should take the union of the flows, groups, etc, and check consistency
+        of other parameters (e.g. site)
+        '''
+        raise NotImplementedError
+
     def render(self):
         return {
             "campaigns": [], # self.campaigns,

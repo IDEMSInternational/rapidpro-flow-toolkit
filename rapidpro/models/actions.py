@@ -49,7 +49,7 @@ class SendMessageAction(Action):
         render_dict = super().render()
         render_dict.update({
             "text": self.text,
-            "attachments": self.attachments,
+            "attachments": [attachment for attachment in self.attachments if attachment],
             "quick_replies": self.quick_replies,
         })
 
@@ -159,13 +159,17 @@ class SetRunResultAction(Action):
         self.category = category
 
     def render(self):
-        return {
+        render_dict = {
             "type": self.type,
             "name": self.name,
             "value": self.value,
-            "category": self.category,
             "uuid": self.uuid
         }
+        if self.category:
+            render_dict.update({
+                "category": self.category,
+            })
+        return render_dict
 
 
 class EnterFlowAction(Action):

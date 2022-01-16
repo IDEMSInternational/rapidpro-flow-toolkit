@@ -111,8 +111,8 @@ class SwitchRouterNode(BaseNode):
         self.router = SwitchRouter(operand, result_name, wait_for_message)
         self.has_basic_exit = False
 
-    def add_choice(self, **kwargs):
-        self.router.add_choice(**kwargs)
+    def add_choice(self, *args, **kwargs):
+        self.router.add_choice(*args, **kwargs)
 
     def update_default_exit(self, destination_uuid):
         self.router.update_default_category(destination_uuid)
