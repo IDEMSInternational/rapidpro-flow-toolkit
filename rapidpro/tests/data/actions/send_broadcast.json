@@ -1,0 +1,8 @@
+{
+    "type": "send_broadcast",
+    "uuid": "8eebd020-1af5-431c-b943-aa670fc74da9",
+    "urns": [
+        "tel:+12065551212"
+    ],
+    "text": "Hi @contact.name, are you ready to complete today's survey?"
+}

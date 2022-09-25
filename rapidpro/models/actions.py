@@ -1,5 +1,5 @@
 from rapidpro.utils import generate_new_uuid
-
+import copy
 
 # TODO: Check enter flow
 # Node classification:
@@ -10,8 +10,22 @@ from rapidpro.utils import generate_new_uuid
 # - Call webhook (Router with Success/Failure)
 # - No action, split by random
 
-
 class Action:
+    def from_dict(data):
+        # Create a generic Action, and cast it to the specific Action subclass
+        # in order to bypass the constructor of the subclass
+        assert "type" in data
+        action_type = data['type']
+        action = Action(action_type)
+        cls = action_map[action_type]
+        action.__class__ = cls
+        # Fill in the fields of the object
+        action._assign_fields_from_dict(data)
+        return action
+
+    def _assign_fields_from_dict(self, data):
+        self.__dict__ = data
+
     def __init__(self, type):
         self.uuid = generate_new_uuid()
         self.type = type
@@ -27,6 +41,11 @@ class Action:
             'uuid': self.uuid,
             'type': self.type,
         }
+
+
+class UnclassifiedAction(Action):
+    def render(self):
+        return self.__dict__
 
 
 class SendMessageAction(Action):
@@ -53,9 +72,18 @@ class SendMessageAction(Action):
             "quick_replies": self.quick_replies,
         })
 
-        if self.all_urns:
+        # Refactor this into a method to avoid code replication
+        if hasattr(self, "all_urns") and self.all_urns:
             render_dict.update({
                 'all_urns': self.all_urns
+            })
+        if hasattr(self, "topic") and self.topic:
+            render_dict.update({
+                'topic': self.topic
+            })
+        if hasattr(self, "templating") and self.templating:
+            render_dict.update({
+                'templating': self.templating
             })
 
         return render_dict
@@ -67,6 +95,14 @@ class SetContactFieldAction(Action):
         self.field_key = self._get_field_key(field_name)
         self.field_name = field_name
         self.value = value
+
+    def _assign_fields_from_dict(self, data):
+        assert "field" in data
+        data_copy = copy.deepcopy(data)
+        field = data_copy.pop("field")
+        super()._assign_fields_from_dict(data_copy)
+        self.field_key = field["key"]
+        self.field_name = field["name"]
 
     def _get_field_key(self, field_name):
         return field_name.strip().replace(' ', '_')
@@ -84,6 +120,9 @@ class SetContactFieldAction(Action):
 
 
 class Group:
+    def from_dict(data):
+        return Group(**data)
+
     def __init__(self, name, uuid=None):
         self.name = name
         self.uuid = uuid
@@ -105,6 +144,16 @@ class GenericGroupAction(Action):
     def __init__(self, type, groups):
         super().__init__(type)
         self.groups = groups
+
+    def _assign_fields_from_dict(self, data):
+        assert "groups" in data
+        groups = []
+        for group in data["groups"]:
+            groups.append(Group.from_dict(group))
+        data = copy.deepcopy(data)  # don't mutate the input
+        data["groups"] = groups
+        super()._assign_fields_from_dict(data)
+
 
     def record_global_uuids(self, uuid_dict):
         for group in self.groups:
@@ -144,7 +193,7 @@ class RemoveContactGroupAction(GenericGroupAction):
             "uuid": self.uuid,
             "groups": [group.render() for group in self.groups],
         }
-        if self.all_groups:
+        if hasattr(self, "all_groups") and self.all_groups:
             render_dict.update({
                 'all_groups': self.all_groups
             })
@@ -192,3 +241,29 @@ class EnterFlowAction(Action):
             "uuid": self.uuid,
             "flow": self.flow
         }
+
+action_map = {
+    "add_contact_groups" : AddContactGroupAction,
+    "add_contact_urn" : UnclassifiedAction,
+    "add_input_labels" : UnclassifiedAction,
+    "call_classifier" : UnclassifiedAction,
+    "call_resthook" : UnclassifiedAction,
+    "call_webhook" : UnclassifiedAction,
+    "enter_flow" : EnterFlowAction,
+    "open_ticket" : UnclassifiedAction,
+    "play_audio" : UnclassifiedAction,
+    "remove_contact_groups" : RemoveContactGroupAction,
+    "say_msg" : UnclassifiedAction,
+    "send_broadcast" : UnclassifiedAction,
+    "send_email" : UnclassifiedAction,
+    "send_msg" : SendMessageAction,
+    "set_contact_channel" : UnclassifiedAction,
+    "set_contact_field" : SetContactFieldAction,
+    "set_contact_language" : UnclassifiedAction,
+    "set_contact_name" : UnclassifiedAction,
+    "set_contact_status" : UnclassifiedAction,
+    "set_contact_timezone" : UnclassifiedAction,
+    "set_run_result" : SetRunResultAction,
+    "start_session" : UnclassifiedAction,
+    "transfer_airtime" : UnclassifiedAction,
+}
