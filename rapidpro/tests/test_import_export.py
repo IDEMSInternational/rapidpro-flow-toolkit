@@ -2,7 +2,7 @@ import unittest
 import json
 import glob
 
-from rapidpro.models.actions import Action
+from rapidpro.models.actions import Action, Group
 from rapidpro.models.common import Exit
 
 
@@ -24,4 +24,11 @@ class TestActions(unittest.TestCase):
            data = json.load(f)
         exit = Exit.from_dict(data)
         render_output = exit.render()
+        self.assertEqual(render_output, data)
+
+    def test_groups(self):
+        with open('rapidpro/tests/data/groups/group.json', 'r') as f:
+           data = json.load(f)
+        group = Group.from_dict(data)
+        render_output = group.render()
         self.assertEqual(render_output, data)
