@@ -195,7 +195,7 @@ class RouterCategory:
         self.destination_uuid = destination_uuid
 
     def get_exit(self):
-        return Exit(exit_uuid=self.exit_uuid, destination_uuid=self.destination_uuid)
+        return Exit(uuid=self.exit_uuid, destination_uuid=self.destination_uuid)
 
     def update_destination_uuid(self, uuid):
         self.destination_uuid = uuid

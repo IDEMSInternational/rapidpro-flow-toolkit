@@ -3,6 +3,7 @@ import json
 import glob
 
 from rapidpro.models.actions import Action
+from rapidpro.models.common import Exit
 
 
 class TestActions(unittest.TestCase):
@@ -16,5 +17,11 @@ class TestActions(unittest.TestCase):
                action_data = json.load(f)
             action = Action.from_dict(action_data)
             render_output = action.render()
-            # print(type(action), render_output, action_data)
             self.assertEqual(render_output, action_data)
+
+    def test_exits(self):
+        with open('rapidpro/tests/data/exits/exit.json', 'r') as f:
+           data = json.load(f)
+        exit = Exit.from_dict(data)
+        render_output = exit.render()
+        self.assertEqual(render_output, data)
