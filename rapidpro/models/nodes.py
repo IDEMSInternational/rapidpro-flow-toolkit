@@ -1,4 +1,4 @@
-from rapidpro.models.actions import EnterFlowAction
+from rapidpro.models.actions import Action, EnterFlowAction
 from rapidpro.models.common import Exit
 
 from rapidpro.models.routers import SwitchRouter, RandomRouter
@@ -28,9 +28,9 @@ from rapidpro.utils import generate_new_uuid
 
 
 class BaseNode:
-    def __init__(self, uuid=None):
+    def __init__(self, uuid=None, destination_uuid=None, default_exit=None, actions=None):
         self.uuid = uuid or generate_new_uuid()
-        self.actions = []
+        self.actions = actions or []
         self.router = None
 
         # has_basic_exit denotes if the node should have only one exit
@@ -38,8 +38,25 @@ class BaseNode:
         # if has_basic_exit is True, we will render a (very basic) exit which
         # points to default_exit_uuid
         self.has_basic_exit = True
-        self.default_exit = Exit(destination_uuid=None)
+        if default_exit:
+            self.default_exit = default_exit
+        else:
+            self.default_exit = Exit(destination_uuid=destination_uuid or None)
         self.exits = [self.default_exit]
+
+    def from_dict(data, ui_data=None):
+        if "router" in data:
+            if data["router"]["type"] == "random":
+                return RandomRouterNode.from_dict(data, ui_data)
+            elif data["router"]["type"] == "switch":
+                if data["router"]["operand"] == "@child.run.status":
+                    return EnterFlowNode.from_dict(data, ui_data)
+                else:
+                    return SwitchRouterNode.from_dict(data, ui_data)
+            else:
+                raise ValueError("Node contains router of invalid type")
+        else:
+            return BasicNode.from_dict(data, ui_data)
 
     def update_default_exit(self, destination_uuid):
         # TODO: Think of any caveats to storing a node rather than a UUID
@@ -93,6 +110,13 @@ class BaseNode:
 class BasicNode(BaseNode):
     # A basic node can accomodate actions and a very basic exit
 
+    def from_dict(data, ui_data=None):
+        exits = [Exit.from_dict(exit_data) for exit_data in data["exits"]]
+        if len(exits) != 1:
+            raise ValueError("Basic node must have exactly one exit")
+        actions = [Action.from_dict(action) for action in data["actions"]]
+        return BasicNode(uuid=data["uuid"], default_exit=exits[0], actions=actions)
+
     def _add_exit(self, exit):
         raise NotImplementedError
 
@@ -106,10 +130,24 @@ class BasicNode(BaseNode):
 
 class SwitchRouterNode(BaseNode):
 
-    def __init__(self, operand, result_name=None, wait_for_message=False, uuid=None):
+    def __init__(self, operand=None, result_name=None, wait_for_message=False, uuid=None, router=None):
+        # TODO: Support proper wait, not just true/false
+        '''
+        Either an operand or a router need to be provided
+        '''
         super().__init__(uuid)
-        self.router = SwitchRouter(operand, result_name, wait_for_message)
+        if router:
+            self.router = router
+        else:
+            if not operand:
+                raise ValueError("Either an operand or a router need to be provided")
+            self.router = SwitchRouter(operand, result_name, wait_for_message)
         self.has_basic_exit = False
+
+    def from_dict(data, ui_data=None):
+        exits = [Exit.from_dict(exit_data) for exit_data in data["exits"]]
+        router = SwitchRouter.from_dict(data["router"], exits)
+        return SwitchRouterNode(uuid=data["uuid"], router=router)
 
     def add_choice(self, *args, **kwargs):
         self.router.add_choice(*args, **kwargs)
@@ -136,10 +174,18 @@ class SwitchRouterNode(BaseNode):
 
 class RandomRouterNode(BaseNode):
 
-    def __init__(self, result_name=None, uuid=None):
+    def __init__(self, result_name=None, uuid=None, router=None):
         super().__init__(uuid)
-        self.router = RandomRouter(result_name)
+        if router:
+            self.router = router
+        else:
+            self.router = RandomRouter(result_name)
         self.has_basic_exit = False
+
+    def from_dict(data, ui_data=None):
+        exits = [Exit.from_dict(exit_data) for exit_data in data["exits"]]
+        router = RandomRouter.from_dict(data["router"], exits)
+        return RandomRouterNode(uuid=data["uuid"], router=router)
 
     def add_choice(self, **kwargs):
         self.router.add_choice(**kwargs)
@@ -155,22 +201,43 @@ class RandomRouterNode(BaseNode):
 
 
 class EnterFlowNode(BaseNode):
-    def __init__(self, flow_name, complete_destination_uuid=None, expired_destination_uuid=None, uuid=None):
+    def __init__(self, flow_name=None, complete_destination_uuid=None, expired_destination_uuid=None, uuid=None, router=None, action=None):
+        '''
+        Either an action or a flow_name have to be provided.
+        '''
         super().__init__(uuid)
 
-        self.add_action(EnterFlowAction(flow_name))
+        if action:
+            if action.type != "enter_flow":
+                raise ValueError("Action for EnterFlowNode must be of type enter_flow")
+            self.add_action(action)
+        else:
+            if not flow_name:
+                raise ValueError("Either an action or a flow_name have to be provided.")
+            self.add_action(EnterFlowAction(flow_name))
 
-        self.router = SwitchRouter(operand='@child.run.status', result_name=None, wait_for_message=False)
-        self.router.default_category.update_name('Expired')
+        if router:
+            self.router = router
+        else:
+            self.router = SwitchRouter(operand='@child.run.status', result_name=None, wait_for_message=False)
+            self.router.default_category.update_name('Expired')
 
-        self.add_choice(comparison_variable='@child.run.status', comparison_type='has_only_text',
-                        comparison_arguments=['completed'], category_name='Complete',
-                        destination_uuid=complete_destination_uuid)
-        self.add_choice(comparison_variable='@child.run.status', comparison_type='has_only_text',
-                        comparison_arguments=['expired'], category_name='Expired',
-                        destination_uuid=expired_destination_uuid, is_default=True)
-        # Suppress the warning about overwriting default category
-        self.router.has_explicit_default_category = False
+            self.add_choice(comparison_variable='@child.run.status', comparison_type='has_only_text',
+                            comparison_arguments=['completed'], category_name='Complete',
+                            destination_uuid=complete_destination_uuid)
+            self.add_choice(comparison_variable='@child.run.status', comparison_type='has_only_text',
+                            comparison_arguments=['expired'], category_name='Expired',
+                            destination_uuid=expired_destination_uuid, is_default=True)
+            # Suppress the warning about overwriting default category
+            self.router.has_explicit_default_category = False
+
+    def from_dict(data, ui_data=None):
+        exits = [Exit.from_dict(exit_data) for exit_data in data["exits"]]
+        router = SwitchRouter.from_dict(data["router"], exits)
+        actions = [Action.from_dict(action) for action in data["actions"]]
+        if len(actions) != 1:
+            raise ValueError("EnterFlowNode node must have exactly one action")
+        return EnterFlowNode(uuid=data["uuid"], router=router, action=actions[0])
 
     def add_choice(self, **kwargs):
         # TODO: validate the input

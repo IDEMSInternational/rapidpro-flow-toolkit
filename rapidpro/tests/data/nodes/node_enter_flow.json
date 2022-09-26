@@ -1,0 +1,58 @@
+{
+  "uuid": "3ecfb56f-627b-4afe-8448-a14eaccfbe0e",
+  "actions": [
+    {
+      "uuid": "b2d5a706-5fbd-4aa0-9fc4-70064633b47a",
+      "type": "enter_flow",
+      "flow": {
+        "uuid": "c1a32f07-ff0f-4b8b-a700-360c13f53914",
+        "name": "loop_and_multiple_conditions"
+      }
+    }
+  ],
+  "router": {
+    "type": "switch",
+    "operand": "@child.run.status",
+    "cases": [
+      {
+        "uuid": "5b8f6488-4fac-4e01-95a3-5367a9cf4cc6",
+        "type": "has_only_text",
+        "arguments": [
+          "completed"
+        ],
+        "category_uuid": "bdf17f94-effd-4655-9ca9-063349698615"
+      },
+      {
+        "uuid": "9aca3ddb-ceb4-45a7-9687-0fb4fc3ae211",
+        "arguments": [
+          "expired"
+        ],
+        "type": "has_only_text",
+        "category_uuid": "8a63eff6-27e9-4b42-ae48-2b08139fbdf4"
+      }
+    ],
+    "categories": [
+      {
+        "uuid": "bdf17f94-effd-4655-9ca9-063349698615",
+        "name": "Complete",
+        "exit_uuid": "7d6673fc-a9bb-4c94-97de-81e60c7a0b05"
+      },
+      {
+        "uuid": "8a63eff6-27e9-4b42-ae48-2b08139fbdf4",
+        "name": "Expired",
+        "exit_uuid": "c5e80923-0836-4ff5-bb8c-e36634cba13a"
+      }
+    ],
+    "default_category_uuid": "8a63eff6-27e9-4b42-ae48-2b08139fbdf4"
+  },
+  "exits": [
+    {
+      "uuid": "7d6673fc-a9bb-4c94-97de-81e60c7a0b05",
+      "destination_uuid": "1bf341f3-e043-4024-88bd-271bb61f6f1e"
+    },
+    {
+      "uuid": "c5e80923-0836-4ff5-bb8c-e36634cba13a",
+      "destination_uuid": "5beeda91-eeca-4287-a48e-7eebf5f3a7e7"
+    }
+  ]
+}

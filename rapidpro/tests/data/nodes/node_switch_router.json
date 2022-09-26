@@ -1,0 +1,42 @@
+{
+  "uuid": "c952a38d-7479-41a2-8382-8221e27ccabe",
+  "actions": [],
+  "router": {
+    "type": "switch",
+    "default_category_uuid": "c30c85fa-b217-46b9-9385-bf6e0f5f74c4",
+    "cases": [
+      {
+        "arguments": [
+          "a"
+        ],
+        "type": "has_any_word",
+        "uuid": "d9a4413e-9988-439e-bdfa-7ac6e60b3b62",
+        "category_uuid": "42f56814-8514-44bf-882a-8759f9e388b5"
+      }
+    ],
+    "categories": [
+      {
+        "uuid": "42f56814-8514-44bf-882a-8759f9e388b5",
+        "name": "A",
+        "exit_uuid": "e2631c71-3352-40a4-87be-45db3cecb629"
+      },
+      {
+        "uuid": "c30c85fa-b217-46b9-9385-bf6e0f5f74c4",
+        "name": "Other",
+        "exit_uuid": "bd278cd2-82ab-4fd9-ab1e-0b31b03452c2"
+      }
+    ],
+    "operand": "@input.text",
+    "result_name": "Result"
+  },
+  "exits": [
+    {
+      "uuid": "e2631c71-3352-40a4-87be-45db3cecb629",
+      "destination_uuid": "f9c19f9e-04d2-437c-a9ff-f3906e436391"
+    },
+    {
+      "uuid": "bd278cd2-82ab-4fd9-ab1e-0b31b03452c2",
+      "destination_uuid": "a6ade3d1-2b8f-4c8c-bc25-aba8d1cb3195"
+    }
+  ]
+}
