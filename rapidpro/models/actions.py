@@ -123,9 +123,10 @@ class Group:
     def from_dict(data):
         return Group(**data)
 
-    def __init__(self, name, uuid=None):
+    def __init__(self, name, uuid=None, query=None):
         self.name = name
         self.uuid = uuid
+        self.query = query
 
     def record_uuid(self, uuid_dict):
         uuid_dict.record_group_uuid(self.name, self.uuid)
@@ -134,10 +135,13 @@ class Group:
         self.uuid = uuid_dict.get_group_uuid(self.name)
 
     def render(self):
-        return {
+        render_dict = {
             'name': self.name,
             'uuid': self.uuid
         }
+        if self.query:
+            render_dict["query"] = query
+        return render_dict
 
 
 class GenericGroupAction(Action):

@@ -1,5 +1,6 @@
 from rapidpro.utils import generate_new_uuid
 from rapidpro.models.nodes import BaseNode
+from rapidpro.models.actions import Group
 import copy
 
 
@@ -12,6 +13,17 @@ class RapidProContainer:
         self.site = site or 'https://rapidpro.idems.international'
         self.triggers = triggers or []
         self.version = version
+
+    def from_dict(data):
+        data_copy = copy.deepcopy(data)
+        flows = data_copy.pop("flows")
+        flows = [FlowContainer.from_dict(flow) for flow in flows]
+        groups = data_copy.pop("groups")
+        groups = [Group.from_dict(group) for group in groups]
+        container = RapidProContainer(**data_copy)
+        container.flows = flows
+        container.groups = groups
+        return container
 
     def add_flow(self, flow):
         self.flows.append(flow)
@@ -43,12 +55,12 @@ class RapidProContainer:
 
     def render(self):
         return {
-            "campaigns": [], # self.campaigns,
-            "fields": [], # self.fields,
+            "campaigns": self.campaigns,
+            "fields": self.fields,
             "flows": [flow.render() for flow in self.flows],
-            "groups": [], # self.groups,
+            "groups": [group.render() for group in self.groups],
             "site": self.site,
-            "triggers": [], # self.triggers,
+            "triggers": self.triggers,
             "version": self.version,
         }
 
