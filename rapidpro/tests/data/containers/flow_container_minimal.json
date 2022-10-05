@@ -1,0 +1,14 @@
+{
+  "name": "flow_with_node",
+  "uuid": "c1a32f07-ff0f-4b8b-a700-360c13f53914",
+  "spec_version": "13.1.0",
+  "language": "base",
+  "type": "messaging",
+  "nodes": [],
+  "revision": 63,
+  "expire_after_minutes": 10080,
+  "metadata": {
+    "revision": 62
+  },
+  "localization": {}
+}

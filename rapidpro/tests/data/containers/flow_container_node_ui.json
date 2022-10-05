@@ -1,0 +1,44 @@
+{
+  "name": "flow_with_node",
+  "uuid": "c1a32f07-ff0f-4b8b-a700-360c13f53914",
+  "spec_version": "13.1.0",
+  "language": "base",
+  "type": "messaging",
+  "nodes": [
+    {
+      "uuid": "ee74eaef-e8dd-42bb-965a-03e34cb5ef13",
+      "actions": [
+        {
+          "attachments": [],
+          "text": "1",
+          "type": "send_msg",
+          "quick_replies": [],
+          "uuid": "dd69934b-85e3-49aa-b299-4a203ff46a49"
+        }
+      ],
+      "exits": [
+        {
+          "uuid": "05c13aeb-7b9e-497c-9723-6bf4d1413edc",
+          "destination_uuid": "60b0ffd3-6235-438f-b356-ed8f72e5404d"
+        }
+      ]
+    }
+  ],
+  "_ui": {
+    "nodes": {
+      "ee74eaef-e8dd-42bb-965a-03e34cb5ef13": {
+        "position": {
+          "left": 820,
+          "top": 200
+        },
+        "type": "execute_actions"
+      }
+    }
+  },
+  "revision": 63,
+  "expire_after_minutes": 10080,
+  "metadata": {
+    "revision": 62
+  },
+  "localization": {}
+}

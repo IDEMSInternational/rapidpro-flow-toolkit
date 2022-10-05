@@ -6,6 +6,7 @@ from rapidpro.models.actions import Action, Group
 from rapidpro.models.common import Exit
 from rapidpro.models.routers import RouterCase, RouterCategory, BaseRouter
 from rapidpro.models.nodes import BaseNode
+from rapidpro.models.containers import FlowContainer
 
 
 class TestActions(unittest.TestCase):
@@ -69,9 +70,6 @@ class TestActions(unittest.TestCase):
             self.assertEqual(render_output, router_data)
 
     def test_all_node_types(self):
-        # Note: These test cases assume that the default category
-        # within switch routers is always the last one.
-        # This might change once we support "Expired" categories
         self.maxDiff = None
         nodeFilenamesList = glob.glob('rapidpro/tests/data/nodes/node_*.json')
         for filename in nodeFilenamesList:
@@ -80,3 +78,14 @@ class TestActions(unittest.TestCase):
             node = BaseNode.from_dict(node_data)
             render_output = node.render()
             self.assertEqual(render_output, node_data)
+
+    def test_flow_containers(self):
+        # TODO: Add test with multiple nodes to ensure order is maintained
+        # TODO: Add test with localization (of different objects) to ensure it is maintained
+        containerFilenamesList = glob.glob('rapidpro/tests/data/containers/flow_container_*.json')
+        for filename in containerFilenamesList:
+            with open(filename, 'r') as f:
+               container_data = json.load(f)
+            container = FlowContainer.from_dict(container_data)
+            render_output = container.render()
+            self.assertEqual(render_output, container_data)
