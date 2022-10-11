@@ -5,11 +5,12 @@ from rapidpro.models.routers import SwitchRouter, RandomRouter
 
 class TestRouters(unittest.TestCase):
     def setUp(self) -> None:
-        self.switch_router = SwitchRouter(operand='@input.text', result_name=None, wait_for_message=None)
+        self.switch_router = SwitchRouter(operand='@input.text', result_name=None, wait_timeout=600)
         self.switch_router.add_choice('@input.text', 'has_any_word', None, 'Add', 'test_destination_1',
                                       is_default=False)
         self.switch_router.add_choice('@input.text', 'has_any_word', None, 'Other', 'test_destination_2',
                                       is_default=True)
+        self.switch_router.update_no_response_category('no_response_destination_uuid')
 
         self.random_router = RandomRouter()
         self.random_router.add_choice('random_1', 'test_destination_1')
@@ -28,11 +29,16 @@ class TestRouters(unittest.TestCase):
         self.assertEqual(render_output['cases'][0]['type'], 'has_any_word')
         self.assertEqual(render_output['cases'][0]['arguments'], None)
 
-        self.assertEqual(len(render_output['categories']), 2)
+        self.assertEqual(len(render_output['categories']), 3)
         self.assertEqual(render_output['categories'][0]['name'], 'Add')
 
         self.assertIn('Add', [c['name'] for c in render_output['categories']])
         self.assertIn('Other', [c['name'] for c in render_output['categories']])
+        self.assertIn('No Response', [c['name'] for c in render_output['categories']])
+        self.assertIn('wait', render_output)
+        self.assertEqual(render_output['wait']['timeout']['seconds'], 600)
+        no_response_category = [c for c in render_output['categories'] if c['name'] == 'No Response'][0]
+        self.assertEqual(render_output['wait']['timeout']['category_uuid'], no_response_category['uuid'])
 
         other_category_arr = [c for c in render_output['categories'] if c['name'] == 'Other']
 
