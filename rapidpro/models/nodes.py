@@ -130,7 +130,7 @@ class BasicNode(BaseNode):
 
 class SwitchRouterNode(BaseNode):
 
-    def __init__(self, operand=None, result_name=None, wait_for_message=False, uuid=None, router=None):
+    def __init__(self, operand=None, result_name=None, wait_timeout=None, uuid=None, router=None):
         # TODO: Support proper wait, not just true/false
         '''
         Either an operand or a router need to be provided
@@ -141,7 +141,7 @@ class SwitchRouterNode(BaseNode):
         else:
             if not operand:
                 raise ValueError("Either an operand or a router need to be provided")
-            self.router = SwitchRouter(operand, result_name, wait_for_message)
+            self.router = SwitchRouter(operand, result_name, wait_timeout)
         self.has_basic_exit = False
 
     def from_dict(data, ui_data=None):
@@ -219,7 +219,7 @@ class EnterFlowNode(BaseNode):
         if router:
             self.router = router
         else:
-            self.router = SwitchRouter(operand='@child.run.status', result_name=None, wait_for_message=False)
+            self.router = SwitchRouter(operand='@child.run.status', result_name=None, wait_timeout=None)
             self.router.default_category.update_name('Expired')
 
             self.add_choice(comparison_variable='@child.run.status', comparison_type='has_only_text',

@@ -59,13 +59,19 @@ class BaseRouter:
 
 class SwitchRouter(BaseRouter):
 
-    def __init__(self, operand, result_name=None, wait_for_message=False, cases=None, categories=None, default_category=None):
-        # TODO: implement wait field
+    def __init__(self, operand, result_name=None, wait_timeout=None, cases=None, categories=None, default_category=None, no_response_category=None):
+        '''
+        wait_timeout:
+            None: There is no waiting for a user's message in this router
+            0: Waiting for user's message, without a timeout
+            >0: Waiting for user's message, with a timeout (in which case no_response_category is taken)
+        '''
+
         super().__init__(result_name)
         self.type = 'switch'
         self.operand = operand
         self.cases = cases or []
-        self.wait_for_message = wait_for_message
+        self.wait_timeout = wait_timeout
         if categories and default_category:
             self.categories = categories
             self.default_category = default_category
@@ -76,16 +82,29 @@ class SwitchRouter(BaseRouter):
             self.default_category = category
             # Indicates that a default category has been added by the user
             self.has_explicit_default_category = False
+        self.no_response_category = no_response_category
 
     def from_dict(data, exits):
         # TODO: implement wait field
         result_name, categories = BaseRouter._get_result_name_and_categories_from_data(data, exits)
         cases = [RouterCase.from_dict(case_data) for case_data in data["cases"]]
         default_categories = [category for category in categories if category.uuid == data["default_category_uuid"]]
-        other_categories = [category for category in categories if category.uuid != data["default_category_uuid"]]
         if not default_categories:
             raise ValueError("Default category uuid does not match any category.")
-        return SwitchRouter(data["operand"], result_name, False, cases, other_categories, default_categories[0])
+        no_response_category = None
+        no_response_category_id = None
+        wait_timeout = None
+        if "wait" in data:
+            wait_timeout = 0
+            if "timeout" in data["wait"]:
+                no_response_category_id = data["wait"]["timeout"]["category_uuid"]
+                wait_timeout = int(data["wait"]["timeout"]["seconds"])
+                no_response_categories = [category for category in categories if category.uuid == no_response_category_id]
+                if not no_response_categories:
+                    raise ValueError("No Response category uuid does not match any category.")
+                no_response_category = no_response_categories[0]
+        other_categories = [category for category in categories if category.uuid not in [data["default_category_uuid"], no_response_category_id]]
+        return SwitchRouter(data["operand"], result_name, wait_timeout, cases, other_categories, default_categories[0], no_response_category)
 
     def _get_case_or_none(self, comparison_type, arguments, category_uuid):
         for case in self.cases:
@@ -139,7 +158,10 @@ class SwitchRouter(BaseRouter):
             self.has_explicit_default_category = True
 
     def get_categories(self):
-        return self.categories + [self.default_category]
+        if self.no_response_category:
+            return self.categories + [self.default_category] + [self.no_response_category]
+        else:
+            return self.categories + [self.default_category]
 
     def set_operand(self, operand):
         if not operand:
@@ -160,8 +182,13 @@ class SwitchRouter(BaseRouter):
                 case.arguments[0] = uuid_dict.get_group_uuid(case.arguments[1])
 
     def validate(self):
-        # TODO: Add validation
-        pass
+        # TODO: Add more validation
+        if self.wait_timeout is not None:
+            # print(self.wait_timeout, type(self.wait_timeout))
+            assert type(self.wait_timeout) is int
+            assert self.wait_timeout >= 0
+            if self.wait_timeout > 0:
+                assert self.no_response_category is not None
 
     def render(self):
         self.validate()
@@ -172,10 +199,20 @@ class SwitchRouter(BaseRouter):
             "categories": [category.render() for category in self.get_categories()],
             "default_category_uuid": self.default_category.uuid
         }
-        if self.wait_for_message:
+        if self.wait_timeout == 0:
             render_dict.update({
                 "wait": {
                     "type": "msg",
+                }
+            })
+        elif self.wait_timeout is not None:
+            render_dict.update({
+                "wait": {
+                    "type": "msg",
+                    "timeout" : {
+                        "seconds" : self.wait_timeout,
+                        "category_uuid" : self.no_response_category.uuid
+                    }
                 }
             })
         if self.result_name:

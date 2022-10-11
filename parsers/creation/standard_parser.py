@@ -47,7 +47,7 @@ class NodeGroup:
         # We have a non-trivial condition. Fill in default values if necessary
         condition_type = condition.type
         comparison_arguments=[condition.value]
-        wait_for_message = False
+        wait_timeout = None
         if self.row_type in ['split_by_group', 'split_by_value']:
             variable = exit_node.router.operand
             if self.row_type == 'split_by_group':
@@ -59,7 +59,7 @@ class NodeGroup:
             variable = condition.variable
         else:
             # TODO: Check if the source node has a save_name, and use that instead?
-            wait_for_message = True
+            wait_timeout = 0
             variable = '@input.text'
 
         if isinstance(exit_node, BasicNode):
@@ -67,7 +67,7 @@ class NodeGroup:
             # Create a router node (new exit_node) and connect it.
             old_exit_node = exit_node
             old_destination = old_exit_node.default_exit.destination_uuid
-            exit_node = SwitchRouterNode(variable, wait_for_message=wait_for_message)
+            exit_node = SwitchRouterNode(variable, wait_timeout=wait_timeout)
             exit_node.update_default_exit(old_destination)
             old_exit_node.update_default_exit(exit_node.uuid)
             self.nodes.append(exit_node)
@@ -160,11 +160,11 @@ class Parser:
             return EnterFlowNode(row.mainarg_flow_name)
         elif row.type in ['wait_for_response']:
             # TODO: Support timeout and timeout category
-            return SwitchRouterNode('@input.text', result_name=row.save_name, wait_for_message=True)
+            return SwitchRouterNode('@input.text', result_name=row.save_name, wait_timeout=0)
         elif row.type in ['split_by_value']:
-            return SwitchRouterNode(row.mainarg_expression, result_name=row.save_name, wait_for_message=False)
+            return SwitchRouterNode(row.mainarg_expression, result_name=row.save_name, wait_timeout=None)
         elif row.type in ['split_by_group']:
-            return SwitchRouterNode('@contact.groups', result_name=row.save_name, wait_for_message=False)
+            return SwitchRouterNode('@contact.groups', result_name=row.save_name, wait_timeout=None)
         elif row.type in ['split_random']:
             return RandomRouterNode(result_name=row.save_name)
         else:

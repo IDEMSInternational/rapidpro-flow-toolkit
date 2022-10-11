@@ -5,7 +5,7 @@ from rapidpro.models.routers import SwitchRouter, RandomRouter
 
 class TestRouters(unittest.TestCase):
     def setUp(self) -> None:
-        self.switch_router = SwitchRouter(operand='@input.text', result_name=None, wait_for_message=None)
+        self.switch_router = SwitchRouter(operand='@input.text', result_name=None, wait_timeout=None)
         self.switch_router.add_choice('@input.text', 'has_any_word', None, 'Add', 'test_destination_1',
                                       is_default=False)
         self.switch_router.add_choice('@input.text', 'has_any_word', None, 'Other', 'test_destination_2',
