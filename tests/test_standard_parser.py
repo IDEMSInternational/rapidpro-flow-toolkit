@@ -79,6 +79,15 @@ class TestStandardParser(unittest.TestCase):
                 })
         self.run_example('input/switch_nodes.csv', 'switch_nodes', context)
 
+        context = Context(inputs=['a', 'completed', None, None],
+                group_names=['test group'],
+                variables = {
+                    "expression" : 'a',
+                    "@contact.name" : 'a',
+                    "@results.result_wfr" : 'a',
+                })
+        self.run_example('input/switch_nodes.csv', 'switch_nodes', context)
+
     def test_loop_from_start(self):
         context = Context(inputs=['b'])
         self.run_example('input/loop_from_start.csv', 'loop_from_start', context)

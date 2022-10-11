@@ -44,6 +44,15 @@ class NodeGroup:
                 raise ValueError("Condition from start_new_flow must be 'Completed' or 'Expired'.")
             return
 
+        # No Response edge from wait_for_response
+        if isinstance(exit_node, SwitchRouterNode) and condition.value.lower() == "no response":
+            if exit_node.has_positive_wait():
+                exit_node.update_no_response_exit(destination_uuid)
+            else:
+                # TODO: Should this be a warning rather than an error?
+                raise ValueError("No Response exit only exists for wait_for_response rows with non-zero timeout.")
+
+
         # We have a non-trivial condition. Fill in default values if necessary
         condition_type = condition.type
         comparison_arguments=[condition.value]
@@ -160,7 +169,10 @@ class Parser:
             return EnterFlowNode(row.mainarg_flow_name)
         elif row.type in ['wait_for_response']:
             # TODO: Support timeout and timeout category
-            return SwitchRouterNode('@input.text', result_name=row.save_name, wait_timeout=0)
+            if row.no_response:
+                return SwitchRouterNode('@input.text', result_name=row.save_name, wait_timeout=int(row.no_response))
+            else:
+                return SwitchRouterNode('@input.text', result_name=row.save_name, wait_timeout=None)
         elif row.type in ['split_by_value']:
             return SwitchRouterNode(row.mainarg_expression, result_name=row.save_name, wait_timeout=None)
         elif row.type in ['split_by_group']:

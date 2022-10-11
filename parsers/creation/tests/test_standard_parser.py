@@ -235,4 +235,10 @@ class TestParsing(unittest.TestCase):
         parser.parse()
 
         render_output = parser.container.render()
+        # Check that No Response category is created even if not connected
+        last_node = render_output['nodes'][-1]
+        self.assertEqual('No Response', last_node['router']['categories'][-1]['name'])
+
+        # TODO: Ideally, there should be more explicit tests here.
+        # At least the functionality is covered by the integration tests simulating the flow.
         # print(json.dumps(render_output, indent=2))

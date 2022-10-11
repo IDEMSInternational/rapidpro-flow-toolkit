@@ -1105,7 +1105,8 @@
               "destination_uuid": "acf35dbd-e737-469d-95c3-798544bfbfe5"
             },
             {
-              "uuid": "544748c8-20cb-437a-9171-1489c52196f4"
+              "uuid": "544748c8-20cb-437a-9171-1489c52196f4",
+              "destination_uuid": "ba443bbb-00a7-4bdd-8de1-d783ade863d5"
             }
           ]
         },
@@ -1166,6 +1167,24 @@
           ]
         },
         {
+          "uuid": "ba443bbb-00a7-4bdd-8de1-d783ade863d5",
+          "actions": [
+            {
+              "attachments": [],
+              "text": "no response message",
+              "type": "send_msg",
+              "quick_replies": [],
+              "uuid": "df7202e7-e3bb-45b4-8601-fc8e6b31985f"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "4220b4ab-e94f-41dc-a891-17489407997b",
+              "destination_uuid": "e0a3e4e8-66bf-41b6-9a4e-a9d473e6d3b7"
+            }
+          ]
+        },
+        {
           "uuid": "8e97560c-a019-44bd-b65d-ae9e025e97cc",
           "actions": [
             {
@@ -1198,6 +1217,45 @@
             {
               "uuid": "d347ecb7-a7c8-464f-b87b-8f10aff16d26",
               "destination_uuid": null
+            }
+          ]
+        },
+        {
+          "uuid": "e0a3e4e8-66bf-41b6-9a4e-a9d473e6d3b7",
+          "actions": [],
+          "router": {
+            "type": "switch",
+            "default_category_uuid": "426431f3-78f7-45ee-ad9c-b067cb7d77e0",
+            "cases": [],
+            "categories": [
+              {
+                "uuid": "426431f3-78f7-45ee-ad9c-b067cb7d77e0",
+                "name": "Other",
+                "exit_uuid": "ddbd23dd-87c0-451c-89f8-ec4447c095ba"
+              },
+              {
+                "uuid": "08a6bcee-1106-4263-81df-a7ae0d7ca418",
+                "name": "No Response",
+                "exit_uuid": "166560a9-3159-4ad6-8b11-d92e83e88d1f"
+              }
+            ],
+            "operand": "@input.text",
+            "wait": {
+              "type": "msg",
+              "timeout": {
+                "seconds": 86400,
+                "category_uuid": "08a6bcee-1106-4263-81df-a7ae0d7ca418"
+              }
+            },
+            "result_name": "Result 3"
+          },
+          "exits": [
+            {
+              "uuid": "ddbd23dd-87c0-451c-89f8-ec4447c095ba",
+              "destination_uuid": null
+            },
+            {
+              "uuid": "166560a9-3159-4ad6-8b11-d92e83e88d1f"
             }
           ]
         }
@@ -1317,6 +1375,23 @@
               "top": 1060
             },
             "type": "execute_actions"
+          },
+          "ba443bbb-00a7-4bdd-8de1-d783ade863d5": {
+            "position": {
+              "left": 840,
+              "top": 1060
+            },
+            "type": "execute_actions"
+          },
+          "e0a3e4e8-66bf-41b6-9a4e-a9d473e6d3b7": {
+            "type": "wait_for_response",
+            "position": {
+              "left": 840,
+              "top": 1200
+            },
+            "config": {
+              "cases": {}
+            }
           }
         },
         "stickies": {}

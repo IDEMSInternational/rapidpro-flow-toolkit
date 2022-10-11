@@ -72,17 +72,32 @@ class SwitchRouter(BaseRouter):
         self.operand = operand
         self.cases = cases or []
         self.wait_timeout = wait_timeout
+
+        self.has_explicit_default_category = False
         if categories and default_category:
             self.categories = categories
             self.default_category = default_category
+            # Indicates that a default category has been added by the user
             self.has_explicit_default_category = True
         else:
+            self.categories = []
             # Add an implicit default category
             category = RouterCategory('Other', None)
             self.default_category = category
-            # Indicates that a default category has been added by the user
-            self.has_explicit_default_category = False
-        self.no_response_category = no_response_category
+
+        self.has_explicit_no_response_category = False
+        if self.wait_timeout:
+            if no_response_category:
+                self.no_response_category = no_response_category
+                # Indicates that a No Response category has been added by the user
+                self.has_explicit_no_response_category = True
+            else:
+                category = RouterCategory('No Response', None)
+                self.no_response_category = category
+        else:
+            self.no_response_category = None
+            if no_response_category:
+                logger.warning(f'Router has No Response category but no wait timeout. Ignoring No Response category.')
 
     def from_dict(data, exits):
         # TODO: implement wait field
@@ -157,6 +172,23 @@ class SwitchRouter(BaseRouter):
         if destination_uuid or category_name:
             self.has_explicit_default_category = True
 
+    def update_no_response_category(self, destination_uuid, category_name=None):
+        if not self.wait_timeout:
+            logger.warning(f'Updating No Response category, but router has no wait timeout.')
+        if self.has_explicit_no_response_category:
+            logger.warning(f'Overwriting No Response category for Router')
+        self.no_response_category.update_destination_uuid(destination_uuid)
+        if category_name:
+            self.no_response_category.update_name(category_name)
+        if destination_uuid or category_name:
+            self.has_explicit_no_response_category = True
+
+    def has_wait(self):
+        return self.wait_timeout is not None
+
+    def has_positive_wait(self):
+        return bool(self.wait_timeout)
+
     def get_categories(self):
         if self.no_response_category:
             return self.categories + [self.default_category] + [self.no_response_category]
@@ -199,13 +231,7 @@ class SwitchRouter(BaseRouter):
             "categories": [category.render() for category in self.get_categories()],
             "default_category_uuid": self.default_category.uuid
         }
-        if self.wait_timeout == 0:
-            render_dict.update({
-                "wait": {
-                    "type": "msg",
-                }
-            })
-        elif self.wait_timeout is not None:
+        if self.has_positive_wait():
             render_dict.update({
                 "wait": {
                     "type": "msg",
@@ -213,6 +239,12 @@ class SwitchRouter(BaseRouter):
                         "seconds" : self.wait_timeout,
                         "category_uuid" : self.no_response_category.uuid
                     }
+                }
+            })
+        elif self.has_wait():
+            render_dict.update({
+                "wait": {
+                    "type": "msg",
                 }
             })
         if self.result_name:

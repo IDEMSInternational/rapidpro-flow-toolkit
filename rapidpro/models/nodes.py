@@ -155,6 +155,15 @@ class SwitchRouterNode(BaseNode):
     def update_default_exit(self, destination_uuid):
         self.router.update_default_category(destination_uuid)
 
+    def update_no_response_exit(self, destination_uuid):
+        self.router.update_no_response_category(destination_uuid)
+
+    def has_wait(self):
+        return self.router.has_wait()
+
+    def has_positive_wait(self):
+        return self.router.has_positive_wait()
+
     def record_global_uuids(self, uuid_dict):
         super().record_global_uuids(uuid_dict)
         self.router.record_global_uuids(uuid_dict)

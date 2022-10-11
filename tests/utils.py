@@ -90,7 +90,14 @@ def find_destination_uuid(current_node, context):
             # Find the case that applies here and get its category_uuid
             # The arguments are not parse (e.g. no variable substitution)
             category_uuid = router["default_category_uuid"]  # The "Other" option (default)
-            if operand is not None:
+            if operand is None:
+                # Input "None" indicates No Response if the router has a wait.
+                if "wait" in router:
+                    if "timeout" in router["wait"] and router["wait"]["timeout"]["seconds"] > 0:
+                        category_uuid = router["wait"]["timeout"]["category_uuid"]
+                    else:
+                        return None  # We're stuck here forever --> exit here.
+            else:
                 for case in router["cases"]:
                     if case["type"] == "has_group":
                         group_name = case["arguments"][1]
