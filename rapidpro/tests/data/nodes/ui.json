@@ -1,0 +1,119 @@
+{
+  "nodes": {
+    "bb408455-d8f5-4377-a901-717ade84688b": {
+      "type": "wait_for_response",
+      "position": {
+        "left": 340,
+        "top": 0
+      },
+      "config": {
+        "cases": {}
+      }
+    },
+    "3ecfb56f-627b-4afe-8448-a14eaccfbe0e": {
+      "type": "split_by_subflow",
+      "position": {
+        "left": 360,
+        "top": 180
+      },
+      "config": {}
+    },
+    "1bf341f3-e043-4024-88bd-271bb61f6f1e": {
+      "type": "split_by_expression",
+      "position": {
+        "left": 400,
+        "top": 360
+      },
+      "config": {
+        "cases": {}
+      }
+    },
+    "7dca0b72-ec99-49c9-95ae-681bf9e65cba": {
+      "type": "split_by_contact_field",
+      "position": {
+        "left": 400,
+        "top": 480
+      },
+      "config": {
+        "operand": {
+          "id": "name",
+          "type": "property",
+          "name": "Name"
+        },
+        "cases": {}
+      }
+    },
+    "95f465cd-6794-4ff4-b926-e94afd341ebf": {
+      "type": "split_by_run_result",
+      "position": {
+        "left": 400,
+        "top": 620
+      },
+      "config": {
+        "operand": {
+          "id": "result_wfr",
+          "type": "result",
+          "name": "Result_wfr"
+        },
+        "cases": {}
+      }
+    },
+    "bac467c9-e699-4211-bc70-3440414fd301": {
+      "type": "split_by_groups",
+      "position": {
+        "left": 360,
+        "top": 740
+      },
+      "config": {
+        "cases": {}
+      }
+    },
+    "deda75fc-d136-4666-b7c5-f8a23b4a2cd8": {
+      "type": "wait_for_response",
+      "position": {
+        "left": 380,
+        "top": 880
+      },
+      "config": {
+        "cases": {}
+      }
+    },
+    "37538d9a-7920-474e-aeea-69037a39f111": {
+      "type": "split_by_random",
+      "position": {
+        "left": 280,
+        "top": 1060
+      },
+      "config": null
+    },
+    "8e97560c-a019-44bd-b65d-ae9e025e97cc": {
+      "position": {
+        "left": 120,
+        "top": 1180
+      },
+      "type": "execute_actions"
+    },
+    "224f6caa-fd25-47d3-96a9-3d43506b7878": {
+      "position": {
+        "left": 340,
+        "top": 1280
+      },
+      "type": "execute_actions"
+    },
+    "5beeda91-eeca-4287-a48e-7eebf5f3a7e7": {
+      "position": {
+        "left": 740,
+        "top": 300
+      },
+      "type": "execute_actions"
+    },
+    "acf35dbd-e737-469d-95c3-798544bfbfe5": {
+      "position": {
+        "left": 600,
+        "top": 1060
+      },
+      "type": "execute_actions"
+    }
+  },
+  "stickies": {}
+}

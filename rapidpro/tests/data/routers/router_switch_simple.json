@@ -1,0 +1,53 @@
+{
+  "type": "switch",
+  "default_category_uuid": "f3e14dc3-721e-4f8a-80bb-45a7ad6e5195",
+  "cases": [
+    {
+      "arguments": [
+        "a"
+      ],
+      "type": "has_any_word",
+      "uuid": "762d87ed-48b2-4fb0-991d-6d96c0310a36",
+      "category_uuid": "f98e5149-b6e6-47f2-bc04-428a2c1e0578"
+    },
+    {
+      "arguments": [
+        "b"
+      ],
+      "type": "has_any_word",
+      "uuid": "ae8145ad-04fe-4052-b3ce-ded2aac4d2dc",
+      "category_uuid": "32522ae3-d58c-4f6e-af03-4973100270cc"
+    },
+    {
+      "arguments": [
+        "c"
+      ],
+      "type": "has_any_word",
+      "uuid": "5548d62c-a30b-4760-96a8-1c542e240ec4",
+      "category_uuid": "4d15f4ba-8ca9-47c8-bee1-a68ac1227c5c"
+    }
+  ],
+  "categories": [
+    {
+      "uuid": "f98e5149-b6e6-47f2-bc04-428a2c1e0578",
+      "name": "A",
+      "exit_uuid": "6e72636e-7300-4cda-a675-3a5009a8f4e1"
+    },
+    {
+      "uuid": "32522ae3-d58c-4f6e-af03-4973100270cc",
+      "name": "B",
+      "exit_uuid": "64120394-ece0-4cd7-9870-3625a61549ca"
+    },
+    {
+      "uuid": "4d15f4ba-8ca9-47c8-bee1-a68ac1227c5c",
+      "name": "C",
+      "exit_uuid": "22431ae2-5e5d-4432-ae5d-94045d520ed7"
+    },
+    {
+      "uuid": "f3e14dc3-721e-4f8a-80bb-45a7ad6e5195",
+      "name": "Other",
+      "exit_uuid": "19c23a60-a734-465f-b55a-efe15e7c2537"
+    }
+  ],
+  "operand": "@input.text"
+}

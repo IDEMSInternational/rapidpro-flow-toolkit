@@ -1,4 +1,7 @@
 from rapidpro.utils import generate_new_uuid
+from rapidpro.models.nodes import BaseNode
+from rapidpro.models.actions import Group
+import copy
 
 
 class RapidProContainer:
@@ -10,6 +13,17 @@ class RapidProContainer:
         self.site = site or 'https://rapidpro.idems.international'
         self.triggers = triggers or []
         self.version = version
+
+    def from_dict(data):
+        data_copy = copy.deepcopy(data)
+        flows = data_copy.pop("flows")
+        flows = [FlowContainer.from_dict(flow) for flow in flows]
+        groups = data_copy.pop("groups")
+        groups = [Group.from_dict(group) for group in groups]
+        container = RapidProContainer(**data_copy)
+        container.flows = flows
+        container.groups = groups
+        return container
 
     def add_flow(self, flow):
         self.flows.append(flow)
@@ -41,29 +55,47 @@ class RapidProContainer:
 
     def render(self):
         return {
-            "campaigns": [], # self.campaigns,
-            "fields": [], # self.fields,
+            "campaigns": self.campaigns,
+            "fields": self.fields,
             "flows": [flow.render() for flow in self.flows],
-            "groups": [], # self.groups,
+            "groups": [group.render() for group in self.groups],
             "site": self.site,
-            "triggers": [], # self.triggers,
+            "triggers": self.triggers,
             "version": self.version,
         }
 
 
 class FlowContainer:
-    def __init__(self, flow_name, type='messaging', language='eng', uuid=None):
+    def __init__(self, flow_name, type='messaging', language='eng', uuid=None, spec_version='13.1.0', revision=0, expire_after_minutes=10080, metadata=None, localization=None, ui=None):
+        # UI is not part of this as it is captured within the nodes.
+        # Localization/ui may be handled differently in the future (e.g. stored within nodes or similar)
+        # The field is likely to be dropped from here, and only here temporarily to avoid losing its data.
         self.uuid = uuid or generate_new_uuid()
         self.name = flow_name
         self.language = language
         self.type = type
         self.nodes = []
-        # 'spec_version': '13.1.0',
-        # '_ui': None,
-        # 'revision': 0,
-        # 'expire_after_minutes': 60,
-        # 'metadata': {'revision': 0},
-        # 'localization': {}
+        self.spec_version = spec_version
+        self.revision = revision
+        self.expire_after_minutes = expire_after_minutes
+        self.metadata = metadata or {}
+        self.localization = localization or {}
+        self.ui = ui or {}
+
+    def from_dict(data):
+        data_copy = copy.deepcopy(data)
+        name = data_copy.pop("name")
+        data_copy["flow_name"] = name
+        if "_ui" in data_copy:
+            ui = data_copy.pop("_ui")
+            data_copy["ui"] = ui
+        else:
+            data_copy["ui"] = {}
+        nodes = data_copy.pop("nodes")
+        nodes = [BaseNode.from_dict(node) for node in nodes]
+        flow_container = FlowContainer(**data_copy)
+        flow_container.nodes = nodes
+        return flow_container
 
     def add_node(self, node):
         self.nodes.append(node)
@@ -77,14 +109,21 @@ class FlowContainer:
             node.assign_global_uuids(uuid_dict)
 
     def render(self):
-        return {
+        render_dict = {
             "uuid": self.uuid,
             "name": self.name,
             "language": self.language,
             "type": self.type,
             "nodes": [node.render() for node in self.nodes],
-            "spec_version": "13.1.0"
+            "spec_version": self.spec_version,
+            "revision": self.revision,
+            "expire_after_minutes": self.expire_after_minutes,
+            "metadata": self.metadata,
+            "localization": self.localization
         }
+        if self.ui:
+            render_dict["_ui"] = self.ui
+        return render_dict
 
 
 class UUIDDict:

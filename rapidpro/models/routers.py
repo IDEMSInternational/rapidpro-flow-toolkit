@@ -8,11 +8,26 @@ logger = logging.getLogger(__name__)
 
 
 class BaseRouter:
-    def __init__(self, result_name=None):
+    def __init__(self, result_name=None, categories=None):
         self.type = None
-        self.categories = []
+        self.categories = categories or []
         self.result_name = result_name
 
+    def from_dict(data, exits):
+        if data["type"] == "random":
+            return RandomRouter.from_dict(data, exits)
+        elif data["type"] == "switch":
+            return SwitchRouter.from_dict(data, exits)
+        else:
+            raise ValueError("Router data has invalid router type.")
+
+    def _get_result_name_and_categories_from_data(data, exits):
+        categories = [RouterCategory.from_dict(category_data, exits) for category_data in data["categories"]]
+        result_name = None
+        if "result_name" in data:
+            result_name = data["result_name"]
+        return result_name, categories
+        
     def set_result_name(self, result_name):
         # TODO: Check that this works
         self.result_name = result_name
@@ -44,17 +59,33 @@ class BaseRouter:
 
 class SwitchRouter(BaseRouter):
 
-    def __init__(self, operand, result_name=None, wait_for_message=False):
+    def __init__(self, operand, result_name=None, wait_for_message=False, cases=None, categories=None, default_category=None):
+        # TODO: implement wait field
         super().__init__(result_name)
         self.type = 'switch'
         self.operand = operand
-        self.cases = []
+        self.cases = cases or []
         self.wait_for_message = wait_for_message
-        # Add an implicit default category
-        category = RouterCategory('Other', None)
-        self.default_category = category
-        # Indicates that a default category has been added by the user
-        self.has_explicit_default_category = False
+        if categories and default_category:
+            self.categories = categories
+            self.default_category = default_category
+            self.has_explicit_default_category = True
+        else:
+            # Add an implicit default category
+            category = RouterCategory('Other', None)
+            self.default_category = category
+            # Indicates that a default category has been added by the user
+            self.has_explicit_default_category = False
+
+    def from_dict(data, exits):
+        # TODO: implement wait field
+        result_name, categories = BaseRouter._get_result_name_and_categories_from_data(data, exits)
+        cases = [RouterCase.from_dict(case_data) for case_data in data["cases"]]
+        default_categories = [category for category in categories if category.uuid == data["default_category_uuid"]]
+        other_categories = [category for category in categories if category.uuid != data["default_category_uuid"]]
+        if not default_categories:
+            raise ValueError("Default category uuid does not match any category.")
+        return SwitchRouter(data["operand"], result_name, False, cases, other_categories, default_categories[0])
 
     def _get_case_or_none(self, comparison_type, arguments, category_uuid):
         for case in self.cases:
@@ -155,9 +186,13 @@ class SwitchRouter(BaseRouter):
 
 
 class RandomRouter(BaseRouter):
-    def __init__(self, result_name=None):
-        super().__init__(result_name)
+    def __init__(self, result_name=None, categories=None):
+        super().__init__(result_name, categories)
         self.type = 'random'
+
+    def from_dict(data, exits):
+        result_name, categories = BaseRouter._get_result_name_and_categories_from_data(data, exits)
+        return RandomRouter(result_name, categories)
 
     def add_choice(self, category_name=None, destination_uuid=None):
         if not category_name:
@@ -184,21 +219,35 @@ class RandomRouter(BaseRouter):
 
 
 class RouterCategory:
-    def __init__(self, name, destination_uuid):
+    def __init__(self, name, destination_uuid=None, uuid=None, exit_uuid=None, exit=None):
         """
         :param name: Name of the category
         :param destination_uuid: The UUID of the node that this category should point to
+
+        The destination of the category can be provided either as a destination_uuid or an exit.
         """
-        self.uuid = generate_new_uuid()
+        self.uuid = uuid or generate_new_uuid()
         self.name = name
-        self.exit_uuid = generate_new_uuid()
-        self.destination_uuid = destination_uuid
+        if exit:
+            self.exit = exit
+        else:
+            self.exit = Exit(uuid=exit_uuid or generate_new_uuid(), destination_uuid=destination_uuid)
+
+    def from_dict(data, exits):
+        """
+        :param data: The router in json format, as in RapidPro flows.
+        :param exits: A list of exit objects containing an exit the category connects to.
+        """
+        matching_exits = [exit for exit in exits if exit.uuid == data["exit_uuid"]]
+        if not matching_exits:
+            raise ValueError("RouterCategory with no matching exit.")
+        return RouterCategory(name=data["name"], uuid=data["uuid"], exit=matching_exits[0])
 
     def get_exit(self):
-        return Exit(exit_uuid=self.exit_uuid, destination_uuid=self.destination_uuid)
+        return self.exit
 
     def update_destination_uuid(self, uuid):
-        self.destination_uuid = uuid
+        self.exit.destination_uuid = uuid
 
     def update_name(self, name):
         self.name = name 
@@ -207,16 +256,19 @@ class RouterCategory:
         return {
             'uuid': self.uuid,
             'name': self.name,
-            'exit_uuid': self.exit_uuid,
+            'exit_uuid': self.exit.uuid,
         }
 
 
 class RouterCase:
-    def __init__(self, comparison_type, arguments, category_uuid):
-        self.uuid = generate_new_uuid()
+    def __init__(self, comparison_type, arguments, category_uuid, uuid=None):
+        self.uuid = uuid or generate_new_uuid()
         self.type = comparison_type
         self.arguments = arguments
         self.category_uuid = category_uuid
+
+    def from_dict(data):
+        return RouterCase(data["type"], data["arguments"], data["category_uuid"], data["uuid"])
 
     def render(self):
         return {

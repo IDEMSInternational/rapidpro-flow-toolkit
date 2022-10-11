@@ -1,0 +1,5 @@
+{
+    "type": "call_resthook",
+    "uuid": "8eebd020-1af5-431c-b943-aa670fc74da9",
+    "resthook": "new-registration"
+}

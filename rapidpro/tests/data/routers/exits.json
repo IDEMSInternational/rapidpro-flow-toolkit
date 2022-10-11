@@ -1,0 +1,22 @@
+[
+  {
+    "uuid": "6e72636e-7300-4cda-a675-3a5009a8f4e1",
+    "destination_uuid": "369811ce-9dd7-4f69-b554-fb8bbbe505ac"
+  },
+  {
+    "uuid": "64120394-ece0-4cd7-9870-3625a61549ca",
+    "destination_uuid": "ee74eaef-e8dd-42bb-965a-03e34cb5ef13"
+  },
+  {
+    "uuid": "22431ae2-5e5d-4432-ae5d-94045d520ed7",
+    "destination_uuid": "369811ce-9dd7-4f69-b554-fb8bbbe505ac"
+  },
+  {
+    "uuid": "19c23a60-a734-465f-b55a-efe15e7c2537",
+    "destination_uuid": "369811ce-9dd7-4f69-b554-fb8bbbe505ac"
+  },
+  {
+    "uuid": "78938c7e-ce5b-47f7-b13a-f552a0889f34",
+    "destination_uuid": null
+  }
+]
