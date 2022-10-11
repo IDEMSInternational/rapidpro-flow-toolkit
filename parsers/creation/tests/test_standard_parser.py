@@ -139,7 +139,6 @@ class TestParsing(unittest.TestCase):
         self.assertIsNone(node_start.get('router'))
         self.assertIsNotNone(node_switch.get('router'))
 
-
     def test_no_switch_node_rows(self):
         rows = get_dict_from_csv('input/no_switch_nodes.csv')
         no_switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
@@ -147,6 +146,12 @@ class TestParsing(unittest.TestCase):
         parser.data_rows = no_switch_node_rows
         parser.parse()
         render_output = parser.container.render()
+
+        # Check that node UUIDs are maintained
+        nodes = render_output['nodes']
+        actual_node_uuids = [node['uuid'] for node in nodes]
+        expected_node_uuids = [row['_nodeId'] for row in rows][3:]  # The first 4 rows are actions joined into a single node.
+        self.assertEqual(expected_node_uuids, actual_node_uuids)
 
         self.assertEqual(render_output['name'], 'no_switch_node')
         self.assertEqual(render_output['type'], 'messaging')
@@ -235,8 +240,15 @@ class TestParsing(unittest.TestCase):
         parser.parse()
 
         render_output = parser.container.render()
+
+        # Check that node UUIDs are maintained
+        nodes = render_output['nodes']
+        actual_node_uuids = [node['uuid'] for node in nodes]
+        expected_node_uuids = [row['_nodeId'] for row in rows]
+        self.assertEqual(expected_node_uuids, actual_node_uuids)
+
         # Check that No Response category is created even if not connected
-        last_node = render_output['nodes'][-1]
+        last_node = nodes[-1]
         self.assertEqual('No Response', last_node['router']['categories'][-1]['name'])
 
         # TODO: Ideally, there should be more explicit tests here.

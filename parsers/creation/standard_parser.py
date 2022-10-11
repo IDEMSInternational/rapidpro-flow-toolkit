@@ -161,26 +161,26 @@ class Parser:
         return Group(name=name, uuid=uuid)
 
     def get_row_node(self, row):
+        node_uuid = row.node_uuid or None
         if row.type in ['send_message', 'save_value', 'add_to_group', 'remove_from_group', 'save_flow_result']:
-            node = BasicNode()
+            node = BasicNode(uuid=node_uuid)
             node.update_default_exit(None)
             return node
         elif row.type in ['start_new_flow']:
-            return EnterFlowNode(row.mainarg_flow_name)
+            return EnterFlowNode(row.mainarg_flow_name, uuid=node_uuid)
         elif row.type in ['wait_for_response']:
-            # TODO: Support timeout and timeout category
             if row.no_response:
-                return SwitchRouterNode('@input.text', result_name=row.save_name, wait_timeout=int(row.no_response))
+                return SwitchRouterNode('@input.text', result_name=row.save_name, wait_timeout=int(row.no_response), uuid=node_uuid)
             else:
-                return SwitchRouterNode('@input.text', result_name=row.save_name, wait_timeout=None)
+                return SwitchRouterNode('@input.text', result_name=row.save_name, wait_timeout=None, uuid=node_uuid)
         elif row.type in ['split_by_value']:
-            return SwitchRouterNode(row.mainarg_expression, result_name=row.save_name, wait_timeout=None)
+            return SwitchRouterNode(row.mainarg_expression, result_name=row.save_name, wait_timeout=None, uuid=node_uuid)
         elif row.type in ['split_by_group']:
-            return SwitchRouterNode('@contact.groups', result_name=row.save_name, wait_timeout=None)
+            return SwitchRouterNode('@contact.groups', result_name=row.save_name, wait_timeout=None, uuid=node_uuid)
         elif row.type in ['split_random']:
-            return RandomRouterNode(result_name=row.save_name)
+            return RandomRouterNode(result_name=row.save_name, uuid=node_uuid)
         else:
-            return BasicNode()
+            return BasicNode(uuid=node_uuid)
 
     def get_node_name(self, row):
         return row.node_uuid or row.node_name
