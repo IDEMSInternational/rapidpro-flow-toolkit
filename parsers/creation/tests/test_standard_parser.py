@@ -303,4 +303,14 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(nodes[3]['router']['cases'][0]['arguments'], [test_uuid, 'test group'])
         # This UUID was part of the groups in the container, but not in the sheet
         self.assertEqual(nodes[7]['actions'][0]['groups'], [other_group_dict])
-        
+
+        tiny_flow.uuid = 'something else'
+        with self.assertRaises(ValueError):
+            # The enter_flow node has a different uuid than the flow
+            container.validate()
+
+        tiny_flow.uuid = tiny_uuid
+        container.flows[1].nodes[2].actions[0].groups[0].uuid = 'something else'
+        with self.assertRaises(ValueError):
+            # The group is referenced by 2 different UUIDs
+            container.validate()
