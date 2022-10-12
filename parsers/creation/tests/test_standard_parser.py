@@ -3,6 +3,9 @@ import unittest
 
 from parsers.creation.standard_parser import Parser
 from tests.utils import get_dict_from_csv, find_destination_uuid, Context, find_node_by_uuid
+from rapidpro.models.containers import RapidProContainer, FlowContainer
+from rapidpro.models.actions import Group, AddContactGroupAction
+from rapidpro.models.nodes import BasicNode
 
 from parsers.common.rowparser import RowParser
 from parsers.creation.standard_models import RowData
@@ -50,10 +53,10 @@ class TestParsing(unittest.TestCase):
         self.row_parser = RowParser(RowData, CellParser())
 
     def test_send_message(self):
-        parser = Parser(rows=[], flow_name='send_message')
+        parser = Parser(RapidProContainer(), rows=[], flow_name='send_message')
         parser.data_rows = [get_start_row()]
         parser.parse()
-        render_output = parser.container.render()
+        render_output = parser.flow_container.render()
 
         node_0 = render_output['nodes'][0]
         node_0_actions = node_0['actions']
@@ -66,10 +69,10 @@ class TestParsing(unittest.TestCase):
     def test_linear(self):
         data_row1 = get_start_row()
         data_row2 = get_unconditional_node_from_1()
-        parser = Parser(rows=[], flow_name='linear')
+        parser = Parser(RapidProContainer(), rows=[], flow_name='linear')
         parser.data_rows = [data_row1, data_row2]
         parser.parse()
-        render_output = parser.container.render()
+        render_output = parser.flow_container.render()
 
         node_0 = render_output['nodes'][0]
         node_1 = render_output['nodes'][1]
@@ -84,10 +87,10 @@ class TestParsing(unittest.TestCase):
     def test_only_conditional(self):
         data_row1 = get_start_row()
         data_row3 = get_conditional_node_from_1()
-        parser = Parser(rows=[], flow_name='only_conditional')
+        parser = Parser(RapidProContainer(), rows=[], flow_name='only_conditional')
         parser.data_rows = [data_row1, data_row3]
         parser.parse()
-        render_output = parser.container.render()
+        render_output = parser.flow_container.render()
 
         self.assertEqual(len(render_output['nodes']), 3)
         node_0 = render_output['nodes'][0]
@@ -119,10 +122,10 @@ class TestParsing(unittest.TestCase):
         self.check_split(data_rows)
 
     def check_split(self, data_rows):
-        parser = Parser(rows=[], flow_name='split')
+        parser = Parser(RapidProContainer(), rows=[], flow_name='split')
         parser.data_rows = data_rows
         parser.parse()
-        render_output = parser.container.render()
+        render_output = parser.flow_container.render()
 
         node_start = render_output['nodes'][0]
         node_switch = find_node_by_uuid(render_output, node_start['exits'][0]['destination_uuid'])
@@ -139,14 +142,19 @@ class TestParsing(unittest.TestCase):
         self.assertIsNone(node_start.get('router'))
         self.assertIsNotNone(node_switch.get('router'))
 
-
     def test_no_switch_node_rows(self):
         rows = get_dict_from_csv('input/no_switch_nodes.csv')
         no_switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
-        parser = Parser(rows=[], flow_name='no_switch_node')
+        parser = Parser(RapidProContainer(), rows=[], flow_name='no_switch_node')
         parser.data_rows = no_switch_node_rows
         parser.parse()
-        render_output = parser.container.render()
+        render_output = parser.flow_container.render()
+
+        # Check that node UUIDs are maintained
+        nodes = render_output['nodes']
+        actual_node_uuids = [node['uuid'] for node in nodes]
+        expected_node_uuids = [row['_nodeId'] for row in rows][3:]  # The first 4 rows are actions joined into a single node.
+        self.assertEqual(expected_node_uuids, actual_node_uuids)
 
         self.assertEqual(render_output['name'], 'no_switch_node')
         self.assertEqual(render_output['type'], 'messaging')
@@ -230,15 +238,79 @@ class TestParsing(unittest.TestCase):
     def test_switch_node_rows(self):
         rows = get_dict_from_csv('input/switch_nodes.csv')
         switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
-        parser = Parser(rows=[], flow_name='switch_node')
+        parser = Parser(RapidProContainer(), rows=[], flow_name='switch_node')
         parser.data_rows = switch_node_rows
         parser.parse()
 
-        render_output = parser.container.render()
+        render_output = parser.flow_container.render()
+
+        # Check that node UUIDs are maintained
+        nodes = render_output['nodes']
+        actual_node_uuids = [node['uuid'] for node in nodes]
+        expected_node_uuids = [row['_nodeId'] for row in rows]
+        self.assertEqual(expected_node_uuids, actual_node_uuids)
+
         # Check that No Response category is created even if not connected
-        last_node = render_output['nodes'][-1]
+        last_node = nodes[-1]
         self.assertEqual('No Response', last_node['router']['categories'][-1]['name'])
 
         # TODO: Ideally, there should be more explicit tests here.
         # At least the functionality is covered by the integration tests simulating the flow.
         # print(json.dumps(render_output, indent=2))
+
+    def test_groups_and_flows(self):
+        # We check that references flows and group are assigned uuids consistently
+        tiny_uuid = '00000000-acec-434f-bc7c-14c584fc4bc8'
+        test_uuid = '8224bfe2-acec-434f-bc7c-14c584fc4bc8'
+        other_uuid = '12345678-acec-434f-bc7c-14c584fc4bc8'
+        test_group_dict = {'name': 'test group', 'uuid' : test_uuid}
+        other_group_dict = {'name': 'other group', 'uuid' : other_uuid}
+        tiny_flow_dict = {'name': 'tiny_flow', 'uuid' : tiny_uuid}
+
+        # Make a flow with a single group node (no UUIDs), and put it into new container
+        node = BasicNode()
+        node.add_action(AddContactGroupAction([Group('test group'), Group('other group')]))
+        tiny_flow = FlowContainer('tiny_flow', uuid=tiny_uuid)
+        tiny_flow.add_node(node)
+        container = RapidProContainer(groups=[Group('other group', other_uuid)])
+        container.add_flow(tiny_flow)
+
+        # Add flow from sheet into container
+        rows = get_dict_from_csv('input/groups_and_flows.csv')
+        switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
+        parser = Parser(container, rows=[], flow_name='groups_and_flows')
+        parser.data_rows = switch_node_rows
+        parser.parse()
+        container.add_flow(parser.get_flow())
+
+        # Render also invokes filling in all the flow/group UUIDs
+        render_output = container.render()
+
+        # Ensure container groups are complete and have correct UUIDs
+        self.assertIn(test_group_dict, render_output['groups'])
+        self.assertIn(other_group_dict, render_output['groups'])
+        # These UUIDs are inferred from the sheet/the container groups, respectively
+        self.assertEqual(render_output['flows'][0]['nodes'][0]['actions'][0]['groups'], [test_group_dict, other_group_dict])
+
+        nodes = render_output['flows'][1]['nodes']
+        # This UUID appears only in a later occurrence of the group in the sheet
+        self.assertEqual(nodes[0]['actions'][0]['groups'], [test_group_dict])
+        # This UUID is missing from the sheet, but explicit in the flow definition
+        self.assertEqual(nodes[1]['actions'][0]['flow'], tiny_flow_dict)
+        # This UUID is explicit in the sheet
+        self.assertEqual(nodes[2]['actions'][0]['groups'], [test_group_dict])
+        # This UUID appears in a previous occurrence of the group in the sheet
+        self.assertEqual(nodes[3]['router']['cases'][0]['arguments'], [test_uuid, 'test group'])
+        # This UUID was part of the groups in the container, but not in the sheet
+        self.assertEqual(nodes[7]['actions'][0]['groups'], [other_group_dict])
+
+        tiny_flow.uuid = 'something else'
+        with self.assertRaises(ValueError):
+            # The enter_flow node has a different uuid than the flow
+            container.validate()
+
+        tiny_flow.uuid = tiny_uuid
+        container.flows[1].nodes[2].actions[0].groups[0].uuid = 'something else'
+        with self.assertRaises(ValueError):
+            # The group is referenced by 2 different UUIDs
+            container.validate()
