@@ -13,6 +13,7 @@ class RapidProContainer:
         self.site = site or 'https://rapidpro.idems.international'
         self.triggers = triggers or []
         self.version = version
+        self.uuid_dict = UUIDDict()
 
     def from_dict(data):
         data_copy = copy.deepcopy(data)
@@ -28,22 +29,25 @@ class RapidProContainer:
     def add_flow(self, flow):
         self.flows.append(flow)
 
-    def update_global_uuids(self, uuid_dict=None):
-        if uuid_dict is None:
-            uuid_dict = UUIDDict()
+    def record_group_uuid(self, name, uuid):
+        self.uuid_dict.record_group_uuid(name, uuid)
+
+    def record_flow_uuid(self, name, uuid):
+        self.uuid_dict.record_flow_uuid(name, uuid)
+
+    def update_global_uuids(self):
         # Prefill with existings flows and groups
         for group in self.groups:
-            uuid_dict.record_group_uuid(group.name, group.uuid)
+            self.uuid_dict.record_group_uuid(group.name, group.uuid)
         for flow in self.flows:
-            uuid_dict.record_flow_uuid(flow.name, flow.uuid)
+            self.uuid_dict.record_flow_uuid(flow.name, flow.uuid)
 
         # Update group/flow UUIDs referenced within the flows
         for flow in self.flows:
-            flow.record_global_uuids(uuid_dict)
-        uuid_dict.generate_missing_uuids()
+            flow.record_global_uuids(self.uuid_dict)
+        self.uuid_dict.generate_missing_uuids()
         for flow in self.flows:
-            flow.assign_global_uuids(uuid_dict)
-        # TODO: Update self.groups
+            flow.assign_global_uuids(self.uuid_dict)
 
     def merge(self, container):
         '''Merge another RapidPro container into this one.
@@ -53,7 +57,13 @@ class RapidProContainer:
         '''
         raise NotImplementedError
 
+    def validate(self):
+        self.update_global_uuids()
+        self.groups = self.uuid_dict.get_group_list()
+        # TODO: Update self.fields
+
     def render(self):
+        self.validate()
         return {
             "campaigns": self.campaigns,
             "fields": self.fields,
@@ -140,12 +150,12 @@ class UUIDDict:
                 self.group_dict[k] = generate_new_uuid()
 
     def record_group_uuid(self, name, uuid):
-        self.record_uuid(self.group_dict, name, uuid)
+        self._record_uuid(self.group_dict, name, uuid)
 
     def record_flow_uuid(self, name, uuid):
-        self.record_uuid(self.flow_dict, name, uuid)
+        self._record_uuid(self.flow_dict, name, uuid)
 
-    def record_uuid(self, uuid_dict, name, uuid):
+    def _record_uuid(self, uuid_dict, name, uuid):
         recorded_uuid = uuid_dict.get(name)
         if recorded_uuid:
             if uuid and uuid != recorded_uuid:
@@ -158,3 +168,6 @@ class UUIDDict:
 
     def get_flow_uuid(self, name):
         return self.flow_dict[name]
+
+    def get_group_list(self):
+        return [Group(name, uuid) for name, uuid in self.group_dict.items()]

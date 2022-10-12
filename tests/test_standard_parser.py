@@ -4,7 +4,7 @@ import copy
 
 from .utils import traverse_flow, Context, get_dict_from_csv
 from parsers.creation.standard_parser import Parser
-
+from rapidpro.models.containers import RapidProContainer
 
 class TestStandardParser(unittest.TestCase):
     def setUp(self) -> None:
@@ -12,9 +12,9 @@ class TestStandardParser(unittest.TestCase):
 
     def run_example(self, filename, flow_name, context):
         rows = get_dict_from_csv(filename)
-        parser = Parser(rows=rows, flow_name=flow_name)
+        parser = Parser(RapidProContainer(), rows=rows, flow_name=flow_name)
         parser.parse()
-        output_flow = parser.container.render()
+        output_flow = parser.flow_container.render()
         # print(json.dumps(output_flow, indent=2))
 
         with open("tests/output/all_test_flows.json", 'r') as file:
