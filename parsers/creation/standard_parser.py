@@ -170,27 +170,32 @@ class Parser:
             self.rapidpro_container.record_group_uuid(row.mainarg_groups[0], row.obj_id)
 
         node_uuid = row.node_uuid or None
+        if row.ui_position:
+            ui_pos = [int(coord) for coord in row.ui_position]  # List[str] -> List[int]
+            assert len(ui_pos) == 2
+        else:
+            ui_pos = None
         if row.type in ['send_message', 'save_value', 'add_to_group', 'remove_from_group', 'save_flow_result']:
-            node = BasicNode(uuid=node_uuid)
+            node = BasicNode(uuid=node_uuid, ui_pos=ui_pos)
             node.update_default_exit(None)
             return node
         elif row.type in ['start_new_flow']:
             if row.obj_id:
                 self.rapidpro_container.record_flow_uuid(row.mainarg_flow_name, row.obj_id)
-            return EnterFlowNode(row.mainarg_flow_name, uuid=node_uuid)
+            return EnterFlowNode(row.mainarg_flow_name, uuid=node_uuid, ui_pos=ui_pos)
         elif row.type in ['wait_for_response']:
             if row.no_response:
-                return SwitchRouterNode('@input.text', result_name=row.save_name, wait_timeout=int(row.no_response), uuid=node_uuid)
+                return SwitchRouterNode('@input.text', result_name=row.save_name, wait_timeout=int(row.no_response), uuid=node_uuid, ui_pos=ui_pos)
             else:
-                return SwitchRouterNode('@input.text', result_name=row.save_name, wait_timeout=None, uuid=node_uuid)
+                return SwitchRouterNode('@input.text', result_name=row.save_name, wait_timeout=0, uuid=node_uuid, ui_pos=ui_pos)
         elif row.type in ['split_by_value']:
-            return SwitchRouterNode(row.mainarg_expression, result_name=row.save_name, wait_timeout=None, uuid=node_uuid)
+            return SwitchRouterNode(row.mainarg_expression, result_name=row.save_name, wait_timeout=None, uuid=node_uuid, ui_pos=ui_pos)
         elif row.type in ['split_by_group']:
-            return SwitchRouterNode('@contact.groups', result_name=row.save_name, wait_timeout=None, uuid=node_uuid)
+            return SwitchRouterNode('@contact.groups', result_name=row.save_name, wait_timeout=None, uuid=node_uuid, ui_pos=ui_pos)
         elif row.type in ['split_random']:
-            return RandomRouterNode(result_name=row.save_name, uuid=node_uuid)
+            return RandomRouterNode(result_name=row.save_name, uuid=node_uuid, ui_pos=ui_pos)
         else:
-            return BasicNode(uuid=node_uuid)
+            return BasicNode(uuid=node_uuid, ui_pos=ui_pos)
 
     def get_node_name(self, row):
         return row.node_uuid or row.node_name

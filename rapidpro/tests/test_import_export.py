@@ -20,7 +20,7 @@ class TestActions(unittest.TestCase):
                action_data = json.load(f)
             action = Action.from_dict(action_data)
             render_output = action.render()
-            self.assertEqual(render_output, action_data)
+            self.assertEqual(render_output, action_data, msg=filename)
 
     def test_exits(self):
         with open('rapidpro/tests/data/exits/exit.json', 'r') as f:
@@ -67,7 +67,7 @@ class TestActions(unittest.TestCase):
             exits = [Exit.from_dict(exit) for exit in exit_data]
             router = BaseRouter.from_dict(router_data, exits)
             render_output = router.render()
-            self.assertEqual(render_output, router_data)
+            self.assertEqual(render_output, router_data, msg=filename)
 
     def test_all_node_types(self):
         self.maxDiff = None
@@ -77,11 +77,10 @@ class TestActions(unittest.TestCase):
                node_data = json.load(f)
             node = BaseNode.from_dict(node_data)
             render_output = node.render()
-            self.assertEqual(render_output, node_data)
+            self.assertEqual(render_output, node_data, msg=filename)
 
     def test_flow_containers(self):
         self.maxDiff = None
-        # TODO: Add test with multiple nodes to ensure order is maintained
         # TODO: Add test with localization (of different objects) to ensure it is maintained
         containerFilenamesList = glob.glob('rapidpro/tests/data/containers/flow_container_*.json')
         for filename in containerFilenamesList:
@@ -89,7 +88,8 @@ class TestActions(unittest.TestCase):
                container_data = json.load(f)
             container = FlowContainer.from_dict(container_data)
             render_output = container.render()
-            self.assertEqual(render_output, container_data)
+            # TODO: compare nodes/UI element-wise, for smaller error output?
+            self.assertEqual(render_output, container_data, msg=filename)
 
     def test_rapidpro_containers(self):
         self.maxDiff = None
@@ -99,4 +99,4 @@ class TestActions(unittest.TestCase):
                container_data = json.load(f)
             container = RapidProContainer.from_dict(container_data)
             render_output = container.render()
-            self.assertEqual(render_output, container_data)
+            self.assertEqual(render_output, container_data, msg=filename)

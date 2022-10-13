@@ -1,34 +1,23 @@
+import re
+
 from rapidpro.models.actions import Action, EnterFlowAction
 from rapidpro.models.common import Exit
 
 from rapidpro.models.routers import SwitchRouter, RandomRouter
 from rapidpro.utils import generate_new_uuid
 
-
-# In practice, nodes have either a router or a non-zero amount of actions.
-#     (I don't know if this is a technical restriction, or convention to make
-#     visualization in the UI work.)
-# The only exception is enter_flow, which has both.
-#     (a flow can be completed or expire, hence the router)
-# A node with neither is meaningless, so our output shouldn't have such nodes
-
-
-# I believe that it is true that whenever we create a node,
-# we know what type of node it is.
-# Thus it is sensible to implement nodes via classes
-# Class tree (suggestion)
-# GenericNode (allows for actions)
-#   SwitchRouterNode
+# TODO: EnterFlowNode and WebhookNode are currently children of BaseNode.
+# Ideal class tree of nodes:
+# BaseNode
+#   BasicNode (allows for actions, only has one exit [no router])
+#   SwitchRouterNode (has router and multiple exits; should support actions for its subclasses.)
 #     EnterFlowNode
 #     WebhookNode
 #   RandomRouterNode
-# possibly more: dedicated subclasses for any kind of node where
-# there is extra complexity that goes beyond the Action object.
-#   wait_for_response is a potential instance of that
 
 
 class BaseNode:
-    def __init__(self, uuid=None, destination_uuid=None, default_exit=None, actions=None):
+    def __init__(self, uuid=None, destination_uuid=None, default_exit=None, actions=None, ui_pos=None):
         self.uuid = uuid or generate_new_uuid()
         self.actions = actions or []
         self.router = None
@@ -43,6 +32,7 @@ class BaseNode:
         else:
             self.default_exit = Exit(destination_uuid=destination_uuid or None)
         self.exits = [self.default_exit]
+        self.ui_pos = ui_pos
 
     def from_dict(data, ui_data=None):
         if "router" in data:
@@ -51,12 +41,21 @@ class BaseNode:
             elif data["router"]["type"] == "switch":
                 if data["router"]["operand"] == "@child.run.status":
                     return EnterFlowNode.from_dict(data, ui_data)
+                elif data["router"]["operand"] == "@results.webhook_result.category":
+                    return WebhookNode.from_dict(data, ui_data)
                 else:
                     return SwitchRouterNode.from_dict(data, ui_data)
             else:
                 raise ValueError("Node contains router of invalid type")
         else:
             return BasicNode.from_dict(data, ui_data)
+
+    def add_ui_from_dict(self, ui_dict):
+        if self.uuid in ui_dict:
+            pos_dict = ui_dict[self.uuid]['position']
+            self.ui_pos = (pos_dict['left'], pos_dict['top'])
+        else:
+            self.ui_pos = None
 
     def update_default_exit(self, destination_uuid):
         # TODO: Think of any caveats to storing a node rather than a UUID
@@ -97,14 +96,27 @@ class BaseNode:
         # recursively render the elements of the node
         fields = {
             'uuid': self.uuid,
-            'actions': [action.render() for action in self.actions],
             'exits': [exit.render() for exit in self._get_exits()],
         }
+        if self.actions is not None:
+            fields['actions'] = [action.render() for action in self.actions]
         if self.router is not None:
             fields.update({
                 'router': self.router.render(),
             })
         return fields
+
+    def render_ui(self):
+        if self.ui_pos:
+            return {
+                'position' : {
+                    'left' : self.ui_pos[0],
+                    'top' : self.ui_pos[1],
+                },
+                'type' : 'execute_actions'
+            }
+        else:
+            return None
 
 
 class BasicNode(BaseNode):
@@ -130,12 +142,11 @@ class BasicNode(BaseNode):
 
 class SwitchRouterNode(BaseNode):
 
-    def __init__(self, operand=None, result_name=None, wait_timeout=None, uuid=None, router=None):
-        # TODO: Support proper wait, not just true/false
+    def __init__(self, operand=None, result_name=None, wait_timeout=None, uuid=None, router=None, ui_pos=None):
         '''
         Either an operand or a router need to be provided
         '''
-        super().__init__(uuid)
+        super().__init__(uuid, ui_pos=ui_pos)
         if router:
             self.router = router
         else:
@@ -180,11 +191,69 @@ class SwitchRouterNode(BaseNode):
     def _get_exits(self):
         return self.router.get_exits()
 
+    def render_ui(self):
+        ui_entry = super().render_ui()
+        if not ui_entry:
+            return None
+        matches_scheme = re.match(r'@\(default\(urn_parts\(urns\.([a-z]+)\)\.path,\s+""\)\)', self.router.operand)
+        # TODO: for results/fields, the title cannot be inferred from the id alone.
+        # We should therefore get it using a dict of fields.
+        if self.has_wait():
+            ui_entry['type'] = 'wait_for_response'
+            ui_entry['config'] = {'cases' : {}}
+        elif self.router.operand == '@contact.groups':
+            ui_entry['type'] = 'split_by_groups'
+            ui_entry['config'] = {'cases' : {}}
+        elif self.router.operand == '@(urn_parts(contact.urn).scheme)':
+            ui_entry['type'] = 'split_by_scheme'
+            ui_entry['config'] = {'cases' : {}}
+        elif self.router.operand.startswith('@contact.') or self.router.operand.startswith('@fields.') or matches_scheme:
+            if matches_scheme:
+                field_id = matches_scheme.group(1)
+                field_type = 'scheme'
+                field_title = field_id.title()
+                # TODO: Technically, the field name is custom here.
+                # For example, if the id is 'mailto', the name is 'Email Address'
+                # As the name is not very important, we ignore this for now.
+            else:
+                field_id = re.sub('(@contact.)|(@fields.)', '', self.router.operand)
+                field_title = field_id
+                if self.router.operand.startswith('@contact.') and field_id in ['name', 'language', 'channel']:
+                    field_type = 'property'
+                    field_title = field_id.title()
+                else:
+                    field_type = 'field'
+            ui_entry['type'] = 'split_by_contact_field'
+            ui_entry['config'] = {
+                'cases' : {},
+                'operand' : {
+                    'id' : field_id,
+                    'type' : field_type,  # TODO: can this take other values?
+                    'name' : field_title
+                }
+            }
+        elif self.router.operand.startswith('@results.'):
+            result_id = field_id = re.sub('(@results.)', '', self.router.operand)
+            result_title = result_id
+            ui_entry['type'] = 'split_by_run_result'
+            ui_entry['config'] = {
+                'cases' : {},
+                'operand' : {
+                    'id' : result_id,
+                    'type' : 'result',  # TODO: can this take other values?
+                    'name' : result_title  # This is a heuristic.
+                }
+            }
+        else:
+            ui_entry['type'] = 'split_by_expression'
+            ui_entry['config'] = {'cases' : {}}
+        return ui_entry
+
 
 class RandomRouterNode(BaseNode):
 
-    def __init__(self, result_name=None, uuid=None, router=None):
-        super().__init__(uuid)
+    def __init__(self, result_name=None, uuid=None, router=None, ui_pos=None):
+        super().__init__(uuid, ui_pos=ui_pos)
         if router:
             self.router = router
         else:
@@ -208,13 +277,21 @@ class RandomRouterNode(BaseNode):
     def _get_exits(self):
         return self.router.get_exits()
 
+    def render_ui(self):
+        ui_entry = super().render_ui()
+        if not ui_entry:
+            return None
+        ui_entry['type'] = 'split_by_random'
+        ui_entry['config'] = None
+        return ui_entry
+
 
 class EnterFlowNode(BaseNode):
-    def __init__(self, flow_name=None, complete_destination_uuid=None, expired_destination_uuid=None, uuid=None, router=None, action=None):
+    def __init__(self, flow_name=None, complete_destination_uuid=None, expired_destination_uuid=None, uuid=None, router=None, action=None, ui_pos=None):
         '''
         Either an action or a flow_name have to be provided.
         '''
-        super().__init__(uuid)
+        super().__init__(uuid, ui_pos=ui_pos)
 
         if action:
             if action.type != "enter_flow":
@@ -268,3 +345,85 @@ class EnterFlowNode(BaseNode):
     def _get_exits(self):
         return self.router.get_exits()
 
+    def render_ui(self):
+        ui_entry = super().render_ui()
+        if not ui_entry:
+            return None
+        ui_entry['type'] = 'split_by_subflow'
+        ui_entry['config'] = {}
+        return ui_entry
+
+
+class WebhookNode(BaseNode):
+    def __init__(self, result_name=None, url=None, method='GET', body='', headers=None, success_destination_uuid=None, failure_destination_uuid=None, uuid=None, router=None, action=None, ui_pos=None):
+        '''
+        Either an action or a flow_name have to be provided.
+        '''
+        super().__init__(uuid, ui_pos=ui_pos)
+
+        if action:
+            if action.type != "call_webhook":
+                raise ValueError("Action for WebhookNode must be of type call_webhook")
+            self.add_action(action)
+        else:
+            if not url or not result_name:
+                raise ValueError("Either an action or a url/result_name have to be provided.")
+            # This is kinda lazy, we might want a dedicated Webhook action.
+            action = Action.from_dict({
+                "type": "call_webhook",
+                "result_name": result_name,
+                "url": url,
+                "method": method,
+                "body": body,
+                "headers": headers or {},
+            })
+            self.add_action(action)
+
+        if router:
+            self.router = router
+        else:
+            self.router = SwitchRouter(operand='@results.webhook_result.category', result_name=None, wait_timeout=None)
+            self.router.default_category.update_name('Expired')
+
+            self.add_choice(comparison_variable='@results.webhook_result.category', comparison_type='has_only_text',
+                            comparison_arguments=['Success'], category_name='Success',
+                            destination_uuid=success_destination_uuid)
+            # Suppress the warning about overwriting default category
+            self.router.has_explicit_default_category = False
+            self.router.update_default_category(failure_destination_uuid, 'Failure')
+
+    def from_dict(data, ui_data=None):
+        exits = [Exit.from_dict(exit_data) for exit_data in data["exits"]]
+        router = SwitchRouter.from_dict(data["router"], exits)
+        actions = [Action.from_dict(action) for action in data["actions"]]
+        if len(actions) != 1:
+            raise ValueError("WebhookNode node must have exactly one action")
+        return WebhookNode(uuid=data["uuid"], router=router, action=actions[0])
+
+    def add_choice(self, **kwargs):
+        # TODO: validate the input
+        self.router.add_choice(**kwargs)
+
+    def update_default_exit(self, destination_uuid):
+        self.router.update_default_category(destination_uuid)
+
+    def update_success_exit(self, destination_uuid):
+        category = self.router._get_category_or_none('Success')
+        category.update_destination_uuid(destination_uuid)
+
+    def update_failure_exit(self, destination_uuid):
+        self.update_default_exit(destination_uuid)
+
+    def validate(self):
+        pass
+
+    def _get_exits(self):
+        return self.router.get_exits()
+
+    def render_ui(self):
+        ui_entry = super().render_ui()
+        if not ui_entry:
+            return None
+        ui_entry['type'] = 'split_by_webhook'
+        ui_entry['config'] = {}
+        return ui_entry

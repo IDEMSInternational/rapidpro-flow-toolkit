@@ -76,10 +76,10 @@ class RapidProContainer:
 
 
 class FlowContainer:
-    def __init__(self, flow_name, type='messaging', language='eng', uuid=None, spec_version='13.1.0', revision=0, expire_after_minutes=10080, metadata=None, localization=None, ui=None):
+    def __init__(self, flow_name, type='messaging', language='eng', uuid=None, spec_version='13.1.0', revision=0, expire_after_minutes=10080, metadata=None, localization=None):
         # UI is not part of this as it is captured within the nodes.
-        # Localization/ui may be handled differently in the future (e.g. stored within nodes or similar)
-        # The field is likely to be dropped from here, and only here temporarily to avoid losing its data.
+        # Localization may be handled differently in the future (e.g. stored within nodes or similar);
+        # it is likely to be dropped from here, and only here temporarily to avoid losing its data.
         self.uuid = uuid or generate_new_uuid()
         self.name = flow_name
         self.language = language
@@ -90,19 +90,18 @@ class FlowContainer:
         self.expire_after_minutes = expire_after_minutes
         self.metadata = metadata or {}
         self.localization = localization or {}
-        self.ui = ui or {}
 
     def from_dict(data):
         data_copy = copy.deepcopy(data)
         name = data_copy.pop("name")
         data_copy["flow_name"] = name
-        if "_ui" in data_copy:
-            ui = data_copy.pop("_ui")
-            data_copy["ui"] = ui
-        else:
-            data_copy["ui"] = {}
         nodes = data_copy.pop("nodes")
         nodes = [BaseNode.from_dict(node) for node in nodes]
+        if "_ui" in data_copy:
+            ui = data_copy.pop("_ui")
+            if 'nodes' in ui:
+                for node in nodes:
+                    node.add_ui_from_dict(ui['nodes'])
         flow_container = FlowContainer(**data_copy)
         flow_container.nodes = nodes
         return flow_container
@@ -131,8 +130,13 @@ class FlowContainer:
             "metadata": self.metadata,
             "localization": self.localization
         }
-        if self.ui:
-            render_dict["_ui"] = self.ui
+        ui_dict = {}
+        for node in self.nodes:
+            node_ui = node.render_ui()
+            if node_ui:
+                ui_dict[node.uuid] = node_ui
+        if ui_dict:
+            render_dict["_ui"] = {'nodes': ui_dict}
         return render_dict
 
 
