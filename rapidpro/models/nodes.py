@@ -1,30 +1,19 @@
+import re
+
 from rapidpro.models.actions import Action, EnterFlowAction
 from rapidpro.models.common import Exit
 
 from rapidpro.models.routers import SwitchRouter, RandomRouter
 from rapidpro.utils import generate_new_uuid
 
-
-# In practice, nodes have either a router or a non-zero amount of actions.
-#     (I don't know if this is a technical restriction, or convention to make
-#     visualization in the UI work.)
-# The only exception is enter_flow, which has both.
-#     (a flow can be completed or expire, hence the router)
-# A node with neither is meaningless, so our output shouldn't have such nodes
-
-
-# I believe that it is true that whenever we create a node,
-# we know what type of node it is.
-# Thus it is sensible to implement nodes via classes
-# Class tree (suggestion)
-# GenericNode (allows for actions)
-#   SwitchRouterNode
+# TODO: EnterFlowNode and WebhookNode are currently children of BaseNode.
+# Ideal class tree of nodes:
+# BaseNode
+#   BasicNode (allows for actions, only has one exit [no router])
+#   SwitchRouterNode (has router and multiple exits; should support actions for its subclasses.)
 #     EnterFlowNode
 #     WebhookNode
 #   RandomRouterNode
-# possibly more: dedicated subclasses for any kind of node where
-# there is extra complexity that goes beyond the Action object.
-#   wait_for_response is a potential instance of that
 
 
 class BaseNode:
@@ -51,6 +40,8 @@ class BaseNode:
             elif data["router"]["type"] == "switch":
                 if data["router"]["operand"] == "@child.run.status":
                     return EnterFlowNode.from_dict(data, ui_data)
+                elif data["router"]["operand"] == "@results.webhook_result.category":
+                    return WebhookNode.from_dict(data, ui_data)
                 else:
                     return SwitchRouterNode.from_dict(data, ui_data)
             else:
@@ -97,9 +88,10 @@ class BaseNode:
         # recursively render the elements of the node
         fields = {
             'uuid': self.uuid,
-            'actions': [action.render() for action in self.actions],
             'exits': [exit.render() for exit in self._get_exits()],
         }
+        if self.actions is not None:
+            fields['actions'] = [action.render() for action in self.actions]
         if self.router is not None:
             fields.update({
                 'router': self.router.render(),
@@ -131,7 +123,6 @@ class BasicNode(BaseNode):
 class SwitchRouterNode(BaseNode):
 
     def __init__(self, operand=None, result_name=None, wait_timeout=None, uuid=None, router=None):
-        # TODO: Support proper wait, not just true/false
         '''
         Either an operand or a router need to be provided
         '''
@@ -268,3 +259,69 @@ class EnterFlowNode(BaseNode):
     def _get_exits(self):
         return self.router.get_exits()
 
+
+class WebhookNode(BaseNode):
+    def __init__(self, result_name=None, url=None, method='GET', body='', headers=None, success_destination_uuid=None, failure_destination_uuid=None, uuid=None, router=None, action=None):
+        '''
+        Either an action or a flow_name have to be provided.
+        '''
+        super().__init__(uuid)
+
+        if action:
+            if action.type != "call_webhook":
+                raise ValueError("Action for WebhookNode must be of type call_webhook")
+            self.add_action(action)
+        else:
+            if not url or not result_name:
+                raise ValueError("Either an action or a url/result_name have to be provided.")
+            # This is kinda lazy, we might want a dedicated Webhook action.
+            action = Action.from_dict({
+                "type": "call_webhook",
+                "result_name": result_name,
+                "url": url,
+                "method": method,
+                "body": body,
+                "headers": headers or {},
+            })
+            self.add_action(action)
+
+        if router:
+            self.router = router
+        else:
+            self.router = SwitchRouter(operand='@results.webhook_result.category', result_name=None, wait_timeout=None)
+            self.router.default_category.update_name('Expired')
+
+            self.add_choice(comparison_variable='@results.webhook_result.category', comparison_type='has_only_text',
+                            comparison_arguments=['Success'], category_name='Success',
+                            destination_uuid=success_destination_uuid)
+            # Suppress the warning about overwriting default category
+            self.router.has_explicit_default_category = False
+            self.router.update_default_category(failure_destination_uuid, 'Failure')
+
+    def from_dict(data, ui_data=None):
+        exits = [Exit.from_dict(exit_data) for exit_data in data["exits"]]
+        router = SwitchRouter.from_dict(data["router"], exits)
+        actions = [Action.from_dict(action) for action in data["actions"]]
+        if len(actions) != 1:
+            raise ValueError("WebhookNode node must have exactly one action")
+        return WebhookNode(uuid=data["uuid"], router=router, action=actions[0])
+
+    def add_choice(self, **kwargs):
+        # TODO: validate the input
+        self.router.add_choice(**kwargs)
+
+    def update_default_exit(self, destination_uuid):
+        self.router.update_default_category(destination_uuid)
+
+    def update_success_exit(self, destination_uuid):
+        category = self.router._get_category_or_none('Success')
+        category.update_destination_uuid(destination_uuid)
+
+    def update_failure_exit(self, destination_uuid):
+        self.update_default_exit(destination_uuid)
+
+    def validate(self):
+        pass
+
+    def _get_exits(self):
+        return self.router.get_exits()

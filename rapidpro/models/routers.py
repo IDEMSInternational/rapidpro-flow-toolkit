@@ -247,7 +247,7 @@ class SwitchRouter(BaseRouter):
                     "type": "msg",
                 }
             })
-        if self.result_name:
+        if self.result_name is not None:
             render_dict.update({
                 "result_name": self.result_name
             })
