@@ -146,7 +146,7 @@ class SwitchRouterNode(BaseNode):
         '''
         Either an operand or a router need to be provided
         '''
-        super().__init__(uuid, ui_pos)
+        super().__init__(uuid, ui_pos=ui_pos)
         if router:
             self.router = router
         else:
@@ -253,7 +253,7 @@ class SwitchRouterNode(BaseNode):
 class RandomRouterNode(BaseNode):
 
     def __init__(self, result_name=None, uuid=None, router=None, ui_pos=None):
-        super().__init__(uuid, ui_pos)
+        super().__init__(uuid, ui_pos=ui_pos)
         if router:
             self.router = router
         else:
@@ -291,7 +291,7 @@ class EnterFlowNode(BaseNode):
         '''
         Either an action or a flow_name have to be provided.
         '''
-        super().__init__(uuid, ui_pos)
+        super().__init__(uuid, ui_pos=ui_pos)
 
         if action:
             if action.type != "enter_flow":
@@ -359,7 +359,7 @@ class WebhookNode(BaseNode):
         '''
         Either an action or a flow_name have to be provided.
         '''
-        super().__init__(uuid, ui_pos)
+        super().__init__(uuid, ui_pos=ui_pos)
 
         if action:
             if action.type != "call_webhook":

@@ -235,6 +235,17 @@ class TestParsing(unittest.TestCase):
 
         self.assertIsNone(node_4['exits'][0]['destination_uuid'])
 
+        # Check UI positions/types of the first two nodes
+        render_ui = render_output['_ui']['nodes']
+        self.assertIn(node_0['uuid'], render_ui)
+        pos0 = render_ui[node_0['uuid']]['position']
+        self.assertEqual((280, 73), (pos0['left'], pos0['top']))
+        self.assertEqual('execute_actions', render_ui[node_0['uuid']]['type'])
+        self.assertIn(node_1['uuid'], render_ui)
+        pos1 = render_ui[node_1['uuid']]['position']
+        self.assertEqual((280, 600), (pos1['left'], pos1['top']))
+        self.assertEqual('execute_actions', render_ui[node_1['uuid']]['type'])
+
     def test_switch_node_rows(self):
         rows = get_dict_from_csv('input/switch_nodes.csv')
         switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
@@ -257,6 +268,27 @@ class TestParsing(unittest.TestCase):
         # TODO: Ideally, there should be more explicit tests here.
         # At least the functionality is covered by the integration tests simulating the flow.
         # print(json.dumps(render_output, indent=2))
+
+        render_ui = render_output['_ui']['nodes']
+        f_uuid = lambda i: render_output['nodes'][i]['uuid']
+        f_uipos_dict = lambda i: render_ui[f_uuid(i)]['position']
+        f_uipos = lambda i: (f_uipos_dict(i)['left'], f_uipos_dict(i)['top'])
+        f_uitype = lambda i: render_ui[f_uuid(i)]['type']
+        self.assertIn(f_uuid(0), render_ui)
+        self.assertEqual((340, 0), f_uipos(0))
+        self.assertEqual((360, 180), f_uipos(1))
+        self.assertEqual((840, 1200), f_uipos(-1))
+        self.assertEqual("wait_for_response", f_uitype(0))
+        self.assertEqual("split_by_subflow", f_uitype(1))
+        self.assertEqual("split_by_expression", f_uitype(2))
+        self.assertEqual("split_by_contact_field", f_uitype(3))
+        self.assertEqual("split_by_run_result", f_uitype(4))
+        self.assertEqual("split_by_groups", f_uitype(5))
+        self.assertEqual("wait_for_response", f_uitype(6))
+        self.assertEqual("split_by_random", f_uitype(7))
+        self.assertEqual("execute_actions", f_uitype(8))
+        self.assertEqual("execute_actions", f_uitype(9))
+        self.assertEqual("wait_for_response", f_uitype(-1))
 
     def test_groups_and_flows(self):
         # We check that references flows and group are assigned uuids consistently
