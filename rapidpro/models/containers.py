@@ -1,6 +1,7 @@
 from rapidpro.utils import generate_new_uuid
 from rapidpro.models.nodes import BaseNode
 from rapidpro.models.actions import Group
+from parsers.creation.standard_models import RowData, Edge
 import copy
 
 
@@ -138,6 +139,53 @@ class FlowContainer:
         if ui_dict:
             render_dict["_ui"] = {'nodes': ui_dict}
         return render_dict
+
+    def find_node(self, uuid):
+        for node in self.nodes:
+            if node.uuid == uuid:
+                return node
+        raise ValueError(f"Destination node {uuid} does not exist within flow.")
+
+    def _to_rows_recurse(self, node, parent_edge):
+        # The version of the graph encoded in a sheet is always a DAG, if we disregard all go_to edges. 
+        # So we effectively do the DFS version of topological sort here, with the one special case that
+        # if we encounter a backward edge (and thus a cycle), we convert it into a go_to edge.
+        self.visited_nodes.add(node.uuid)
+        current_row_id_str = str(self.row_id_counter)
+        self.row_id_counter = node.initiate_row_models(self.row_id_counter, parent_edge)
+        exits_edges = node.get_exit_edge_pairs()  # Returns pairs: of exits with edge objects (containing the conditions/source id)
+        for exit, edge in exits_edges:
+            if not exit.destination_uuid:
+                # If the edge leads nowhere, there's no way of encoding it in the sheet format.
+                # In practice, this means that cases/categories from routers may be dropped if
+                # they are not connected to anything.
+                continue
+            child_node = self.find_node(exit.destination_uuid)
+            if child_node.uuid in self.completed_nodes:
+                # Edge to a later node
+                child_node.add_edge_to_row_models(edge)
+            elif child_node.uuid in self.visited_nodes:
+                # This is a backward edge to an ancestor of this node.
+                child_row_id = child_node.get_row_models()[0].row_id
+                self.rows.append(RowData(row_id=str(self.row_id_counter), type='go_to', edges=[edge], mainarg_value=child_row_id))
+                self.row_id_counter += 1
+            else:
+                # A new node we haven't encountered yet
+                self._to_rows_recurse(child_node, edge)
+        self.completed_nodes.add(node.uuid)
+        self.rows = node.get_row_models() + self.rows  # Note: these may still be modified in the next steps
+
+    def to_rows(self):
+        # TODO: We might want to have a dedicated model for a list of rows
+        # that can also contain metadata, used for generating a sheet.
+        self.visited_nodes = set()
+        self.completed_nodes = set()
+        self.rows = []
+        self.row_id_counter = 1
+        for node in self.nodes:
+            node.clear_row_model()
+        self._to_rows_recurse(self.nodes[0], Edge(from_='start'))
+        return self.rows
 
 
 class UUIDDict:

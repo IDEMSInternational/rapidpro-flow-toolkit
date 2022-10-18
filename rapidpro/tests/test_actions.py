@@ -8,7 +8,7 @@ class TestActions(unittest.TestCase):
         pass
 
     def test_enter_flow_node(self):
-        enter_flow_node = EnterFlowAction(flow_name='test_flow', uuid='fake-uuid')
+        enter_flow_node = EnterFlowAction(flow_name='test_flow', flow_uuid='fake-uuid')
         render_output = enter_flow_node.render()
         self.assertEqual(render_output['type'], 'enter_flow')
         self.assertEqual(render_output['flow']['name'], 'test_flow')

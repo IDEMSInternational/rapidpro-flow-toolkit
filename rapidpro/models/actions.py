@@ -1,4 +1,6 @@
 from rapidpro.utils import generate_new_uuid
+from parsers.creation.standard_models import RowData, Edge, Condition
+
 import copy
 
 # TODO: Check enter flow
@@ -42,10 +44,18 @@ class Action:
             'type': self.type,
         }
 
+    def get_row_model(self, row_id, parent_edge):
+        # This should probably be an abstract method returning a partially
+        # instantiated row model.
+        return NotImplementedError
+
 
 class UnclassifiedAction(Action):
     def render(self):
         return self.__dict__
+
+    def get_row_model(self, row_id, parent_edge):
+        return NotImplementedError
 
 
 class SendMessageAction(Action):
@@ -88,6 +98,16 @@ class SendMessageAction(Action):
 
         return render_dict
 
+    def get_row_model(self, row_id, parent_edge):
+        # TODO: image/audio/video. Have to consider: multiple attachments per type?
+        return RowData(
+            row_id=row_id, 
+            type='send_message',
+            mainarg_message_text=self.text,
+            choices=self.quick_replies,
+            edges=[parent_edge]
+        )
+
 
 class SetContactFieldAction(Action):
     def __init__(self, field_name, value):
@@ -118,6 +138,14 @@ class SetContactFieldAction(Action):
             "value": self.value
         }
 
+    def get_row_model(self, row_id, parent_edge):
+        return RowData(
+            row_id=row_id, 
+            type='save_value',
+            mainarg_value=self.value,
+            save_name=self.field_name,
+            edges=[parent_edge]
+        )
 
 class Group:
     def from_dict(data):
@@ -170,6 +198,16 @@ class GenericGroupAction(Action):
     def render(self):
         return NotImplementedError
 
+    def get_row_model(self, row_id, parent_edge):
+    # abstract method
+        return RowData(
+            row_id=row_id,
+            type='',
+            mainarg_groups=[group.name for group in self.groups],
+            obj_id=[group.uuid for group in self.groups][0], # 0th element as obj_id is not yet a list.
+            edges=[parent_edge]
+        )
+
 
 class AddContactGroupAction(GenericGroupAction):
     def __init__(self, groups):
@@ -184,6 +222,11 @@ class AddContactGroupAction(GenericGroupAction):
             "uuid": self.uuid,
             "groups": [group.render() for group in self.groups],
         }
+
+    def get_row_model(self, row_id, parent_edge):
+        row_data = super().get_row_model(row_id, parent_edge)
+        row_data.type = 'add_to_group'
+        return row_data
 
 
 class RemoveContactGroupAction(GenericGroupAction):
@@ -202,6 +245,11 @@ class RemoveContactGroupAction(GenericGroupAction):
                 'all_groups': self.all_groups
             })
         return render_dict
+
+    def get_row_model(self, row_id, parent_edge):
+        row_data = super().get_row_model(row_id, parent_edge)
+        row_data.type = 'remove_from_group'
+        return row_data
 
 
 class SetRunResultAction(Action):
@@ -224,13 +272,22 @@ class SetRunResultAction(Action):
             })
         return render_dict
 
+    def get_row_model(self, row_id, parent_edge):
+        return RowData(
+            row_id=row_id, 
+            type='save_value',
+            mainarg_value=self.value,
+            save_name=self.name,
+            edges=[parent_edge]
+        )
+
 
 class EnterFlowAction(Action):
-    def __init__(self, flow_name, uuid=None):
+    def __init__(self, flow_name, flow_uuid=None):
         super().__init__('enter_flow')
         self.flow = {
             'name': flow_name,
-            'uuid': uuid
+            'uuid': flow_uuid
         }
 
     def record_global_uuids(self, uuid_dict):
@@ -245,6 +302,15 @@ class EnterFlowAction(Action):
             "uuid": self.uuid,
             "flow": self.flow
         }
+
+    def get_row_model(self, row_id, parent_edge):
+        return RowData(
+            row_id=row_id,
+            type='start_new_flow',
+            mainarg_flow_name=self.flow['name'],
+            obj_id=self.flow['uuid'] or '',
+            edges=[parent_edge]
+        )
 
 action_map = {
     "add_contact_groups" : AddContactGroupAction,

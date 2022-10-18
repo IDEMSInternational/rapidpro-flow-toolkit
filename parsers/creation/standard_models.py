@@ -4,7 +4,7 @@ from pydantic import Field
 
 
 class Condition(ParserModel):
-    value: str = ''
+    value: str = ''  # Technically, this should be a list as a case may have multiple args
     variable: str = ''
     type: str = ''
     name: str = ''
@@ -35,8 +35,8 @@ class RowData(ParserModel):
     image: str = ''
     audio: str = ''
     video: str = ''
-    obj_name: str = ''
-    obj_id: str = ''
+    obj_name: str = ''  # What is this used for?
+    obj_id: str = ''  # This should be a list
     node_name: str = ''
     node_uuid: str = ''
     no_response: str = ''

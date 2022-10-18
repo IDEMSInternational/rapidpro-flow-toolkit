@@ -131,6 +131,7 @@ class Parser:
             send_message_action = SendMessageAction(text=row.mainarg_message_text)
             for attachment in [row.image, row.audio, row.video]:
                 if attachment:
+                    # TODO: Add depending on prefix.
                     send_message_action.add_attachment(attachment)
 
             quick_replies = [qr for qr in row.choices if qr]
@@ -169,6 +170,9 @@ class Parser:
         if row.type in ['add_to_group', 'remove_from_group', 'split_by_group'] and row.obj_id:
             self.rapidpro_container.record_group_uuid(row.mainarg_groups[0], row.obj_id)
 
+        # TODO: Consider whether to put the functionality of getting
+        # a node/action from a row should go into the Node/Action model,
+        # considering that the reverse naturally is there as well.
         node_uuid = row.node_uuid or None
         if row.ui_position:
             ui_pos = [int(coord) for coord in row.ui_position]  # List[str] -> List[int]

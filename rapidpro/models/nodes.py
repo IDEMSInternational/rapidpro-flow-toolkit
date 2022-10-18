@@ -6,6 +6,8 @@ from rapidpro.models.common import Exit
 from rapidpro.models.routers import SwitchRouter, RandomRouter
 from rapidpro.utils import generate_new_uuid
 
+from parsers.creation.standard_models import RowData, Edge, Condition
+
 # TODO: EnterFlowNode and WebhookNode are currently children of BaseNode.
 # Ideal class tree of nodes:
 # BaseNode
@@ -14,6 +16,7 @@ from rapidpro.utils import generate_new_uuid
 #     EnterFlowNode
 #     WebhookNode
 #   RandomRouterNode
+# TODO: Make BaseNode an abstract class
 
 
 class BaseNode:
@@ -88,7 +91,7 @@ class BaseNode:
         except IndexError:
             return None
 
-    def _get_exits(self):
+    def get_exits(self):
         return self.exits
 
     def render(self):
@@ -96,7 +99,7 @@ class BaseNode:
         # recursively render the elements of the node
         fields = {
             'uuid': self.uuid,
-            'exits': [exit.render() for exit in self._get_exits()],
+            'exits': [exit.render() for exit in self.get_exits()],
         }
         if self.actions is not None:
             fields['actions'] = [action.render() for action in self.actions]
@@ -118,6 +121,26 @@ class BaseNode:
         else:
             return None
 
+    def clear_row_model(self):
+        self.row_models = []
+
+    def get_row_models(self):
+        return self.row_models
+
+    def add_edge_to_row_models(self, edge):
+        self.row_models[0].edges.append(edge)
+
+    def initiate_row_models(self, current_row_id_int, parent_edge):
+        # abstract method
+        # TODO: ui pos/node uuid and other common properties should be done here
+        #   to avoid functionality duplication in the subclasses.
+        # returns: an updated current_row_id_int with an ID that is still available
+        pass
+
+    def get_exit_edge_pairs(self):
+        # abstract method
+        pass
+
 
 class BasicNode(BaseNode):
     # A basic node can accomodate actions and a very basic exit
@@ -138,6 +161,20 @@ class BasicNode(BaseNode):
 
         if not self.default_exit:
             raise ValueError('default_exit must be set for BasicNode')
+
+    def initiate_row_models(self, current_row_id_int, parent_edge):
+        self.row_models = []
+        for i, action in enumerate(self.actions):
+            row_model = action.get_row_model(str(current_row_id_int), parent_edge)
+            self.row_models.append(row_model)
+            parent_edge = Edge(from_=str(current_row_id_int))
+            current_row_id_int += 1
+        return current_row_id_int
+
+    def get_exit_edge_pairs(self):
+        return [
+            (self.default_exit, Edge(from_=self.row_models[-1].row_id))
+        ]
 
 
 class SwitchRouterNode(BaseNode):
@@ -188,7 +225,7 @@ class SwitchRouterNode(BaseNode):
             raise ValueError('Basic exits are not supported in SwitchRouterNode')
         self.router.validate()
 
-    def _get_exits(self):
+    def get_exits(self):
         return self.router.get_exits()
 
     def render_ui(self):
@@ -249,6 +286,38 @@ class SwitchRouterNode(BaseNode):
             ui_entry['config'] = {'cases' : {}}
         return ui_entry
 
+    def initiate_row_models(self, current_row_id_int, parent_edge):
+        current_row_id_str = str(current_row_id_int)
+        if self.has_wait():
+            self.row_models = [RowData(
+                row_id=current_row_id_str, 
+                type='wait_for_response', 
+                save_name=self.router.result_name or '',
+                no_response=self.router.wait_timeout or '',
+                edges=[parent_edge]
+            )]
+        elif self.router.operand == '@contact.groups':
+            # TODO: What about multiple groups?
+            # TODO: groups in cases should be implemented differently.
+            self.row_models = [RowData(
+                row_id=current_row_id_str, 
+                type='split_by_group', 
+                mainarg_groups=self.router.cases[0].arguments[1],
+                obj_id=self.router.cases[0].arguments[0],
+                edges=[parent_edge]
+            )]
+        else:
+            self.row_models = [RowData(
+                row_id=current_row_id_str, 
+                type='split_by_value',
+                mainarg_value=self.router.operand,
+                edges=[parent_edge]
+            )]
+        return current_row_id_int+1
+
+    def get_exit_edge_pairs(self):
+        return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)
+        
 
 class RandomRouterNode(BaseNode):
 
@@ -265,8 +334,8 @@ class RandomRouterNode(BaseNode):
         router = RandomRouter.from_dict(data["router"], exits)
         return RandomRouterNode(uuid=data["uuid"], router=router)
 
-    def add_choice(self, **kwargs):
-        self.router.add_choice(**kwargs)
+    def add_choice(self, *args, **kwargs):
+        self.router.add_choice(*args, **kwargs)
 
     def validate(self):
         if self.has_basic_exit:
@@ -274,7 +343,7 @@ class RandomRouterNode(BaseNode):
 
         self.router.validate()
 
-    def _get_exits(self):
+    def get_exits(self):
         return self.router.get_exits()
 
     def render_ui(self):
@@ -285,9 +354,20 @@ class RandomRouterNode(BaseNode):
         ui_entry['config'] = None
         return ui_entry
 
+    def initiate_row_models(self, current_row_id_int, parent_edge):
+        self.row_models = [RowData(
+            row_id=str(current_row_id_int),
+            type='split_random', 
+            edges=[parent_edge]
+        )]
+        return current_row_id_int+1
+
+    def get_exit_edge_pairs(self):
+        return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)
+
 
 class EnterFlowNode(BaseNode):
-    def __init__(self, flow_name=None, complete_destination_uuid=None, expired_destination_uuid=None, uuid=None, router=None, action=None, ui_pos=None):
+    def __init__(self, flow_name=None, flow_uuid=None, complete_destination_uuid=None, expired_destination_uuid=None, uuid=None, router=None, action=None, ui_pos=None):
         '''
         Either an action or a flow_name have to be provided.
         '''
@@ -300,7 +380,7 @@ class EnterFlowNode(BaseNode):
         else:
             if not flow_name:
                 raise ValueError("Either an action or a flow_name have to be provided.")
-            self.add_action(EnterFlowAction(flow_name))
+            self.add_action(EnterFlowAction(flow_name, flow_uuid))
 
         if router:
             self.router = router
@@ -325,9 +405,9 @@ class EnterFlowNode(BaseNode):
             raise ValueError("EnterFlowNode node must have exactly one action")
         return EnterFlowNode(uuid=data["uuid"], router=router, action=actions[0])
 
-    def add_choice(self, **kwargs):
+    def add_choice(self, *args, **kwargs):
         # TODO: validate the input
-        self.router.add_choice(**kwargs)
+        self.router.add_choice(*args, **kwargs)
 
     def update_default_exit(self, destination_uuid):
         raise ValueError("EnterFlowNode does not support default exits.")
@@ -342,7 +422,7 @@ class EnterFlowNode(BaseNode):
     def validate(self):
         pass
 
-    def _get_exits(self):
+    def get_exits(self):
         return self.router.get_exits()
 
     def render_ui(self):
@@ -352,6 +432,15 @@ class EnterFlowNode(BaseNode):
         ui_entry['type'] = 'split_by_subflow'
         ui_entry['config'] = {}
         return ui_entry
+
+    def initiate_row_models(self, current_row_id_int, parent_edge):
+        # TODO: This is a special case as for the BasicNode class --> refactor?
+        row_model = self.actions[0].get_row_model(str(current_row_id_int), parent_edge)
+        self.row_models.append(row_model)
+        return current_row_id_int+1
+
+    def get_exit_edge_pairs(self):
+        return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)
 
 
 class WebhookNode(BaseNode):
@@ -400,9 +489,9 @@ class WebhookNode(BaseNode):
             raise ValueError("WebhookNode node must have exactly one action")
         return WebhookNode(uuid=data["uuid"], router=router, action=actions[0])
 
-    def add_choice(self, **kwargs):
+    def add_choice(self, *args, **kwargs):
         # TODO: validate the input
-        self.router.add_choice(**kwargs)
+        self.router.add_choice(*args, **kwargs)
 
     def update_default_exit(self, destination_uuid):
         self.router.update_default_category(destination_uuid)
@@ -417,7 +506,7 @@ class WebhookNode(BaseNode):
     def validate(self):
         pass
 
-    def _get_exits(self):
+    def get_exits(self):
         return self.router.get_exits()
 
     def render_ui(self):
@@ -427,3 +516,10 @@ class WebhookNode(BaseNode):
         ui_entry['type'] = 'split_by_webhook'
         ui_entry['config'] = {}
         return ui_entry
+
+    def initiate_row_models(self, current_row_id_int, parent_edge):
+        # Webhook is not yet part of the sheet specification
+        raise NotImplementedError
+
+    def get_exit_edge_pairs(self):
+        return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)
