@@ -54,8 +54,10 @@ class TestNodes(TestToRowModels):
             'mainarg_groups' : ['test group'],
             'obj_id' : '8224bfe2-acec-434f-bc7c-14c584fc4bc8',
             'edges' : [{ 'from_': 'start' }],
+            'ui_position' : ['123','456'],
+            'node_uuid' : '224f6caa-fd25-47d3-96a9-3d43506b7878',
         })
-        node = BasicNode()
+        node = BasicNode(uuid=row_data.node_uuid, ui_pos=(int(p) for p in row_data.ui_position))
         action = AddContactGroupAction([Group(row_data.mainarg_groups[0], row_data.obj_id)])
         node.add_action(action)
         node.initiate_row_models(1, Edge(from_='start'))

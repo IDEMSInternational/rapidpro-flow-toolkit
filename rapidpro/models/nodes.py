@@ -1,4 +1,5 @@
 import re
+from abc import ABC, abstractmethod
 
 from rapidpro.models.actions import Action, EnterFlowAction
 from rapidpro.models.common import Exit
@@ -19,7 +20,7 @@ from parsers.creation.standard_models import RowData, Edge, Condition
 # TODO: Make BaseNode an abstract class
 
 
-class BaseNode:
+class BaseNode(ABC):
     def __init__(self, uuid=None, destination_uuid=None, default_exit=None, actions=None, ui_pos=None):
         self.uuid = uuid or generate_new_uuid()
         self.actions = actions or []
@@ -130,20 +131,42 @@ class BaseNode:
     def add_edge_to_row_models(self, edge):
         self.row_models[0].edges.append(edge)
 
-    def initiate_row_models(self, current_row_id_int, parent_edge):
-        # abstract method
-        # TODO: ui pos/node uuid and other common properties should be done here
-        #   to avoid functionality duplication in the subclasses.
+    @abstractmethod
+    def initiate_row_models(self, current_row_id_int, parent_edge, **kwargs):
         # returns: an updated current_row_id_int with an ID that is still available
-        pass
+        
+        self.row_models = []
+        if self.actions:
+            for i, action in enumerate(self.actions):
+                action_fields = action.get_row_model_fields()
+                row_model = RowData(
+                    row_id=str(current_row_id_int),
+                    edges=[parent_edge],
+                    node_uuid=self.uuid,
+                    ui_position=self.ui_pos or [],
+                    **action_fields
+                )
+                self.row_models.append(row_model)
+                parent_edge = Edge(from_=str(current_row_id_int))
+                current_row_id_int += 1
+        else:
+            self.row_models = [RowData(
+                row_id=str(current_row_id_int),
+                edges=[parent_edge],
+                node_uuid=self.uuid,
+                ui_position=self.ui_pos or [],
+                **kwargs
+            )]
+            current_row_id_int += 1
+        return current_row_id_int
 
+    @abstractmethod
     def get_exit_edge_pairs(self):
-        # abstract method
         pass
 
 
 class BasicNode(BaseNode):
-    # A basic node can accomodate actions and a very basic exit
+    # A basic node can accomodate actions and a single (default) exit
 
     def from_dict(data, ui_data=None):
         exits = [Exit.from_dict(exit_data) for exit_data in data["exits"]]
@@ -163,13 +186,7 @@ class BasicNode(BaseNode):
             raise ValueError('default_exit must be set for BasicNode')
 
     def initiate_row_models(self, current_row_id_int, parent_edge):
-        self.row_models = []
-        for i, action in enumerate(self.actions):
-            row_model = action.get_row_model(str(current_row_id_int), parent_edge)
-            self.row_models.append(row_model)
-            parent_edge = Edge(from_=str(current_row_id_int))
-            current_row_id_int += 1
-        return current_row_id_int
+        return super().initiate_row_models(current_row_id_int, parent_edge)
 
     def get_exit_edge_pairs(self):
         return [
@@ -289,31 +306,24 @@ class SwitchRouterNode(BaseNode):
     def initiate_row_models(self, current_row_id_int, parent_edge):
         current_row_id_str = str(current_row_id_int)
         if self.has_wait():
-            self.row_models = [RowData(
-                row_id=current_row_id_str, 
+            return super().initiate_row_models(current_row_id_int, parent_edge,
                 type='wait_for_response', 
                 save_name=self.router.result_name or '',
-                no_response=self.router.wait_timeout or '',
-                edges=[parent_edge]
-            )]
+                no_response=self.router.wait_timeout or ''
+            )
         elif self.router.operand == '@contact.groups':
             # TODO: What about multiple groups?
             # TODO: groups in cases should be implemented differently.
-            self.row_models = [RowData(
-                row_id=current_row_id_str, 
+            return super().initiate_row_models(current_row_id_int, parent_edge,
                 type='split_by_group', 
                 mainarg_groups=self.router.cases[0].arguments[1],
                 obj_id=self.router.cases[0].arguments[0],
-                edges=[parent_edge]
-            )]
+            )
         else:
-            self.row_models = [RowData(
-                row_id=current_row_id_str, 
+            return super().initiate_row_models(current_row_id_int, parent_edge,
                 type='split_by_value',
                 mainarg_value=self.router.operand,
-                edges=[parent_edge]
-            )]
-        return current_row_id_int+1
+            )
 
     def get_exit_edge_pairs(self):
         return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)
@@ -355,12 +365,9 @@ class RandomRouterNode(BaseNode):
         return ui_entry
 
     def initiate_row_models(self, current_row_id_int, parent_edge):
-        self.row_models = [RowData(
-            row_id=str(current_row_id_int),
+        return super().initiate_row_models(current_row_id_int, parent_edge,
             type='split_random', 
-            edges=[parent_edge]
-        )]
-        return current_row_id_int+1
+        )
 
     def get_exit_edge_pairs(self):
         return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)
@@ -434,10 +441,9 @@ class EnterFlowNode(BaseNode):
         return ui_entry
 
     def initiate_row_models(self, current_row_id_int, parent_edge):
-        # TODO: This is a special case as for the BasicNode class --> refactor?
-        row_model = self.actions[0].get_row_model(str(current_row_id_int), parent_edge)
-        self.row_models.append(row_model)
-        return current_row_id_int+1
+        # Note: We want to call the method of the BaseNode class here.
+        # If we refactor this to be a child of SwitchRouterNode, careful here!
+        return super().initiate_row_models(current_row_id_int, parent_edge)
 
     def get_exit_edge_pairs(self):
         return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)

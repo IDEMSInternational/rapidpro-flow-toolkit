@@ -18,6 +18,8 @@ class Action:
         # in order to bypass the constructor of the subclass
         assert "type" in data
         action_type = data['type']
+        # TODO: Can we make this more smooth by invoking subclass constructors?
+        # And make the Action class abstract?
         action = Action(action_type)
         cls = action_map[action_type]
         action.__class__ = cls
@@ -44,7 +46,7 @@ class Action:
             'type': self.type,
         }
 
-    def get_row_model(self, row_id, parent_edge):
+    def get_row_model_fields(self):
         # This should probably be an abstract method returning a partially
         # instantiated row model.
         return NotImplementedError
@@ -54,7 +56,7 @@ class UnclassifiedAction(Action):
     def render(self):
         return self.__dict__
 
-    def get_row_model(self, row_id, parent_edge):
+    def get_row_model_fields(self):
         return NotImplementedError
 
 
@@ -98,15 +100,13 @@ class SendMessageAction(Action):
 
         return render_dict
 
-    def get_row_model(self, row_id, parent_edge):
+    def get_row_model_fields(self):
         # TODO: image/audio/video. Have to consider: multiple attachments per type?
-        return RowData(
-            row_id=row_id, 
-            type='send_message',
-            mainarg_message_text=self.text,
-            choices=self.quick_replies,
-            edges=[parent_edge]
-        )
+        return {
+            'type' : 'send_message',
+            'mainarg_message_text' : self.text,
+            'choices' : self.quick_replies,
+        }
 
 
 class SetContactFieldAction(Action):
@@ -138,14 +138,13 @@ class SetContactFieldAction(Action):
             "value": self.value
         }
 
-    def get_row_model(self, row_id, parent_edge):
-        return RowData(
-            row_id=row_id, 
-            type='save_value',
-            mainarg_value=self.value,
-            save_name=self.field_name,
-            edges=[parent_edge]
-        )
+    def get_row_model_fields(self):
+        return {
+            'type' : 'save_value',
+            'mainarg_value' : self.value,
+            'save_name' : self.field_name,
+        }
+
 
 class Group:
     def from_dict(data):
@@ -198,15 +197,12 @@ class GenericGroupAction(Action):
     def render(self):
         return NotImplementedError
 
-    def get_row_model(self, row_id, parent_edge):
-    # abstract method
-        return RowData(
-            row_id=row_id,
-            type='',
-            mainarg_groups=[group.name for group in self.groups],
-            obj_id=[group.uuid for group in self.groups][0], # 0th element as obj_id is not yet a list.
-            edges=[parent_edge]
-        )
+    def get_row_model_fields(self):
+        # abstract method
+        return {
+            'mainarg_groups' : [group.name for group in self.groups],
+            'obj_id' : [group.uuid for group in self.groups][0], # 0th element as obj_id is not yet a list.        
+        }
 
 
 class AddContactGroupAction(GenericGroupAction):
@@ -223,10 +219,10 @@ class AddContactGroupAction(GenericGroupAction):
             "groups": [group.render() for group in self.groups],
         }
 
-    def get_row_model(self, row_id, parent_edge):
-        row_data = super().get_row_model(row_id, parent_edge)
-        row_data.type = 'add_to_group'
-        return row_data
+    def get_row_model_fields(self):
+        fields = super().get_row_model_fields()
+        fields['type'] = 'add_to_group'
+        return fields
 
 
 class RemoveContactGroupAction(GenericGroupAction):
@@ -246,10 +242,10 @@ class RemoveContactGroupAction(GenericGroupAction):
             })
         return render_dict
 
-    def get_row_model(self, row_id, parent_edge):
-        row_data = super().get_row_model(row_id, parent_edge)
-        row_data.type = 'remove_from_group'
-        return row_data
+    def get_row_model_fields(self):
+        fields = super().get_row_model_fields()
+        fields['type'] = 'remove_from_group'
+        return fields
 
 
 class SetRunResultAction(Action):
@@ -272,14 +268,12 @@ class SetRunResultAction(Action):
             })
         return render_dict
 
-    def get_row_model(self, row_id, parent_edge):
-        return RowData(
-            row_id=row_id, 
-            type='save_value',
-            mainarg_value=self.value,
-            save_name=self.name,
-            edges=[parent_edge]
-        )
+    def get_row_model_fields(self):
+        return {
+            'type' : 'save_value',
+            'mainarg_value' : self.value,
+            'save_name' : self.name,
+        }
 
 
 class EnterFlowAction(Action):
@@ -303,14 +297,13 @@ class EnterFlowAction(Action):
             "flow": self.flow
         }
 
-    def get_row_model(self, row_id, parent_edge):
-        return RowData(
-            row_id=row_id,
-            type='start_new_flow',
-            mainarg_flow_name=self.flow['name'],
-            obj_id=self.flow['uuid'] or '',
-            edges=[parent_edge]
-        )
+    def get_row_model_fields(self):
+        return {
+            'type' : 'start_new_flow',
+            'mainarg_flow_name' : self.flow['name'],
+            'obj_id' : self.flow['uuid'] or '',
+        }
+
 
 action_map = {
     "add_contact_groups" : AddContactGroupAction,
