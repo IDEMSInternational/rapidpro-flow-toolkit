@@ -115,7 +115,11 @@ class RowParser:
             # but the cell value is a 1-dimensional list. 1;2 → [[1],[2]] rather than [[1,2]]
             if type(value) != list:
                 # It could be that a list is specified via a single element.
-                value = [value]
+                if value == '':
+                    # Interpret an empty cell as [] rather than ['']
+                    value = []
+                else:
+                    value = [value]
             for entry in value:
                 # For each entry, create a new list entry and assign its value recursively
                 field[key].append(None)

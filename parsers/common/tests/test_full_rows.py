@@ -16,6 +16,7 @@ input1 = {
     'condition_name' : '',
     'message_text' : 'Text of message',
     'choices' : ['Answer 1', 'Answer 2'],
+    'ui_position' : '',  # CellParser is unaware of types, so '' is NOT turned into a list by the cell parser.
 }
 
 output1_exp = RowData(**{
@@ -29,6 +30,7 @@ output1_exp = RowData(**{
     ],
     'mainarg_message_text' : 'Text of message',
     'choices' : ['Answer 1', 'Answer 2'],
+    'ui_position' : [],  # The RowParser converts '' into []
 })
 
 
