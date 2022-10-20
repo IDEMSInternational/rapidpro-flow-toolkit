@@ -4,7 +4,7 @@ import json
 from parsers.creation.standard_parser import Parser
 from tests.utils import get_dict_from_csv, find_destination_uuid, Context, find_node_by_uuid
 from rapidpro.models.containers import RapidProContainer, FlowContainer
-from rapidpro.models.actions import Group, SendMessageAction, AddContactGroupAction, SetRunResultAction
+from rapidpro.models.actions import Group, SendMessageAction, AddContactGroupAction, SetRunResultAction, SetContactFieldAction
 from rapidpro.models.nodes import BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
 from parsers.creation.standard_models import RowData, Edge, Condition
 
@@ -18,9 +18,11 @@ class TestToRowModels(unittest.TestCase):
         self.assertEqual(len(row_models1), len(row_models2))
         for model1, model2 in zip(row_models1, row_models2):
             data1 = model1.dict()
-            data1.pop('node_uuid')
             data2 = model2.dict()
-            data2.pop('node_uuid')
+            if not data1['node_uuid'] or not data2['node_uuid']:
+                # If one of them is blank, skip the comparison
+                data1.pop('node_uuid')
+                data2.pop('node_uuid')
             self.assertEqual(data1, data2)
 
 
@@ -43,8 +45,11 @@ class TestNodes(TestToRowModels):
         node.add_action(action)
         action = SendMessageAction(row_data2.mainarg_message_text, quick_replies=row_data2.choices)
         node.add_action(action)
-        node.initiate_row_models(1, Edge(from_='start'))
+        node.initiate_row_models('1', Edge(from_='start'))
         row_models = node.get_row_models()
+        # The section action gets row ID 1.1, which needs to be remapped to 2.
+        # When converting flows to rows, this remapping is done automatically.
+        row_models[1].row_id = '2'
         self.compare_row_models_without_uuid(row_models, [row_data1, row_data2])
 
     def test_add_group_node(self):
@@ -98,7 +103,7 @@ class TestFlowContainer(TestToRowModels):
             'row_id' : '1',
             'type' : 'split_by_value',
             'edges' : [{ 'from_': 'start' }],
-            'mainarg_value' : '@fields.name',
+            'mainarg_expression' : '@fields.name',
         })
         row_data2 = RowData(**{
             'row_id' : '2',
@@ -121,6 +126,43 @@ class TestFlowContainer(TestToRowModels):
         container.add_node(node1)
 
         action2 = SendMessageAction(row_data2.mainarg_message_text, quick_replies=row_data2.choices)
+        node2.add_action(action2)
+        container.add_node(node2)
+
+        row_models = container.to_rows()
+        self.compare_row_models_without_uuid(row_models, [row_data1, row_data2])
+
+    def test_conditional_edge2(self):
+        row_data1 = RowData(**{
+            'row_id' : '1',
+            'type' : 'split_by_group',
+            'edges' : [{ 'from_': 'start' }],
+            'mainarg_groups' : ['my group'],
+            'obj_id' : '12345678'
+        })
+        row_data2 = RowData(**{
+            'row_id' : '2',
+            'type' : 'save_value',
+            'edges' : [
+                {
+                    'from_': '1',
+                    'condition': {'value':'my group'},
+                }
+            ],
+            'mainarg_value' : 'my value',
+            'save_name' : 'my variable',
+        })
+        case = row_data2.edges[0].condition
+        container = FlowContainer('test_flow')
+
+        node1 = SwitchRouterNode('@contact.groups')
+        node2 = BasicNode()
+
+        # The arguments for this choice is [group uuid, group name]
+        node1.add_choice(case.variable, case.type, [row_data1.obj_id, case.value], case.name, node2.uuid)
+        container.add_node(node1)
+
+        action2 = SetContactFieldAction(row_data2.save_name, row_data2.mainarg_value)
         node2.add_action(action2)
         container.add_node(node2)
 
@@ -175,7 +217,7 @@ class TestFlowContainer(TestToRowModels):
             'no_response' : '300',
             'edges' : [{ 'from_': 'start' }],
         })
-
+        # A proper case
         row_data2 = RowData(**{
             'row_id' : '2',
             'type' : 'go_to',
@@ -185,21 +227,53 @@ class TestFlowContainer(TestToRowModels):
                     'condition': {'value':'word', 'variable':'@input.text', 'type':'has_any_word', 'name':'Word'},
                 }
             ],
-            'mainarg_value' : '1',
+            'mainarg_destination_row_ids' : ['1'],
+        })
+        # The 'Other' category
+        row_data3 = RowData(**{
+            'row_id' : '3',
+            'type' : 'send_message',
+            'edges' : [{ 'from_': '1', }],
+            'mainarg_message_text' : 'Second node message',
+        })
+        # The no response category
+        row_data4 = RowData(**{
+            'row_id' : '4',
+            'type' : 'send_message',
+            'edges' : [
+                {
+                    'from_': '1',
+                    'condition': {'value':'No Response'},
+                }
+            ],
+            'mainarg_message_text' : 'Third node message',
         })
 
         case1 = row_data2.edges[0].condition
+        case2 = row_data3.edges[0].condition
+        case3 = row_data4.edges[0].condition
         container = FlowContainer('test_flow')
         node1 = SwitchRouterNode('@input.text', result_name=row_data1.save_name, wait_timeout=int(row_data1.no_response))
+        node2 = BasicNode()
+        node3 = BasicNode()
         node1.add_choice(case1.variable, case1.type, [case1.value], case1.name, node1.uuid)
+        node1.update_default_exit(node2.uuid)
+        node1.update_no_response_exit(node3.uuid)
         container.add_node(node1)
 
+        action2 = SendMessageAction(row_data3.mainarg_message_text)
+        node2.add_action(action2)
+        container.add_node(node2)
+        action3 = SendMessageAction(row_data4.mainarg_message_text)
+        node3.add_action(action3)
+        container.add_node(node3)
+
         row_models = container.to_rows()
-        self.compare_row_models_without_uuid(row_models, [row_data1, row_data2])
+        self.compare_row_models_without_uuid(row_models, [row_data1, row_data2, row_data3, row_data4])
 
     def test_enter_flow_edge(self):
         # Test expired (default) edge of enter_flow node
-        # test save_value with a @result (set_run_result in rapidpro)
+        # test save_flow_result with a @result (set_run_result in rapidpro)
 
         row_data1 = RowData(**{
             'row_id' : '1',
@@ -211,15 +285,16 @@ class TestFlowContainer(TestToRowModels):
 
         row_data2 = RowData(**{
             'row_id' : '2',
-            'type' : 'save_value',
+            'type' : 'save_flow_result',
             'edges' : [
                 {
                     'from_': '1',
-                    'condition': {'value':'expired', 'variable':'@child.run.status', 'type':'has_only_text', 'name':'Expired'},
+                    'condition': {'value':'expired'},
+                    # 'variable':'@child.run.status', 'type':'has_only_text', 'name':'Expired' are implicit
                 }
             ],
             'mainarg_value' : 'Value',
-            'save_name' : '@results.my_result',
+            'save_name' : 'my result',
         })
 
         case1 = row_data2.edges[0].condition

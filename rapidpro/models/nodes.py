@@ -128,37 +128,33 @@ class BaseNode(ABC):
     def get_row_models(self):
         return self.row_models
 
-    def add_edge_to_row_models(self, edge):
-        self.row_models[0].edges.append(edge)
+    def prepend_edge_to_row_models(self, edge):
+        self.row_models[0].edges.insert(0, edge)
 
     @abstractmethod
-    def initiate_row_models(self, current_row_id_int, parent_edge, **kwargs):
-        # returns: an updated current_row_id_int with an ID that is still available
-        
+    def initiate_row_models(self, node_row_id, parent_edge, **kwargs):
         self.row_models = []
         if self.actions:
             for i, action in enumerate(self.actions):
                 action_fields = action.get_row_model_fields()
+                row_id = f'{node_row_id}.{i}' if i else node_row_id
                 row_model = RowData(
-                    row_id=str(current_row_id_int),
+                    row_id=row_id,
                     edges=[parent_edge],
                     node_uuid=self.uuid,
                     ui_position=self.ui_pos or [],
                     **action_fields
                 )
                 self.row_models.append(row_model)
-                parent_edge = Edge(from_=str(current_row_id_int))
-                current_row_id_int += 1
+                parent_edge = Edge(from_=row_id)
         else:
             self.row_models = [RowData(
-                row_id=str(current_row_id_int),
+                row_id=node_row_id,
                 edges=[parent_edge],
                 node_uuid=self.uuid,
                 ui_position=self.ui_pos or [],
                 **kwargs
             )]
-            current_row_id_int += 1
-        return current_row_id_int
 
     @abstractmethod
     def get_exit_edge_pairs(self):
@@ -185,8 +181,8 @@ class BasicNode(BaseNode):
         if not self.default_exit:
             raise ValueError('default_exit must be set for BasicNode')
 
-    def initiate_row_models(self, current_row_id_int, parent_edge):
-        return super().initiate_row_models(current_row_id_int, parent_edge)
+    def initiate_row_models(self, current_row_id, parent_edge):
+        super().initiate_row_models(current_row_id, parent_edge)
 
     def get_exit_edge_pairs(self):
         return [
@@ -303,10 +299,9 @@ class SwitchRouterNode(BaseNode):
             ui_entry['config'] = {'cases' : {}}
         return ui_entry
 
-    def initiate_row_models(self, current_row_id_int, parent_edge):
-        current_row_id_str = str(current_row_id_int)
+    def initiate_row_models(self, current_row_id, parent_edge):
         if self.has_wait():
-            return super().initiate_row_models(current_row_id_int, parent_edge,
+            super().initiate_row_models(current_row_id, parent_edge,
                 type='wait_for_response', 
                 save_name=self.router.result_name or '',
                 no_response=self.router.wait_timeout or ''
@@ -314,15 +309,15 @@ class SwitchRouterNode(BaseNode):
         elif self.router.operand == '@contact.groups':
             # TODO: What about multiple groups?
             # TODO: groups in cases should be implemented differently.
-            return super().initiate_row_models(current_row_id_int, parent_edge,
+            super().initiate_row_models(current_row_id, parent_edge,
                 type='split_by_group', 
-                mainarg_groups=self.router.cases[0].arguments[1],
-                obj_id=self.router.cases[0].arguments[0],
+                mainarg_groups=[self.router.cases[0].arguments[1]],
+                obj_id=self.router.cases[0].arguments[0] or '',  # obj_id is not yet a list.
             )
         else:
-            return super().initiate_row_models(current_row_id_int, parent_edge,
+            super().initiate_row_models(current_row_id, parent_edge,
                 type='split_by_value',
-                mainarg_value=self.router.operand,
+                mainarg_expression=self.router.operand,
             )
 
     def get_exit_edge_pairs(self):
@@ -364,8 +359,8 @@ class RandomRouterNode(BaseNode):
         ui_entry['config'] = None
         return ui_entry
 
-    def initiate_row_models(self, current_row_id_int, parent_edge):
-        return super().initiate_row_models(current_row_id_int, parent_edge,
+    def initiate_row_models(self, current_row_id, parent_edge):
+        super().initiate_row_models(current_row_id, parent_edge,
             type='split_random', 
         )
 
@@ -440,10 +435,10 @@ class EnterFlowNode(BaseNode):
         ui_entry['config'] = {}
         return ui_entry
 
-    def initiate_row_models(self, current_row_id_int, parent_edge):
+    def initiate_row_models(self, current_row_id, parent_edge):
         # Note: We want to call the method of the BaseNode class here.
         # If we refactor this to be a child of SwitchRouterNode, careful here!
-        return super().initiate_row_models(current_row_id_int, parent_edge)
+        super().initiate_row_models(current_row_id, parent_edge)
 
     def get_exit_edge_pairs(self):
         return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)
@@ -523,7 +518,7 @@ class WebhookNode(BaseNode):
         ui_entry['config'] = {}
         return ui_entry
 
-    def initiate_row_models(self, current_row_id_int, parent_edge):
+    def initiate_row_models(self, current_row_id, parent_edge):
         # Webhook is not yet part of the sheet specification
         raise NotImplementedError
 

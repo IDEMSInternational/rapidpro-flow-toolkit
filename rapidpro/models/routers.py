@@ -219,7 +219,6 @@ class SwitchRouter(BaseRouter):
     def validate(self):
         # TODO: Add more validation
         if self.wait_timeout is not None:
-            # print(self.wait_timeout, type(self.wait_timeout))
             assert type(self.wait_timeout) is int
             assert self.wait_timeout >= 0
             if self.wait_timeout > 0:
@@ -264,8 +263,14 @@ class SwitchRouter(BaseRouter):
                 # Find the case matching the category.
                 if case.category_uuid == category.uuid:
                     covered_category_uuids.add(category.uuid)
+                    arg_idx = 1 if self.operand == "@contact.groups" else 0
+                    if self.operand in ['@contact.groups', '@child.run.status']:
+                        # For groups and expired/complete, var/type/name are implicit
+                        condition = Condition(value=case.arguments[arg_idx])
+                    else:
+                        condition = Condition(value=case.arguments[arg_idx], variable=self.operand, type=case.type, name=category.name)
                     pairs.append(
-                        (category.exit, Edge(from_=row_id, condition=Condition(value=case.arguments[0], variable=self.operand, type=case.type, name=category.name)))
+                        (category.exit, Edge(from_=row_id, condition=condition))
                     )
                     break
         if self.default_category.uuid not in covered_category_uuids:

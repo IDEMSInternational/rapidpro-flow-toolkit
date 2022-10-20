@@ -37,7 +37,7 @@ class RowData(ParserModel):
     video: str = ''
     obj_name: str = ''  # What is this used for?
     obj_id: str = ''  # This should be a list
-    node_name: str = ''
+    node_name: str = ''  # What is this used for?
     node_uuid: str = ''
     no_response: str = ''
     ui_type: str = ''

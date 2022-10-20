@@ -201,7 +201,7 @@ class GenericGroupAction(Action):
         # abstract method
         return {
             'mainarg_groups' : [group.name for group in self.groups],
-            'obj_id' : [group.uuid for group in self.groups][0], # 0th element as obj_id is not yet a list.        
+            'obj_id' : [group.uuid for group in self.groups][0] or '', # 0th element as obj_id is not yet a list.
         }
 
 
@@ -270,7 +270,7 @@ class SetRunResultAction(Action):
 
     def get_row_model_fields(self):
         return {
-            'type' : 'save_value',
+            'type' : 'save_flow_result',
             'mainarg_value' : self.value,
             'save_name' : self.name,
         }
