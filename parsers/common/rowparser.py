@@ -14,6 +14,13 @@ class ParserModel(BaseModel):
         # reserved words in python.
         return header
 
+    def field_name_to_header_name(field):
+        # Reverse of the above.
+        # Currently, however, this is more limited, as field
+        # only refers to top-level field entries, rather than
+        # full hierarchies pointing to a field.
+        return field
+
     def header_name_to_field_name_with_context(header, row):
         # This is used for models representing a full sheet row.
         return header
@@ -283,7 +290,7 @@ class RowParser:
                 self.unparse_row_recurse(entry, f'{prefix}:{i}')
         elif is_parser_model_instance(value):
             for field, entry in value:
-                # TODO: Apply remapping of field names here.
-                self.unparse_row_recurse(entry, f'{prefix}:{field}')
+                mapped_field = type(value).field_name_to_header_name(field)
+                self.unparse_row_recurse(entry, f'{prefix}:{mapped_field}')
         else:
             raise ValueError(f"Unsupported field type {type(value)} of {value}.")

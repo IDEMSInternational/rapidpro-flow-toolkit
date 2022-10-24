@@ -104,6 +104,47 @@ output4_exp = OrderedDict([
 ])
 
 
+# ------ Data for remapping test cases ------
+class ChildModel(ParserModel):
+    some_field: str = ''
+
+    def field_name_to_header_name(field):
+        field_map = {
+            "some_field" : "my_field",
+        }
+        return field_map.get(field, field)
+
+class ModelWithRemap(ParserModel):
+    str_field: str = ''
+    new_str_field: str = ''
+    list_field: List[str] = []
+    child_field: Optional[ChildModel]
+
+    def field_name_to_header_name(field):
+        field_map = {
+            "new_str_field" : "str_field_2",
+            "list_field" : "cool_list",
+        }
+        return field_map.get(field, field)
+
+input_remap = ModelWithRemap(**{
+    'str_field' : 'main model string',
+    'new_str_field' : 'new string',
+    'list_field' : ['cool', 'list'],
+    'child_field' : {
+        'some_field' : 'some value'
+    }
+})
+
+output_remap_exp = OrderedDict([
+    ('str_field', 'main model string'),
+    ('str_field_2', 'new string'),
+    ('cool_list:0', 'cool'),
+    ('cool_list:1', 'list'),
+    ('child_field:my_field', 'some value'),
+])
+
+
 class TestUnparse(unittest.TestCase):
 
     def setUp(self):
@@ -124,6 +165,10 @@ class TestUnparse(unittest.TestCase):
     def test_input_4(self):
         output4 = self.parser.unparse_row(input4)
         self.assertEqual(output4, output4_exp)
+
+    def test_remap(self):
+        output_remap = self.parser.unparse_row(input_remap)
+        self.assertEqual(output_remap, output_remap_exp)
 
 
 if __name__ == '__main__':
