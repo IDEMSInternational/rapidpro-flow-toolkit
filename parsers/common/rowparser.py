@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from typing import List
 from pydantic import BaseModel
 
@@ -27,6 +27,9 @@ def is_list_type(model):
     # This function tries to accommodate both 3.6 and 3.8 (at least)
     return model == list or model == List or model.__dict__.get('__origin__') in [list, List]
 
+def is_list_instance(value):
+    return isinstance(value, list)
+
 
 def is_parser_model_type(model):
     # Determine whether model is a subclass of ParserModel.
@@ -36,9 +39,15 @@ def is_parser_model_type(model):
         # This occurs in Python >= 3.7 if one argument is a nested type, e.g. List[str]
         return False
 
+def is_parser_model_instance(value):
+    return isinstance(value, ParserModel)
+
 
 def is_basic_type(model):
-    return model in [str, int, float, bool]
+    return model in (str, int, float, bool)
+
+def is_basic_instance(value):
+    return isinstance(value, (str, int, float, bool))
 
 
 class RowParser:
@@ -257,3 +266,24 @@ class RowParser:
         # helps us fill in default values where no entries exist.
         return self.model(**self.output)
 
+    def unparse_row(self, model_instance):
+        # No nesting/mapping settings here yet. It simply creates a flat dict.
+        self.output_dict = OrderedDict()
+        self.unparse_row_recurse(model_instance, '')
+        return self.output_dict
+
+    def unparse_row_recurse(self, value, prefix):
+        if value is None:
+            return
+        elif is_basic_instance(value):
+            # We have to remove the leading ':' from the prefix
+            self.output_dict[prefix[1:]] = value
+        elif is_list_instance(value):
+            for i, entry in enumerate(value):
+                self.unparse_row_recurse(entry, f'{prefix}:{i}')
+        elif is_parser_model_instance(value):
+            for field, entry in value:
+                # TODO: Apply remapping of field names here.
+                self.unparse_row_recurse(entry, f'{prefix}:{field}')
+        else:
+            raise ValueError(f"Unsupported field type {type(value)} of {value}.")
