@@ -4,19 +4,21 @@ import copy
 
 from .utils import traverse_flow, Context, get_dict_from_csv
 from parsers.creation.standard_parser import Parser
-from rapidpro.models.containers import RapidProContainer
+from rapidpro.models.containers import RapidProContainer, FlowContainer
 
 class TestStandardParser(unittest.TestCase):
     def setUp(self) -> None:
         pass
 
     def run_example(self, filename, flow_name, context):
+        # Generate a flow from sheet
         rows = get_dict_from_csv(filename)
         parser = Parser(RapidProContainer(), rows=rows, flow_name=flow_name)
         parser.parse()
         output_flow = parser.flow_container.render()
         # print(json.dumps(output_flow, indent=2))
 
+        # Load the expected output flow
         with open("tests/output/all_test_flows.json", 'r') as file:
             output_exp = json.load(file)
         for flow in output_exp["flows"]:
@@ -24,9 +26,22 @@ class TestStandardParser(unittest.TestCase):
                 flow_exp = flow
                 break
 
+        # Ensure the generated flow and expected flow are functionally equivalent
         actions = traverse_flow(output_flow, copy.deepcopy(context))
         actions_exp = traverse_flow(flow_exp, copy.deepcopy(context))
         self.assertEqual(actions, actions_exp)
+
+        # Convert the expected output into a flow and then into a sheet
+        flow_container = FlowContainer.from_dict(flow_exp)
+        new_rows = flow_container.to_rows()
+        # Now convert the sheet back into a flow
+        parser2 = Parser(RapidProContainer(), rows=new_rows, flow_name=flow_name, preprocess_rows=False)
+        parser2.parse()
+        new_output_flow = parser.flow_container.render()
+
+        # Ensure the new generated flow and expected flow are functionally equivalent
+        new_actions = traverse_flow(new_output_flow, copy.deepcopy(context))
+        self.assertEqual(new_actions, actions_exp)
 
     def test_no_switch_nodes(self):
         self.run_example('input/no_switch_nodes.csv', 'no_switch_nodes', Context())

@@ -1,4 +1,6 @@
 from rapidpro.utils import generate_new_uuid
+from parsers.creation.standard_models import RowData, Edge, Condition
+
 import copy
 
 # TODO: Check enter flow
@@ -16,6 +18,8 @@ class Action:
         # in order to bypass the constructor of the subclass
         assert "type" in data
         action_type = data['type']
+        # TODO: Can we make this more smooth by invoking subclass constructors?
+        # And make the Action class abstract?
         action = Action(action_type)
         cls = action_map[action_type]
         action.__class__ = cls
@@ -42,10 +46,18 @@ class Action:
             'type': self.type,
         }
 
+    def get_row_model_fields(self):
+        # This should probably be an abstract method returning a partially
+        # instantiated row model.
+        return NotImplementedError
+
 
 class UnclassifiedAction(Action):
     def render(self):
         return self.__dict__
+
+    def get_row_model_fields(self):
+        return NotImplementedError
 
 
 class SendMessageAction(Action):
@@ -88,6 +100,14 @@ class SendMessageAction(Action):
 
         return render_dict
 
+    def get_row_model_fields(self):
+        # TODO: image/audio/video. Have to consider: multiple attachments per type?
+        return {
+            'type' : 'send_message',
+            'mainarg_message_text' : self.text,
+            'choices' : self.quick_replies,
+        }
+
 
 class SetContactFieldAction(Action):
     def __init__(self, field_name, value):
@@ -116,6 +136,13 @@ class SetContactFieldAction(Action):
                 "name": self.field_name
             },
             "value": self.value
+        }
+
+    def get_row_model_fields(self):
+        return {
+            'type' : 'save_value',
+            'mainarg_value' : self.value,
+            'save_name' : self.field_name,
         }
 
 
@@ -170,6 +197,13 @@ class GenericGroupAction(Action):
     def render(self):
         return NotImplementedError
 
+    def get_row_model_fields(self):
+        # abstract method
+        return {
+            'mainarg_groups' : [group.name for group in self.groups],
+            'obj_id' : [group.uuid for group in self.groups][0] or '', # 0th element as obj_id is not yet a list.
+        }
+
 
 class AddContactGroupAction(GenericGroupAction):
     def __init__(self, groups):
@@ -184,6 +218,11 @@ class AddContactGroupAction(GenericGroupAction):
             "uuid": self.uuid,
             "groups": [group.render() for group in self.groups],
         }
+
+    def get_row_model_fields(self):
+        fields = super().get_row_model_fields()
+        fields['type'] = 'add_to_group'
+        return fields
 
 
 class RemoveContactGroupAction(GenericGroupAction):
@@ -202,6 +241,11 @@ class RemoveContactGroupAction(GenericGroupAction):
                 'all_groups': self.all_groups
             })
         return render_dict
+
+    def get_row_model_fields(self):
+        fields = super().get_row_model_fields()
+        fields['type'] = 'remove_from_group'
+        return fields
 
 
 class SetRunResultAction(Action):
@@ -224,13 +268,20 @@ class SetRunResultAction(Action):
             })
         return render_dict
 
+    def get_row_model_fields(self):
+        return {
+            'type' : 'save_flow_result',
+            'mainarg_value' : self.value,
+            'save_name' : self.name,
+        }
+
 
 class EnterFlowAction(Action):
-    def __init__(self, flow_name, uuid=None):
+    def __init__(self, flow_name, flow_uuid=None):
         super().__init__('enter_flow')
         self.flow = {
             'name': flow_name,
-            'uuid': uuid
+            'uuid': flow_uuid
         }
 
     def record_global_uuids(self, uuid_dict):
@@ -245,6 +296,14 @@ class EnterFlowAction(Action):
             "uuid": self.uuid,
             "flow": self.flow
         }
+
+    def get_row_model_fields(self):
+        return {
+            'type' : 'start_new_flow',
+            'mainarg_flow_name' : self.flow['name'],
+            'obj_id' : self.flow['uuid'] or '',
+        }
+
 
 action_map = {
     "add_contact_groups" : AddContactGroupAction,

@@ -4,6 +4,8 @@ import string
 from rapidpro.models.common import Exit
 from rapidpro.utils import generate_new_uuid
 
+from parsers.creation.standard_models import Edge, Condition
+
 logger = logging.getLogger(__name__)
 
 
@@ -56,6 +58,8 @@ class BaseRouter:
     def render(self):
         raise NotImplementedError
 
+    def get_exit_edge_pairs(self, row_id):
+        raise NotImplementedError
 
 class SwitchRouter(BaseRouter):
 
@@ -100,7 +104,6 @@ class SwitchRouter(BaseRouter):
                 logger.warning(f'Router has No Response category but no wait timeout. Ignoring No Response category.')
 
     def from_dict(data, exits):
-        # TODO: implement wait field
         result_name, categories = BaseRouter._get_result_name_and_categories_from_data(data, exits)
         cases = [RouterCase.from_dict(case_data) for case_data in data["cases"]]
         default_categories = [category for category in categories if category.uuid == data["default_category_uuid"]]
@@ -216,7 +219,6 @@ class SwitchRouter(BaseRouter):
     def validate(self):
         # TODO: Add more validation
         if self.wait_timeout is not None:
-            # print(self.wait_timeout, type(self.wait_timeout))
             assert type(self.wait_timeout) is int
             assert self.wait_timeout >= 0
             if self.wait_timeout > 0:
@@ -253,6 +255,32 @@ class SwitchRouter(BaseRouter):
             })
         return render_dict
 
+    def get_exit_edge_pairs(self, row_id):
+        pairs = []
+        covered_category_uuids = set()
+        for category in self.get_categories():
+            for case in self.cases:
+                # Find the case matching the category.
+                if case.category_uuid == category.uuid:
+                    covered_category_uuids.add(category.uuid)
+                    arg_idx = 1 if self.operand == "@contact.groups" else 0
+                    if self.operand in ['@contact.groups', '@child.run.status']:
+                        # For groups and expired/complete, var/type/name are implicit
+                        condition = Condition(value=case.arguments[arg_idx])
+                    else:
+                        condition = Condition(value=case.arguments[arg_idx], variable=self.operand, type=case.type, name=category.name)
+                    pairs.append(
+                        (category.exit, Edge(from_=row_id, condition=condition))
+                    )
+                    break
+        if self.default_category.uuid not in covered_category_uuids:
+            # Sometimes, the default category is already covered by a specific case.
+            # In that case, its edge has already been covered.
+            pairs.append((self.default_category.exit, Edge(from_=row_id)))  # By convention, the condition is blank rather than 'Other'
+        if self.no_response_category:
+            pairs.append((self.no_response_category.exit, Edge(from_=row_id, condition=Condition(value=category.name))))
+        return pairs
+
 
 class RandomRouter(BaseRouter):
     def __init__(self, result_name=None, categories=None):
@@ -285,6 +313,14 @@ class RandomRouter(BaseRouter):
                 "result_name": self.result_name
             })
         return render_dict
+
+    def get_exit_edge_pairs(self, row_id):
+        pairs = []
+        for category in self.categories:
+            pairs.append(
+                (category.exit, Edge(from_=row_id, condition=Condition(value=category.name)))
+            )
+        return pairs
 
 
 class RouterCategory:

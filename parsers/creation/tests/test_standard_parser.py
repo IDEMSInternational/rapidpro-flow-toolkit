@@ -11,41 +11,7 @@ from parsers.common.rowparser import RowParser
 from parsers.creation.standard_models import RowData
 from parsers.common.cellparser import CellParser
 
-def get_start_row():
-    return RowData(**{
-        'row_id' : '1',
-        'edges' : [{
-            'from_': 'start',
-        }],
-        'type' : 'send_message',
-        'mainarg_message_text' : 'Text of message',
-        'choices' : ['Answer 1', 'Answer 2'],
-    })
-
-def get_unconditional_node_from_1():
-    return RowData(**{
-        'row_id' : '2',
-        'type' : 'send_message',
-        'edges' : [
-            {
-                'from_': '1',
-            }
-        ],
-        'mainarg_message_text' : 'Unconditional message',
-    })
-
-def get_conditional_node_from_1():
-    return RowData(**{
-        'row_id' : '3',
-        'type' : 'send_message',
-        'edges' : [
-            {
-                'from_': '1',
-                'condition': {'value':'3', 'variable':'@fields.name', 'type':'has_phrase', 'name':''},
-            }
-        ],
-        'mainarg_message_text' : 'Message if @fields.name == 3',
-    })
+from .row_data import get_start_row, get_unconditional_node_from_1, get_conditional_node_from_1
 
 class TestParsing(unittest.TestCase):
 
@@ -262,8 +228,8 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(expected_node_uuids, actual_node_uuids)
 
         # Check that No Response category is created even if not connected
-        last_node = nodes[-1]
-        self.assertEqual('No Response', last_node['router']['categories'][-1]['name'])
+        last_wait_node = nodes[-2]
+        self.assertEqual('No Response', last_wait_node['router']['categories'][-1]['name'])
 
         # TODO: Ideally, there should be more explicit tests here.
         # At least the functionality is covered by the integration tests simulating the flow.
@@ -277,7 +243,8 @@ class TestParsing(unittest.TestCase):
         self.assertIn(f_uuid(0), render_ui)
         self.assertEqual((340, 0), f_uipos(0))
         self.assertEqual((360, 180), f_uipos(1))
-        self.assertEqual((840, 1200), f_uipos(-1))
+        self.assertEqual((840, 1200), f_uipos(-2))
+        self.assertEqual((740, 300), f_uipos(-1))
         self.assertEqual("wait_for_response", f_uitype(0))
         self.assertEqual("split_by_subflow", f_uitype(1))
         self.assertEqual("split_by_expression", f_uitype(2))
@@ -288,7 +255,16 @@ class TestParsing(unittest.TestCase):
         self.assertEqual("split_by_random", f_uitype(7))
         self.assertEqual("execute_actions", f_uitype(8))
         self.assertEqual("execute_actions", f_uitype(9))
-        self.assertEqual("wait_for_response", f_uitype(-1))
+        self.assertEqual("wait_for_response", f_uitype(-2))
+
+        # Ensure that wait_for_response cases are working as intended
+        node6 = render_output['nodes'][6]
+        categories = node6["router"]["categories"]
+        self.assertEqual(len(categories), 3)
+        self.assertEqual(categories[0]["name"], 'A')
+        self.assertEqual(categories[1]["name"], 'Other')
+        self.assertEqual(categories[2]["name"], 'No Response')
+        self.assertEqual(len(node6["router"]["cases"]), 1)
 
     def test_groups_and_flows(self):
         # We check that references flows and group are assigned uuids consistently
@@ -313,7 +289,6 @@ class TestParsing(unittest.TestCase):
         parser = Parser(container, rows=[], flow_name='groups_and_flows')
         parser.data_rows = switch_node_rows
         parser.parse()
-        container.add_flow(parser.get_flow())
 
         # Render also invokes filling in all the flow/group UUIDs
         render_output = container.render()
@@ -334,7 +309,7 @@ class TestParsing(unittest.TestCase):
         # This UUID appears in a previous occurrence of the group in the sheet
         self.assertEqual(nodes[3]['router']['cases'][0]['arguments'], [test_uuid, 'test group'])
         # This UUID was part of the groups in the container, but not in the sheet
-        self.assertEqual(nodes[7]['actions'][0]['groups'], [other_group_dict])
+        self.assertEqual(nodes[6]['actions'][0]['groups'], [other_group_dict])
 
         tiny_flow.uuid = 'something else'
         with self.assertRaises(ValueError):
