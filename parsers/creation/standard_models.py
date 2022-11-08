@@ -22,6 +22,12 @@ class Edge(ParserModel):
         }
         return field_map.get(header, header)
 
+    def field_name_to_header_name(field):
+        field_map = {
+            "from_" : "from",
+        }
+        return field_map.get(header, header)
+
     def header_name_to_field_name_with_context(header, row):
         return header_name_to_field_name(header)
 
@@ -57,6 +63,21 @@ class RowData(ParserModel):
     # mainarg_none should be ''
     # _ui_position should be '' or a list of two ints
     # ...
+
+    def field_name_to_header_name(field):
+        field_map = {
+            "node_uuid" : "_nodeId",
+            "ui_type" : "_ui_type",
+            "ui_position" : "_ui_position",
+            'mainarg_message_text' : 'message_text',
+            'mainarg_value' : 'message_text',
+            'mainarg_groups' : 'message_text',
+            'mainarg_none' : 'message_text',
+            'mainarg_destination_row_ids' : 'message_text',
+            'mainarg_flow_name' : 'message_text',
+            'mainarg_expression' : 'message_text',
+        }
+        return field_map.get(header, header)
 
     def header_name_to_field_name_with_context(header, row):
         # TODO: This should be defined outside of this function
