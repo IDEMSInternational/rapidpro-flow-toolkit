@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+from jinja2 import Template
+
 
 def get_separators(value):
     # TODO: Discuss escape characters
@@ -23,9 +25,14 @@ def get_object_from_cell_value(value):
 
 
 class CellParser:
-    def parse(self, value):
+    def parse(self, value, context={}):
+        value = self.parse_as_string(value, context)
+
         # TODO: Implement properly
         if ';' in value:
             return value.split(';')
         else:
             return value
+
+    def parse_as_string(self, value, context={}):
+        return Template(value).render(context)

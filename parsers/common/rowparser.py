@@ -62,10 +62,14 @@ class RowParser:
     # and the values are the cell content converted into nested lists.
     # Turns this into an instance of the provided model.
 
-    def __init__(self, model, cell_parser):
+    def __init__(self, model, cell_parser, context=None):
         self.model = model
         self.output = None  # Gets reinitialized with each call to parse_row
         self.cell_parser = cell_parser
+        self.context = context or {}
+
+    def update_context(self, context):
+        self.context = context
 
     def try_assign_as_kwarg(self, field, key, value, model):
         # If value can be interpreted as a (field, field_value) pair for a field of model,
@@ -76,7 +80,6 @@ class RowParser:
                 self.assign_value(field[key], first_entry_as_key, value[1], model.__fields__[first_entry_as_key].outer_type_)
                 return True
         return False
-
 
     def assign_value(self, field, key, value, model):
         # Given a field in the output and a key, assign
@@ -221,7 +224,9 @@ class RowParser:
             # If the expected type of the value is list/object,
             # parse the cell content as such.
             # Otherwise leave it as a string
-            value = self.cell_parser.parse(value)
+            value = self.cell_parser.parse(value, context=self.context)
+        else:
+            value = self.cell_parser.parse_as_string(value, context=self.context)
         self.assign_value(field, key, value, model)
 
     def parse_row(self, data):
@@ -250,7 +255,7 @@ class RowParser:
         for k,v in data.items():
             if '*' in k:
                 prefix = k.split('*')[0]
-                parsed_v = self.cell_parser.parse(v)
+                parsed_v = self.cell_parser.parse(v, context=self.context)
                 if isinstance(parsed_v, list):
                     asterisk_list_lengths[prefix] = max(asterisk_list_lengths[prefix], len(parsed_v))
                     # No else case needed because then the implied list length is 1, i.e. the default value
@@ -260,7 +265,7 @@ class RowParser:
                 # Process each prefix:*:suffix column entry by assigning the individual
                 # list values to prefix:1:suffix, prefix:2:suffix, etc
                 prefix = k.split('*')[0]
-                parsed_v = self.cell_parser.parse(v)
+                parsed_v = self.cell_parser.parse(v, context=self.context)
                 if not isinstance(parsed_v, list):
                     # If there was only one entry, we assume it is used for the entire list
                     parsed_v = [parsed_v]*asterisk_list_lengths[prefix]
