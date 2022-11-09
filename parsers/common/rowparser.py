@@ -222,6 +222,8 @@ class RowParser:
             # parse the cell content as such.
             # Otherwise leave it as a string
             value = self.cell_parser.parse(value)
+        else:
+            value = self.cell_parser.parse_as_string(value)
         self.assign_value(field, key, value, model)
 
     def parse_row(self, data):
