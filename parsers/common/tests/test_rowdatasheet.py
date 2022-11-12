@@ -94,6 +94,18 @@ class TestRowDataSheet(unittest.TestCase):
     def test_to_tablib_AC(self):
         self.compare_tablibs([rowA, rowC], contentAC_exp)
 
+    def test_export_csv(self):
+        # Not our job to test the contents (tablib's responsibility),
+        # but we want to make sure here the export function works.
+        sheet = RowDataSheet(self.rowparser, [rowA, rowC])
+        output = sheet.export('/dev/null')
+
+    def test_export_xlsx(self):
+        # Not our job to test the contents (tablib's responsibility),
+        # but we want to make sure here the export function works.
+        sheet = RowDataSheet(self.rowparser, [rowA, rowC])
+        output = sheet.export('/dev/null', file_format='xlsx')
+
 
 if __name__ == '__main__':
     unittest.main()

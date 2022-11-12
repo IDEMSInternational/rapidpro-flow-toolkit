@@ -24,7 +24,8 @@ class RowDataSheet:
         '''
         data = self.convert_to_tablib()
         exported_data = data.export(file_format)
-        with open(filename, 'wb') as f:
+        write_type = 'w' if type(exported_data) == str else 'wb'
+        with open(filename, write_type) as f:
             f.write(exported_data)
 
     def convert_to_tablib(self):
