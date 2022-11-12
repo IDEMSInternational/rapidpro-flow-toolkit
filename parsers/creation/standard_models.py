@@ -22,6 +22,12 @@ class Edge(ParserModel):
         }
         return field_map.get(header, header)
 
+    def field_name_to_header_name(field):
+        field_map = {
+            "from_" : "from",
+        }
+        return field_map.get(field, field)
+
     def header_name_to_field_name_with_context(header, row):
         return header_name_to_field_name(header)
 
@@ -30,6 +36,14 @@ class RowData(ParserModel):
     row_id: str
     type: str
     edges: List[Edge]
+    # These are the fields that message_text can map to
+    mainarg_message_text: str = ''
+    mainarg_value: str = ''
+    mainarg_groups: List[str] = []
+    mainarg_none: str = ''
+    mainarg_destination_row_ids: List[str] = []
+    mainarg_flow_name: str = ''
+    mainarg_expression: str = ''
     choices: List[str] = []
     save_name: str = ''
     image: str = ''
@@ -42,14 +56,6 @@ class RowData(ParserModel):
     no_response: str = ''
     ui_type: str = ''
     ui_position: List[str] = []
-    # These are the fields that message_text can map to
-    mainarg_message_text: str = ''
-    mainarg_value: str = ''
-    mainarg_groups: List[str] = []
-    mainarg_none: str = ''
-    mainarg_destination_row_ids: List[str] = []
-    mainarg_flow_name: str = ''
-    mainarg_expression: str = ''
 
     # TODO: Extra validation here, e.g. from must not be empty
     # type must come from row_type_to_main_arg.keys() (see below)
@@ -57,6 +63,21 @@ class RowData(ParserModel):
     # mainarg_none should be ''
     # _ui_position should be '' or a list of two ints
     # ...
+
+    def field_name_to_header_name(field):
+        field_map = {
+            "node_uuid" : "_nodeId",
+            "ui_type" : "_ui_type",
+            "ui_position" : "_ui_position",
+            'mainarg_message_text' : 'message_text',
+            'mainarg_value' : 'message_text',
+            'mainarg_groups' : 'message_text',
+            'mainarg_none' : 'message_text',
+            'mainarg_destination_row_ids' : 'message_text',
+            'mainarg_flow_name' : 'message_text',
+            'mainarg_expression' : 'message_text',
+        }
+        return field_map.get(field, field)
 
     def header_name_to_field_name_with_context(header, row):
         # TODO: This should be defined outside of this function

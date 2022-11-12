@@ -2,6 +2,8 @@ import unittest
 import json
 
 from parsers.creation.standard_parser import Parser
+from parsers.common.rowdatasheet import RowDataSheet
+from parsers.common.rowparser import RowParser
 from tests.utils import get_dict_from_csv, find_destination_uuid, Context, find_node_by_uuid
 from rapidpro.models.containers import RapidProContainer, FlowContainer
 from rapidpro.models.actions import Group, SendMessageAction, AddContactGroupAction, SetRunResultAction, SetContactFieldAction
@@ -311,3 +313,74 @@ class TestFlowContainer(TestToRowModels):
 
         row_models = container.to_rows()
         self.compare_row_models_without_uuid(row_models, [row_data1, row_data2])
+
+
+class TestRowModelExport(unittest.TestCase):
+    def test_row_model_export(self):
+        row_data = RowData(**{
+            'row_id' : '1',
+            'type' : 'send_message',
+            'mainarg_message_text' : 'Hello',
+            'choices' : ['QR1', 'QR2', 'QR3'],
+            'edges' : [{ 'from_': 'start' }],
+            'node_uuid' : '224f6caa-fd25-47d3-96a9-3d43506b7878',
+            'ui_position' : ['123','456'],
+        })
+
+        # Because default values are '', even blank fields are exported.
+        # This may change in the future.
+        expected_headers = [
+            'row_id',
+            'type',
+            'edges:0:from',
+            'edges:0:condition:value',
+            'edges:0:condition:variable',
+            'edges:0:condition:type',
+            'edges:0:condition:name',
+            'message_text',
+            'choices:0',
+            'choices:1',
+            'choices:2',
+            'save_name',
+            'image',
+            'audio',
+            'video',
+            'obj_name',
+            'obj_id',
+            'node_name',
+            '_nodeId',
+            'no_response',
+            '_ui_type',
+            '_ui_position:0',
+            '_ui_position:1',
+        ]
+        expected_content = (
+            '1', 
+            'send_message', 
+            'start', 
+            '', 
+            '', 
+            '', 
+            '', 
+            '', 
+            'QR1', 
+            'QR2', 
+            'QR3', 
+            '', 
+            '', 
+            '', 
+            '', 
+            '', 
+            '', 
+            '', 
+            '224f6caa-fd25-47d3-96a9-3d43506b7878', 
+            '', 
+            '', 
+            '123', 
+            '456',
+        )
+
+        sheet = RowDataSheet(RowParser(RowData, None), [row_data])
+        tablib_sheet = sheet.convert_to_tablib()
+        self.assertEqual(tablib_sheet.headers, expected_headers)
+        self.assertEqual(tablib_sheet[0], expected_content)
