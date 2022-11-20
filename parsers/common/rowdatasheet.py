@@ -1,5 +1,6 @@
 import networkx as nx
 import tablib
+# from .sheetparser import SheetParser
 
 class RowDataSheet:
 
@@ -11,6 +12,10 @@ class RowDataSheet:
         '''
         self.row_parser = row_parser
         self.rows = rows
+
+    # def from_file(row_parser, context, filename, file_format='csv'):
+    #     sheet_parser = SheetParser(row_parser, context, filename, file_format)
+    #     return sheet_parser.get_row_data_sheet()
 
     def export(self, filename, file_format='csv'):
         '''
