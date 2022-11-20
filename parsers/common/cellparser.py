@@ -35,4 +35,10 @@ class CellParser:
             return value
 
     def parse_as_string(self, value, context={}):
-        return Template(value).render(context)
+        if not context:
+            # This is an optimization.
+            # However, it also means that we don't notice if there are
+            # uninstantiated template vars in this particular case.
+            return value
+        else:
+            return Template(value).render(context)
