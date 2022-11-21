@@ -129,31 +129,20 @@ class FlowParser:
             assert table is not None
             row_parser = RowParser(FlowRowModel, CellParser())
             self.sheet_parser = SheetParser(row_parser, table, self.context)
-        self.data_rows = self.sheet_parser.parse_all()
-        # if preprocess_rows:
-        #     # rows are dicts
-        #     row_parser = RowParser(FlowRowModel, CellParser(), self.context)
-        #     self.data_rows = [row_parser.parse_row(row) for row in rows]
-        # else:
-        #     # rows are FlowRowModel instances already
-        #     self.data_rows = rows
-
-        # self.sheet_map = defaultdict()
-        # for row in self.data_rows:
-        #     self.sheet_map[row.row_id] = row
-
         self.node_groups = []
         self.row_id_to_nodegroup = defaultdict()
         self.node_name_to_node_map = defaultdict()
 
     def parse(self):
-        for row in self.data_rows:
+        row = self.sheet_parser.parse_next_row()
+        while row is not None:
             self._parse_row(row)
+            row = self.sheet_parser.parse_next_row()
         flow_container = self._compile_flow()
         self.rapidpro_container.add_flow(flow_container)
         return flow_container
 
-    def get_row_action(self, row):
+    def _get_row_action(self, row):
         attachment_types = [row.image, row.audio, row.video]
         if row.type == 'send_message':
             send_message_action = SendMessageAction(text=row.mainarg_message_text)
@@ -194,7 +183,7 @@ class FlowParser:
             uuid = None
         return Group(name=name, uuid=uuid)
 
-    def get_row_node(self, row):
+    def _get_row_node(self, row):
         if row.type in ['add_to_group', 'remove_from_group', 'split_by_group'] and row.obj_id:
             self.rapidpro_container.record_group_uuid(row.mainarg_groups[0], row.obj_id)
 
@@ -229,7 +218,7 @@ class FlowParser:
         else:
             return BasicNode(uuid=node_uuid, ui_pos=ui_pos)
 
-    def get_node_name(self, row):
+    def _get_node_name(self, row):
         return row.node_uuid or row.node_name
 
     def _add_row_edge(self, edge, destination_uuid):
@@ -263,8 +252,8 @@ class FlowParser:
             self._parse_goto_row(row)
             return
 
-        row_action = self.get_row_action(row)
-        node_name = self.get_node_name(row)
+        row_action = self._get_row_action(row)
+        node_name = self._get_node_name(row)
         existing_node = self.node_name_to_node_map.get(node_name)
 
         if node_name and existing_node and row_action:
@@ -287,7 +276,7 @@ class FlowParser:
             else:
                 raise ValueError(f'To merge rows using node name {node_name} into a single node, there must be exactly one unconditional incoming edge.')
 
-        new_node = self.get_row_node(row)
+        new_node = self._get_row_node(row)
         if row_action:
             new_node.add_action(row_action)
 
@@ -298,7 +287,7 @@ class FlowParser:
         self.node_groups.append(new_node_group)
         if row.row_id:
             self.row_id_to_nodegroup[row.row_id] = new_node_group
-        self.node_name_to_node_map[self.get_node_name(row)] = new_node
+        self.node_name_to_node_map[self._get_node_name(row)] = new_node
 
     def _compile_flow(self):
         '''

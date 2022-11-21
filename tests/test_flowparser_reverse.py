@@ -42,8 +42,9 @@ class TestFlowParserReverse(unittest.TestCase):
         flow = parser.parse()
         container.validate()
         row_models = flow.to_rows()
-        self.assertEqual(len(row_models), len(parser.data_rows))
-        for model, model_exp in zip(row_models, parser.data_rows):
+        data_rows = parser.sheet_parser.parse_all()
+        self.assertEqual(len(row_models), len(data_rows))
+        for model, model_exp in zip(row_models, data_rows):
             self.compare_models_leniently(model, model_exp)
 
     def test_no_switch_nodes(self):

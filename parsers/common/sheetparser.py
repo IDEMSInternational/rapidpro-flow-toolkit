@@ -41,6 +41,7 @@ class SheetParser:
         return row
 
     def parse_all(self):
+        self.iterator = iter(self.input_rows)
         output_rows = []
         row = self.parse_next_row()
         while row is not None:
