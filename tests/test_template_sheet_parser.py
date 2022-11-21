@@ -4,7 +4,6 @@ import copy
 
 from parsers.common.rowparser import RowParser, ParserModel
 from parsers.common.cellparser import CellParser
-from parsers.creation.standard_parser import Parser
 from parsers.creation.template_sheet_parser import TemplateSheetParser
 from rapidpro.models.containers import RapidProContainer
 from .utils import traverse_flow, Context, get_dict_from_csv

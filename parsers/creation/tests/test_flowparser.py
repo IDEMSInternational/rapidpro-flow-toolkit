@@ -1,14 +1,14 @@
 import json
 import unittest
 
-from parsers.creation.standard_parser import Parser
+from parsers.creation.flowparser import FlowParser
 from tests.utils import get_dict_from_csv, find_destination_uuid, Context, find_node_by_uuid
 from rapidpro.models.containers import RapidProContainer, FlowContainer
 from rapidpro.models.actions import Group, AddContactGroupAction
 from rapidpro.models.nodes import BasicNode
 
 from parsers.common.rowparser import RowParser
-from parsers.creation.standard_models import RowData
+from parsers.creation.flowrowmodel import FlowRowModel
 from parsers.common.cellparser import CellParser
 
 from .row_data import get_start_row, get_unconditional_node_from_1, get_conditional_node_from_1
@@ -16,10 +16,10 @@ from .row_data import get_start_row, get_unconditional_node_from_1, get_conditio
 class TestParsing(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.row_parser = RowParser(RowData, CellParser())
+        self.row_parser = RowParser(FlowRowModel, CellParser())
 
     def test_send_message(self):
-        parser = Parser(RapidProContainer(), rows=[], flow_name='send_message')
+        parser = FlowParser(RapidProContainer(), rows=[], flow_name='send_message')
         parser.data_rows = [get_start_row()]
         parser.parse()
         render_output = parser.flow_container.render()
@@ -35,7 +35,7 @@ class TestParsing(unittest.TestCase):
     def test_linear(self):
         data_row1 = get_start_row()
         data_row2 = get_unconditional_node_from_1()
-        parser = Parser(RapidProContainer(), rows=[], flow_name='linear')
+        parser = FlowParser(RapidProContainer(), rows=[], flow_name='linear')
         parser.data_rows = [data_row1, data_row2]
         parser.parse()
         render_output = parser.flow_container.render()
@@ -53,7 +53,7 @@ class TestParsing(unittest.TestCase):
     def test_only_conditional(self):
         data_row1 = get_start_row()
         data_row3 = get_conditional_node_from_1()
-        parser = Parser(RapidProContainer(), rows=[], flow_name='only_conditional')
+        parser = FlowParser(RapidProContainer(), rows=[], flow_name='only_conditional')
         parser.data_rows = [data_row1, data_row3]
         parser.parse()
         render_output = parser.flow_container.render()
@@ -88,7 +88,7 @@ class TestParsing(unittest.TestCase):
         self.check_split(data_rows)
 
     def check_split(self, data_rows):
-        parser = Parser(RapidProContainer(), rows=[], flow_name='split')
+        parser = FlowParser(RapidProContainer(), rows=[], flow_name='split')
         parser.data_rows = data_rows
         parser.parse()
         render_output = parser.flow_container.render()
@@ -111,7 +111,7 @@ class TestParsing(unittest.TestCase):
     def test_no_switch_node_rows(self):
         rows = get_dict_from_csv('input/no_switch_nodes.csv')
         no_switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
-        parser = Parser(RapidProContainer(), rows=[], flow_name='no_switch_node')
+        parser = FlowParser(RapidProContainer(), rows=[], flow_name='no_switch_node')
         parser.data_rows = no_switch_node_rows
         parser.parse()
         render_output = parser.flow_container.render()
@@ -215,7 +215,7 @@ class TestParsing(unittest.TestCase):
     def test_switch_node_rows(self):
         rows = get_dict_from_csv('input/switch_nodes.csv')
         switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
-        parser = Parser(RapidProContainer(), rows=[], flow_name='switch_node')
+        parser = FlowParser(RapidProContainer(), rows=[], flow_name='switch_node')
         parser.data_rows = switch_node_rows
         parser.parse()
 
@@ -286,7 +286,7 @@ class TestParsing(unittest.TestCase):
         # Add flow from sheet into container
         rows = get_dict_from_csv('input/groups_and_flows.csv')
         switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
-        parser = Parser(container, rows=[], flow_name='groups_and_flows')
+        parser = FlowParser(container, rows=[], flow_name='groups_and_flows')
         parser.data_rows = switch_node_rows
         parser.parse()
 

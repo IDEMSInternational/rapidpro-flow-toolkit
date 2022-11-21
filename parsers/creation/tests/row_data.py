@@ -1,7 +1,7 @@
-from parsers.creation.standard_models import RowData
+from parsers.creation.flowrowmodel import FlowRowModel
 
 def get_start_row():
-    return RowData(**{
+    return FlowRowModel(**{
         'row_id' : '1',
         'edges' : [{
             'from_': 'start',
@@ -12,7 +12,7 @@ def get_start_row():
     })
 
 def get_unconditional_node_from_1():
-    return RowData(**{
+    return FlowRowModel(**{
         'row_id' : '2',
         'type' : 'send_message',
         'edges' : [
@@ -24,7 +24,7 @@ def get_unconditional_node_from_1():
     })
 
 def get_conditional_node_from_1():
-    return RowData(**{
+    return FlowRowModel(**{
         'row_id' : '3',
         'type' : 'send_message',
         'edges' : [

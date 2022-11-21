@@ -32,7 +32,7 @@ class Edge(ParserModel):
         return header_name_to_field_name(header)
 
 
-class RowData(ParserModel):
+class FlowRowModel(ParserModel):
     row_id: str
     type: str
     edges: List[Edge]

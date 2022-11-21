@@ -1,4 +1,4 @@
-from parsers.creation.standard_parser import Parser
+from parsers.creation.flowparser import FlowParser
 from rapidpro.models.containers import RapidProContainer
 
 
@@ -17,7 +17,7 @@ class TemplateSheetParser:
         rapidpro_container = RapidProContainer()
 
         for row in template_rows:
-            parser = Parser(rapidpro_container, rows=flow_rows, flow_name=row.ID, context=dict(row))
+            parser = FlowParser(rapidpro_container, rows=flow_rows, flow_name=row.ID, context=dict(row))
             parser.parse()
 
         return rapidpro_container

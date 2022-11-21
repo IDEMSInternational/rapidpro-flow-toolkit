@@ -3,9 +3,8 @@ import json
 import copy
 
 from .utils import traverse_flow, Context, get_dict_from_csv
-from parsers.creation.standard_parser import Parser
+from parsers.creation.flowparser import FlowParser
 from rapidpro.models.containers import RapidProContainer
-from parsers.creation.standard_models import RowData
 
 class TestStandardParserReverse(unittest.TestCase):
     def setUp(self) -> None:
@@ -39,7 +38,7 @@ class TestStandardParserReverse(unittest.TestCase):
         self.maxDiff = None
         rows = get_dict_from_csv(filename)
         container = RapidProContainer()
-        parser = Parser(container, rows=rows, flow_name=flow_name)
+        parser = FlowParser(container, rows=rows, flow_name=flow_name)
         parser.parse()
         container.validate()
         row_models = parser.get_flow().to_rows()

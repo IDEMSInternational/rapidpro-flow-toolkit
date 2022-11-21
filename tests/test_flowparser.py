@@ -3,17 +3,17 @@ import json
 import copy
 
 from .utils import traverse_flow, Context, get_dict_from_csv
-from parsers.creation.standard_parser import Parser
+from parsers.creation.flowparser import FlowParser
 from rapidpro.models.containers import RapidProContainer, FlowContainer
 
-class TestStandardParser(unittest.TestCase):
+class TestFlowParser(unittest.TestCase):
     def setUp(self) -> None:
         pass
 
     def run_example(self, filename, flow_name, context):
         # Generate a flow from sheet
         rows = get_dict_from_csv(filename)
-        parser = Parser(RapidProContainer(), rows=rows, flow_name=flow_name)
+        parser = FlowParser(RapidProContainer(), rows=rows, flow_name=flow_name)
         parser.parse()
         output_flow = parser.flow_container.render()
         # print(json.dumps(output_flow, indent=2))
@@ -35,7 +35,7 @@ class TestStandardParser(unittest.TestCase):
         flow_container = FlowContainer.from_dict(flow_exp)
         new_rows = flow_container.to_rows()
         # Now convert the sheet back into a flow
-        parser2 = Parser(RapidProContainer(), rows=new_rows, flow_name=flow_name, preprocess_rows=False)
+        parser2 = FlowParser(RapidProContainer(), rows=new_rows, flow_name=flow_name, preprocess_rows=False)
         parser2.parse()
         new_output_flow = parser.flow_container.render()
 

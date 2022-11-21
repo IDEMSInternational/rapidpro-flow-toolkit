@@ -8,9 +8,10 @@ from rapidpro.models.containers import FlowContainer
 from rapidpro.models.nodes import BaseNode, BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
 from rapidpro.models.routers import SwitchRouter, RandomRouter
 from parsers.common.cellparser import CellParser
+from parsers.common.sheetparser import SheetParser
 from parsers.common.rowparser import RowParser
-from parsers.creation.standard_models import RowData
-from .standard_models import Condition
+from parsers.creation.flowrowmodel import FlowRowModel
+from .flowrowmodel import Condition
 
 class NodeGroup:
     def __init__(self, node, row_type):
@@ -103,7 +104,7 @@ class NodeGroup:
         return created_node
 
 
-class Parser:
+class FlowParser:
 
     def __init__(self, rapidpro_container, rows, flow_name, flow_uuid=None, preprocess_rows=True, context=None):
         '''
@@ -116,10 +117,10 @@ class Parser:
         self.context = context or {}
         if preprocess_rows:
             # rows are dicts
-            row_parser = RowParser(RowData, CellParser(), self.context)
+            row_parser = RowParser(FlowRowModel, CellParser(), self.context)
             self.data_rows = [row_parser.parse_row(row) for row in rows]
         else:
-            # rows are RowData instances already
+            # rows are FlowRowModel instances already
             self.data_rows = rows
 
         self.sheet_map = defaultdict()
