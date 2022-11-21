@@ -6,7 +6,7 @@ from .utils import traverse_flow, Context, get_dict_from_csv
 from parsers.creation.flowparser import FlowParser
 from rapidpro.models.containers import RapidProContainer
 
-class TestStandardParserReverse(unittest.TestCase):
+class TestFlowParserReverse(unittest.TestCase):
     def setUp(self) -> None:
         pass
 
@@ -39,9 +39,9 @@ class TestStandardParserReverse(unittest.TestCase):
         rows = get_dict_from_csv(filename)
         container = RapidProContainer()
         parser = FlowParser(container, rows=rows, flow_name=flow_name)
-        parser.parse()
+        flow = parser.parse()
         container.validate()
-        row_models = parser.get_flow().to_rows()
+        row_models = flow.to_rows()
         self.assertEqual(len(row_models), len(parser.data_rows))
         for model, model_exp in zip(row_models, parser.data_rows):
             self.compare_models_leniently(model, model_exp)

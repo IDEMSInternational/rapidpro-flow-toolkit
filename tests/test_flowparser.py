@@ -14,8 +14,8 @@ class TestFlowParser(unittest.TestCase):
         # Generate a flow from sheet
         rows = get_dict_from_csv(filename)
         parser = FlowParser(RapidProContainer(), rows=rows, flow_name=flow_name)
-        parser.parse()
-        output_flow = parser.flow_container.render()
+        flow_container = parser.parse()
+        output_flow = flow_container.render()
         # print(json.dumps(output_flow, indent=2))
 
         # Load the expected output flow
@@ -36,8 +36,8 @@ class TestFlowParser(unittest.TestCase):
         new_rows = flow_container.to_rows()
         # Now convert the sheet back into a flow
         parser2 = FlowParser(RapidProContainer(), rows=new_rows, flow_name=flow_name, preprocess_rows=False)
-        parser2.parse()
-        new_output_flow = parser.flow_container.render()
+        flow_container = parser2.parse()
+        new_output_flow = flow_container.render()
 
         # Ensure the new generated flow and expected flow are functionally equivalent
         new_actions = traverse_flow(new_output_flow, copy.deepcopy(context))

@@ -21,8 +21,8 @@ class TestParsing(unittest.TestCase):
     def test_send_message(self):
         parser = FlowParser(RapidProContainer(), rows=[], flow_name='send_message')
         parser.data_rows = [get_start_row()]
-        parser.parse()
-        render_output = parser.flow_container.render()
+        flow_container = parser.parse()
+        render_output = flow_container.render()
 
         node_0 = render_output['nodes'][0]
         node_0_actions = node_0['actions']
@@ -37,8 +37,8 @@ class TestParsing(unittest.TestCase):
         data_row2 = get_unconditional_node_from_1()
         parser = FlowParser(RapidProContainer(), rows=[], flow_name='linear')
         parser.data_rows = [data_row1, data_row2]
-        parser.parse()
-        render_output = parser.flow_container.render()
+        flow_container = parser.parse()
+        render_output = flow_container.render()
 
         node_0 = render_output['nodes'][0]
         node_1 = render_output['nodes'][1]
@@ -55,8 +55,8 @@ class TestParsing(unittest.TestCase):
         data_row3 = get_conditional_node_from_1()
         parser = FlowParser(RapidProContainer(), rows=[], flow_name='only_conditional')
         parser.data_rows = [data_row1, data_row3]
-        parser.parse()
-        render_output = parser.flow_container.render()
+        flow_container = parser.parse()
+        render_output = flow_container.render()
 
         self.assertEqual(len(render_output['nodes']), 3)
         node_0 = render_output['nodes'][0]
@@ -90,8 +90,8 @@ class TestParsing(unittest.TestCase):
     def check_split(self, data_rows):
         parser = FlowParser(RapidProContainer(), rows=[], flow_name='split')
         parser.data_rows = data_rows
-        parser.parse()
-        render_output = parser.flow_container.render()
+        flow_container = parser.parse()
+        render_output = flow_container.render()
 
         node_start = render_output['nodes'][0]
         node_switch = find_node_by_uuid(render_output, node_start['exits'][0]['destination_uuid'])
@@ -113,8 +113,8 @@ class TestParsing(unittest.TestCase):
         no_switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
         parser = FlowParser(RapidProContainer(), rows=[], flow_name='no_switch_node')
         parser.data_rows = no_switch_node_rows
-        parser.parse()
-        render_output = parser.flow_container.render()
+        flow_container = parser.parse()
+        render_output = flow_container.render()
 
         # Check that node UUIDs are maintained
         nodes = render_output['nodes']
@@ -217,9 +217,8 @@ class TestParsing(unittest.TestCase):
         switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
         parser = FlowParser(RapidProContainer(), rows=[], flow_name='switch_node')
         parser.data_rows = switch_node_rows
-        parser.parse()
-
-        render_output = parser.flow_container.render()
+        flow_container = parser.parse()
+        render_output = flow_container.render()
 
         # Check that node UUIDs are maintained
         nodes = render_output['nodes']

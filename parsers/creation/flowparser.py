@@ -25,8 +25,11 @@ class NodeGroup:
     def exit_node(self):
         return self.nodes[-1]
 
+    def add_nodes_to_flow(self, flow_container):
+        for node in self.nodes:
+            flow_container.add_node(node)
+
     def add_exit(self, destination_uuid, condition):
-        created_node = None
         exit_node = self.exit_node()
         # Unconditional/default case edge
         if condition == Condition() and not isinstance(exit_node, RandomRouterNode):
@@ -82,7 +85,6 @@ class NodeGroup:
             exit_node.update_default_exit(old_destination)
             old_exit_node.update_default_exit(exit_node.uuid)
             self.nodes.append(exit_node)
-            created_node = exit_node
 
         # Add an outgoing edge to the router
         if isinstance(exit_node.router, SwitchRouter):
@@ -101,8 +103,6 @@ class NodeGroup:
                 destination_uuid=destination_uuid
             )
 
-        return created_node
-
 
 class FlowParser:
 
@@ -112,8 +112,8 @@ class FlowParser:
         rows: The sheet rows generating the flow.
         '''
         self.rapidpro_container = rapidpro_container
-        self.flow_container = FlowContainer(flow_name=flow_name, uuid=flow_uuid)
-        self.rapidpro_container.record_flow_uuid(flow_name, self.flow_container.uuid)
+        self.flow_name = flow_name
+        self.flow_uuid = flow_uuid
         self.context = context or {}
         if preprocess_rows:
             # rows are dicts
@@ -127,13 +127,16 @@ class FlowParser:
         for row in self.data_rows:
             self.sheet_map[row.row_id] = row
 
+        self.node_groups = []
         self.row_id_to_nodegroup = defaultdict()
         self.node_name_to_node_map = defaultdict()
 
     def parse(self):
         for row in self.data_rows:
             self._parse_row(row)
-        self.rapidpro_container.add_flow(self.flow_container)
+        flow_container = self._compile_flow()
+        self.rapidpro_container.add_flow(flow_container)
+        return flow_container
 
     def get_row_action(self, row):
         attachment_types = [row.image, row.audio, row.video]
@@ -219,9 +222,7 @@ class FlowParser:
             if edge.from_ not in self.row_id_to_nodegroup:
                 print(edge.from_, self.row_id_to_nodegroup.keys())
             from_node_group = self.row_id_to_nodegroup[edge.from_]
-            created_node = from_node_group.add_exit(destination_uuid, edge.condition)
-            if created_node:
-                self.flow_container.add_node(created_node)
+            from_node_group.add_exit(destination_uuid, edge.condition)
 
     def _parse_goto_row(self, row):
         # If there is a single destination, connect all edges to that destination.
@@ -262,18 +263,20 @@ class FlowParser:
         for edge in row.edges:
             self._add_row_edge(edge, new_node.uuid)
 
-        # TODO: Rather than adding individual nodes to the container,
-        # it might be cleaner to go through the list of NodeGroups at
-        # the end and compile the list of nodes.
-        # Caveat: Need to identify which is the starting node.
-        self.flow_container.add_node(new_node)
-        self.row_id_to_nodegroup[row.row_id] = NodeGroup(new_node, row.type)
+        new_node_group = NodeGroup(new_node, row.type)
+        self.node_groups.append(new_node_group)
+        self.row_id_to_nodegroup[row.row_id] = new_node_group
         self.node_name_to_node_map[self.get_node_name(row)] = new_node
 
-    def get_flow(self):
+    def _compile_flow(self):
         '''
         Referenced groups or other flows may have a UUID which is None.
         Add the flow to a RapidProContainer and run update_global_uuids
         to fill in these missing UUIDs in a consistent way.
         '''
-        return self.flow_container
+
+        # Caveat/TODO: Need to ensure starting node comes first.
+        flow_container = FlowContainer(flow_name=self.flow_name, uuid=self.flow_uuid)
+        for node_group in self.node_groups:
+            node_group.add_nodes_to_flow(flow_container)
+        return flow_container

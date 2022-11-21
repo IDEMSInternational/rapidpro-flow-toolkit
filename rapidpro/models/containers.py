@@ -29,6 +29,7 @@ class RapidProContainer:
 
     def add_flow(self, flow):
         self.flows.append(flow)
+        self.record_flow_uuid(flow.name, flow.uuid)
 
     def record_group_uuid(self, name, uuid):
         self.uuid_dict.record_group_uuid(name, uuid)
