@@ -218,11 +218,18 @@ class FlowParser:
         return row.node_uuid or row.node_name
 
     def _add_row_edge(self, edge, destination_uuid):
-        if edge.from_ != 'start':
+        if edge.from_ == 'start':
+            return
+        elif edge.from_:
             if edge.from_ not in self.row_id_to_nodegroup:
-                print(edge.from_, self.row_id_to_nodegroup.keys())
+                raise ValueError(f'Edge from row_id "{edge.from_}" which does not exist.')
+                # print(edge.from_, self.row_id_to_nodegroup.keys())
             from_node_group = self.row_id_to_nodegroup[edge.from_]
-            from_node_group.add_exit(destination_uuid, edge.condition)
+        else:
+            if not self.node_groups:
+                raise ValueError(f'First node must have edge from "start"')
+            from_node_group = self.node_groups[-1]
+        from_node_group.add_exit(destination_uuid, edge.condition)
 
     def _parse_goto_row(self, row):
         # If there is a single destination, connect all edges to that destination.

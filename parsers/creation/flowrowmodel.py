@@ -13,7 +13,7 @@ class Condition(ParserModel):
 
 
 class Edge(ParserModel):
-    from_: str
+    from_: str = ''
     condition: Condition = Condition()
 
     def header_name_to_field_name(header):

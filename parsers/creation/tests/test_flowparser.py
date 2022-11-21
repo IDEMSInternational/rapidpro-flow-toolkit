@@ -35,6 +35,7 @@ class TestParsing(unittest.TestCase):
     def test_linear(self):
         data_row1 = get_start_row()
         data_row2 = get_unconditional_node_from_1()
+        data_row2.edges[0].from_ = ''  # implicit continue from last node
         parser = FlowParser(RapidProContainer(), rows=[], flow_name='linear')
         parser.data_rows = [data_row1, data_row2]
         flow_container = parser.parse()
