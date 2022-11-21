@@ -46,6 +46,9 @@ class TestFlowParser(unittest.TestCase):
     def test_no_switch_nodes(self):
         self.run_example('input/no_switch_nodes.csv', 'no_switch_nodes', Context())
 
+    def test_no_switch_nodes(self):
+        self.run_example('input/no_switch_nodes_without_row_ids.csv', 'no_switch_nodes', Context())
+
     def test_switch_nodes(self):
         context = Context(inputs=['b', 'expired'])
         self.run_example('input/switch_nodes.csv', 'switch_nodes', context)

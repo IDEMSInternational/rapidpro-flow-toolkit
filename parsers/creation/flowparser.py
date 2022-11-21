@@ -256,12 +256,21 @@ class FlowParser:
             # If we want to add an action to an existing node of a given name,
             # there must be exactly one unconditional edge, and the
             # from_ row_id has to match.
-            if len(row.edges) == 1 and row.edges[0].condition == Condition() and self.row_id_to_nodegroup.get(row.edges[0].from_).entry_node() == existing_node:
-                existing_node.add_action(row_action)
-                self.row_id_to_nodegroup[row.row_id] = self.row_id_to_nodegroup[row.edges[0].from_]
-                return
+            if len(row.edges) == 1 and row.edges[0].condition == Condition():
+                # Get the group that this row is linked to.
+                if row.edges[0].from_:
+                    predecessor_group = self.row_id_to_nodegroup.get(row.edges[0].from_)
+                else:
+                    predecessor_group = self.node_groups[-1]
+                if predecessor_group.entry_node() == existing_node:
+                    existing_node.add_action(row_action)
+                    if row.row_id:
+                        self.row_id_to_nodegroup[row.row_id] = self.row_id_to_nodegroup[row.edges[0].from_]
+                    return
+                else:
+                    raise ValueError(f'To merge rows using node name {node_name} into a single node, edge must come from a rode with node name {node_name}.')
             else:
-                print(f'Cannot merge rows using node name {node_name} into a single node.')
+                raise ValueError(f'To merge rows using node name {node_name} into a single node, there must be exactly one unconditional incoming edge.')
 
         new_node = self.get_row_node(row)
         if row_action:
@@ -272,7 +281,8 @@ class FlowParser:
 
         new_node_group = NodeGroup(new_node, row.type)
         self.node_groups.append(new_node_group)
-        self.row_id_to_nodegroup[row.row_id] = new_node_group
+        if row.row_id:
+            self.row_id_to_nodegroup[row.row_id] = new_node_group
         self.node_name_to_node_map[self.get_node_name(row)] = new_node
 
     def _compile_flow(self):

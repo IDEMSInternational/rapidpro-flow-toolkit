@@ -33,7 +33,7 @@ class Edge(ParserModel):
 
 
 class FlowRowModel(ParserModel):
-    row_id: str
+    row_id: str = ''
     type: str
     edges: List[Edge]
     # These are the fields that message_text can map to
