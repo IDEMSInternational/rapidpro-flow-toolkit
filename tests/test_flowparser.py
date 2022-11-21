@@ -2,9 +2,10 @@ import unittest
 import json
 import copy
 
-from .utils import traverse_flow, Context, get_dict_from_csv
+from .utils import traverse_flow, Context, get_dict_from_csv, get_table_from_file
 from parsers.creation.flowparser import FlowParser
 from rapidpro.models.containers import RapidProContainer, FlowContainer
+from parsers.common.tests.mock_sheetparser import MockSheetParser
 
 class TestFlowParser(unittest.TestCase):
     def setUp(self) -> None:
@@ -12,8 +13,8 @@ class TestFlowParser(unittest.TestCase):
 
     def run_example(self, filename, flow_name, context):
         # Generate a flow from sheet
-        rows = get_dict_from_csv(filename)
-        parser = FlowParser(RapidProContainer(), rows=rows, flow_name=flow_name)
+        table = get_table_from_file(filename)
+        parser = FlowParser(RapidProContainer(), flow_name, table)
         flow_container = parser.parse()
         output_flow = flow_container.render()
         # print(json.dumps(output_flow, indent=2))
@@ -35,7 +36,8 @@ class TestFlowParser(unittest.TestCase):
         flow_container = FlowContainer.from_dict(flow_exp)
         new_rows = flow_container.to_rows()
         # Now convert the sheet back into a flow
-        parser2 = FlowParser(RapidProContainer(), rows=new_rows, flow_name=flow_name, preprocess_rows=False)
+        sheet_parser = MockSheetParser(None, new_rows)
+        parser2 = FlowParser(RapidProContainer(), flow_name=flow_name, sheet_parser=sheet_parser)
         flow_container = parser2.parse()
         new_output_flow = flow_container.render()
 

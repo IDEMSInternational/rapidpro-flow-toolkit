@@ -7,10 +7,7 @@ class MockRowParser:
     def unparse_row(self, row):
         return row
 
-    def update_context(self, context):
-        self.context = copy.deepcopy(context)
-
-    def parse_row(self, row):
+    def parse_row(self, row, template_context):
         row = copy.deepcopy(row)
-        row["context"] = self.context
+        row["context"] = template_context
         return row

@@ -2,6 +2,7 @@ import unittest
 import json
 from typing import List, Dict, Optional
 from collections import OrderedDict
+import tablib
 
 from parsers.common.rowparser import RowParser, ParserModel
 from .mock_row_parser import MockRowParser
@@ -23,9 +24,10 @@ class TestSheetParser(unittest.TestCase):
 
     def setUp(self):
         self.rowparser = MockRowParser()
+        self.table1 = tablib.import_set(input1, format='csv')
 
     def test_context_and_bookmarks(self):
-        parser = SheetParser(self.rowparser, input1)
+        parser = SheetParser(self.rowparser, self.table1)
         row1 = parser.parse_next_row()
         self.assertEqual(row1, {'field1' : 'row1f1', 'field2' : 'row1f2', 'context' : {}})
         parser.create_bookmark('row2')
@@ -40,7 +42,7 @@ class TestSheetParser(unittest.TestCase):
         self.assertEqual(row2b, {'field1' : 'row2f1', 'field2' : 'row2f2', 'context' : {}})
 
     def test_parse_all(self):
-        parser = SheetParser(self.rowparser, input1)
+        parser = SheetParser(self.rowparser, self.table1)
         rows = parser.parse_all()
         self.assertEqual(len(rows), 3)        
         self.assertEqual(rows[0], {'field1' : 'row1f1', 'field2' : 'row1f2', 'context' : {}})        

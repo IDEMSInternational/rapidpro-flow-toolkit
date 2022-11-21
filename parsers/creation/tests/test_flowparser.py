@@ -2,7 +2,7 @@ import json
 import unittest
 
 from parsers.creation.flowparser import FlowParser
-from tests.utils import get_dict_from_csv, find_destination_uuid, Context, find_node_by_uuid
+from tests.utils import get_dict_from_csv, get_table_from_file, find_destination_uuid, Context, find_node_by_uuid
 from rapidpro.models.containers import RapidProContainer, FlowContainer
 from rapidpro.models.actions import Group, AddContactGroupAction
 from rapidpro.models.nodes import BasicNode
@@ -10,6 +10,7 @@ from rapidpro.models.nodes import BasicNode
 from parsers.common.rowparser import RowParser
 from parsers.creation.flowrowmodel import FlowRowModel
 from parsers.common.cellparser import CellParser
+from parsers.common.tests.mock_sheetparser import MockSheetParser
 
 from .row_data import get_start_row, get_unconditional_node_from_1, get_conditional_node_from_1
 
@@ -18,11 +19,19 @@ class TestParsing(unittest.TestCase):
     def setUp(self) -> None:
         self.row_parser = RowParser(FlowRowModel, CellParser())
 
-    def test_send_message(self):
-        parser = FlowParser(RapidProContainer(), rows=[], flow_name='send_message')
-        parser.data_rows = [get_start_row()]
+    def get_render_output_from_file(self, flow_name, filename):
+        dict_rows = get_dict_from_csv(filename)
+        self.rows = [self.row_parser.parse_row(row) for row in dict_rows]
+        return self.get_render_output(flow_name, self.rows)
+
+    def get_render_output(self, flow_name, input_rows):
+        sheet_parser = MockSheetParser(None, input_rows)
+        parser = FlowParser(RapidProContainer(), flow_name=flow_name, sheet_parser=sheet_parser)
         flow_container = parser.parse()
-        render_output = flow_container.render()
+        return flow_container.render()
+
+    def test_send_message(self):
+        render_output = self.get_render_output('send_message', [get_start_row()])
 
         node_0 = render_output['nodes'][0]
         node_0_actions = node_0['actions']
@@ -36,10 +45,7 @@ class TestParsing(unittest.TestCase):
         data_row1 = get_start_row()
         data_row2 = get_unconditional_node_from_1()
         data_row2.edges[0].from_ = ''  # implicit continue from last node
-        parser = FlowParser(RapidProContainer(), rows=[], flow_name='linear')
-        parser.data_rows = [data_row1, data_row2]
-        flow_container = parser.parse()
-        render_output = flow_container.render()
+        render_output = self.get_render_output('linear', [data_row1, data_row2])
 
         node_0 = render_output['nodes'][0]
         node_1 = render_output['nodes'][1]
@@ -54,10 +60,7 @@ class TestParsing(unittest.TestCase):
     def test_only_conditional(self):
         data_row1 = get_start_row()
         data_row3 = get_conditional_node_from_1()
-        parser = FlowParser(RapidProContainer(), rows=[], flow_name='only_conditional')
-        parser.data_rows = [data_row1, data_row3]
-        flow_container = parser.parse()
-        render_output = flow_container.render()
+        render_output = self.get_render_output('only_conditional', [data_row1, data_row3])
 
         self.assertEqual(len(render_output['nodes']), 3)
         node_0 = render_output['nodes'][0]
@@ -89,10 +92,7 @@ class TestParsing(unittest.TestCase):
         self.check_split(data_rows)
 
     def check_split(self, data_rows):
-        parser = FlowParser(RapidProContainer(), rows=[], flow_name='split')
-        parser.data_rows = data_rows
-        flow_container = parser.parse()
-        render_output = flow_container.render()
+        render_output = self.get_render_output('split', data_rows)
 
         node_start = render_output['nodes'][0]
         node_switch = find_node_by_uuid(render_output, node_start['exits'][0]['destination_uuid'])
@@ -110,17 +110,12 @@ class TestParsing(unittest.TestCase):
         self.assertIsNotNone(node_switch.get('router'))
 
     def test_no_switch_node_rows(self):
-        rows = get_dict_from_csv('input/no_switch_nodes.csv')
-        no_switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
-        parser = FlowParser(RapidProContainer(), rows=[], flow_name='no_switch_node')
-        parser.data_rows = no_switch_node_rows
-        flow_container = parser.parse()
-        render_output = flow_container.render()
+        render_output = self.get_render_output_from_file('no_switch_node', 'input/no_switch_nodes.csv')
 
         # Check that node UUIDs are maintained
         nodes = render_output['nodes']
         actual_node_uuids = [node['uuid'] for node in nodes]
-        expected_node_uuids = [row['_nodeId'] for row in rows][3:]  # The first 4 rows are actions joined into a single node.
+        expected_node_uuids = [row.node_uuid for row in self.rows][3:]  # The first 4 rows are actions joined into a single node.
         self.assertEqual(expected_node_uuids, actual_node_uuids)
 
         self.assertEqual(render_output['name'], 'no_switch_node')
@@ -214,17 +209,12 @@ class TestParsing(unittest.TestCase):
         self.assertEqual('execute_actions', render_ui[node_1['uuid']]['type'])
 
     def test_switch_node_rows(self):
-        rows = get_dict_from_csv('input/switch_nodes.csv')
-        switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
-        parser = FlowParser(RapidProContainer(), rows=[], flow_name='switch_node')
-        parser.data_rows = switch_node_rows
-        flow_container = parser.parse()
-        render_output = flow_container.render()
+        render_output = self.get_render_output_from_file('switch_node', 'input/switch_nodes.csv')
 
         # Check that node UUIDs are maintained
         nodes = render_output['nodes']
         actual_node_uuids = [node['uuid'] for node in nodes]
-        expected_node_uuids = [row['_nodeId'] for row in rows]
+        expected_node_uuids = [row.node_uuid for row in self.rows]
         self.assertEqual(expected_node_uuids, actual_node_uuids)
 
         # Check that No Response category is created even if not connected
@@ -284,12 +274,11 @@ class TestParsing(unittest.TestCase):
         container.add_flow(tiny_flow)
 
         # Add flow from sheet into container
-        rows = get_dict_from_csv('input/groups_and_flows.csv')
-        switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
-        parser = FlowParser(container, rows=[], flow_name='groups_and_flows')
-        parser.data_rows = switch_node_rows
+        dict_rows = get_dict_from_csv('input/groups_and_flows.csv')
+        rows = [self.row_parser.parse_row(row) for row in dict_rows]
+        sheet_parser = MockSheetParser(None, rows)
+        parser = FlowParser(container, flow_name='groups_and_flows', sheet_parser=sheet_parser)
         parser.parse()
-
         # Render also invokes filling in all the flow/group UUIDs
         render_output = container.render()
 

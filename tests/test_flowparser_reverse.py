@@ -2,7 +2,7 @@ import unittest
 import json
 import copy
 
-from .utils import traverse_flow, Context, get_dict_from_csv
+from .utils import traverse_flow, Context, get_dict_from_csv, get_table_from_file
 from parsers.creation.flowparser import FlowParser
 from rapidpro.models.containers import RapidProContainer
 
@@ -36,9 +36,9 @@ class TestFlowParserReverse(unittest.TestCase):
 
     def run_example(self, filename, flow_name):
         self.maxDiff = None
-        rows = get_dict_from_csv(filename)
+        table = get_table_from_file(filename)
         container = RapidProContainer()
-        parser = FlowParser(container, rows=rows, flow_name=flow_name)
+        parser = FlowParser(container, flow_name, table)
         flow = parser.parse()
         container.validate()
         row_models = flow.to_rows()
