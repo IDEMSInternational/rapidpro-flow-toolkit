@@ -13,24 +13,56 @@ from parsers.common.rowparser import RowParser
 from parsers.creation.flowrowmodel import FlowRowModel
 from .flowrowmodel import Condition
 
+
 class NodeGroup:
+    def __init__(self):
+        # node_groups may contain NodeGroups and RowNodeGroups
+        self.node_groups = []
+        self.loose_exits = []
+
+    def is_empty(self):
+        return not self.node_groups
+
+    def entry_node(self):
+        return nodes_groups[0].entry_node()
+
+    def last_node_group(self):
+        return self.node_groups[-1]
+
+    def add_exit(self, destination_uuid, condition):
+        # TODO: Implement
+        pass
+
+    def add_node_group(self, node_group):
+        # Node: Connecting of exits is not done here.
+        self.node_groups.append(node_group)
+
+    def add_nodes_to_flow(self, flow_container):
+        for node in self.node_groups:
+            node.add_nodes_to_flow(flow_container)
+
+
+class RowNodeGroup:
+    # Group of nodes representing a row in the sheet.
+
     def __init__(self, node, row_type):
         '''node: first node in the group'''
         self.nodes = [node]
         self.row_type = row_type
 
+    def is_empty(self):
+        # Constructor assumes a node
+        return False
+
     def entry_node(self):
         return self.nodes[0]
-
-    def exit_node(self):
-        return self.nodes[-1]
 
     def add_nodes_to_flow(self, flow_container):
         for node in self.nodes:
             flow_container.add_node(node)
 
     def add_exit(self, destination_uuid, condition):
-        exit_node = self.exit_node()
+        exit_node = self.nodes[-1]
         # Unconditional/default case edge
         if condition == Condition() and not isinstance(exit_node, RandomRouterNode):
             # For BasicNode, this updates the default exit.
@@ -129,9 +161,15 @@ class FlowParser:
             assert table is not None
             row_parser = RowParser(FlowRowModel, CellParser())
             self.sheet_parser = SheetParser(row_parser, table, self.context)
-        self.node_groups = []
+        self.node_group_stack = [NodeGroup()]
         self.row_id_to_nodegroup = defaultdict()
         self.node_name_to_node_map = defaultdict()
+
+    def current_node_group(self):
+        return self.node_group_stack[-1]
+
+    def most_recent_node_group(self):
+        return self.current_node_group().last_node_group()
 
     def parse(self):
         row = self.sheet_parser.parse_next_row()
@@ -230,9 +268,9 @@ class FlowParser:
                 # print(edge.from_, self.row_id_to_nodegroup.keys())
             from_node_group = self.row_id_to_nodegroup[edge.from_]
         else:
-            if not self.node_groups:
+            if self.current_node_group().is_empty():
                 raise ValueError(f'First node must have edge from "start"')
-            from_node_group = self.node_groups[-1]
+            from_node_group = self.most_recent_node_group()
         from_node_group.add_exit(destination_uuid, edge.condition)
 
     def _parse_goto_row(self, row):
@@ -265,7 +303,7 @@ class FlowParser:
                 if row.edges[0].from_:
                     predecessor_group = self.row_id_to_nodegroup.get(row.edges[0].from_)
                 else:
-                    predecessor_group = self.node_groups[-1]
+                    predecessor_group = self.most_recent_node_group()
                 if predecessor_group.entry_node() == existing_node:
                     existing_node.add_action(row_action)
                     if row.row_id:
@@ -283,8 +321,8 @@ class FlowParser:
         for edge in row.edges:
             self._add_row_edge(edge, new_node.uuid)
 
-        new_node_group = NodeGroup(new_node, row.type)
-        self.node_groups.append(new_node_group)
+        new_node_group = RowNodeGroup(new_node, row.type)
+        self.current_node_group().add_node_group(new_node_group)
         if row.row_id:
             self.row_id_to_nodegroup[row.row_id] = new_node_group
         self.node_name_to_node_map[self._get_node_name(row)] = new_node
@@ -298,6 +336,6 @@ class FlowParser:
 
         # Caveat/TODO: Need to ensure starting node comes first.
         flow_container = FlowContainer(flow_name=self.flow_name, uuid=self.flow_uuid)
-        for node_group in self.node_groups:
-            node_group.add_nodes_to_flow(flow_container)
+        assert len(self.node_group_stack) == 1
+        self.current_node_group().add_nodes_to_flow(flow_container)
         return flow_container
