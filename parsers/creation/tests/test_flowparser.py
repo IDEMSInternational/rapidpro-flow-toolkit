@@ -1,28 +1,38 @@
 import json
 import unittest
+import tablib
 
-from parsers.creation.standard_parser import Parser
-from tests.utils import get_dict_from_csv, find_destination_uuid, Context, find_node_by_uuid
+from parsers.creation.flowparser import FlowParser
+from tests.utils import get_dict_from_csv, get_table_from_file, find_destination_uuid, Context, find_node_by_uuid, traverse_flow
 from rapidpro.models.containers import RapidProContainer, FlowContainer
 from rapidpro.models.actions import Group, AddContactGroupAction
 from rapidpro.models.nodes import BasicNode
 
 from parsers.common.rowparser import RowParser
-from parsers.creation.standard_models import RowData
+from parsers.creation.flowrowmodel import FlowRowModel
 from parsers.common.cellparser import CellParser
+from parsers.common.tests.mock_sheetparser import MockSheetParser
 
 from .row_data import get_start_row, get_unconditional_node_from_1, get_conditional_node_from_1
 
 class TestParsing(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.row_parser = RowParser(RowData, CellParser())
+        self.row_parser = RowParser(FlowRowModel, CellParser())
+
+    def get_render_output_from_file(self, flow_name, filename):
+        dict_rows = get_dict_from_csv(filename)
+        self.rows = [self.row_parser.parse_row(row) for row in dict_rows]
+        return self.get_render_output(flow_name, self.rows)
+
+    def get_render_output(self, flow_name, input_rows):
+        sheet_parser = MockSheetParser(None, input_rows)
+        parser = FlowParser(RapidProContainer(), flow_name=flow_name, sheet_parser=sheet_parser)
+        flow_container = parser.parse()
+        return flow_container.render()
 
     def test_send_message(self):
-        parser = Parser(RapidProContainer(), rows=[], flow_name='send_message')
-        parser.data_rows = [get_start_row()]
-        parser.parse()
-        render_output = parser.flow_container.render()
+        render_output = self.get_render_output('send_message', [get_start_row()])
 
         node_0 = render_output['nodes'][0]
         node_0_actions = node_0['actions']
@@ -35,10 +45,8 @@ class TestParsing(unittest.TestCase):
     def test_linear(self):
         data_row1 = get_start_row()
         data_row2 = get_unconditional_node_from_1()
-        parser = Parser(RapidProContainer(), rows=[], flow_name='linear')
-        parser.data_rows = [data_row1, data_row2]
-        parser.parse()
-        render_output = parser.flow_container.render()
+        data_row2.edges[0].from_ = ''  # implicit continue from last node
+        render_output = self.get_render_output('linear', [data_row1, data_row2])
 
         node_0 = render_output['nodes'][0]
         node_1 = render_output['nodes'][1]
@@ -53,10 +61,7 @@ class TestParsing(unittest.TestCase):
     def test_only_conditional(self):
         data_row1 = get_start_row()
         data_row3 = get_conditional_node_from_1()
-        parser = Parser(RapidProContainer(), rows=[], flow_name='only_conditional')
-        parser.data_rows = [data_row1, data_row3]
-        parser.parse()
-        render_output = parser.flow_container.render()
+        render_output = self.get_render_output('only_conditional', [data_row1, data_row3])
 
         self.assertEqual(len(render_output['nodes']), 3)
         node_0 = render_output['nodes'][0]
@@ -88,10 +93,7 @@ class TestParsing(unittest.TestCase):
         self.check_split(data_rows)
 
     def check_split(self, data_rows):
-        parser = Parser(RapidProContainer(), rows=[], flow_name='split')
-        parser.data_rows = data_rows
-        parser.parse()
-        render_output = parser.flow_container.render()
+        render_output = self.get_render_output('split', data_rows)
 
         node_start = render_output['nodes'][0]
         node_switch = find_node_by_uuid(render_output, node_start['exits'][0]['destination_uuid'])
@@ -109,17 +111,12 @@ class TestParsing(unittest.TestCase):
         self.assertIsNotNone(node_switch.get('router'))
 
     def test_no_switch_node_rows(self):
-        rows = get_dict_from_csv('input/no_switch_nodes.csv')
-        no_switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
-        parser = Parser(RapidProContainer(), rows=[], flow_name='no_switch_node')
-        parser.data_rows = no_switch_node_rows
-        parser.parse()
-        render_output = parser.flow_container.render()
+        render_output = self.get_render_output_from_file('no_switch_node', 'input/no_switch_nodes.csv')
 
         # Check that node UUIDs are maintained
         nodes = render_output['nodes']
         actual_node_uuids = [node['uuid'] for node in nodes]
-        expected_node_uuids = [row['_nodeId'] for row in rows][3:]  # The first 4 rows are actions joined into a single node.
+        expected_node_uuids = [row.node_uuid for row in self.rows][3:]  # The first 4 rows are actions joined into a single node.
         self.assertEqual(expected_node_uuids, actual_node_uuids)
 
         self.assertEqual(render_output['name'], 'no_switch_node')
@@ -213,18 +210,12 @@ class TestParsing(unittest.TestCase):
         self.assertEqual('execute_actions', render_ui[node_1['uuid']]['type'])
 
     def test_switch_node_rows(self):
-        rows = get_dict_from_csv('input/switch_nodes.csv')
-        switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
-        parser = Parser(RapidProContainer(), rows=[], flow_name='switch_node')
-        parser.data_rows = switch_node_rows
-        parser.parse()
-
-        render_output = parser.flow_container.render()
+        render_output = self.get_render_output_from_file('switch_node', 'input/switch_nodes.csv')
 
         # Check that node UUIDs are maintained
         nodes = render_output['nodes']
         actual_node_uuids = [node['uuid'] for node in nodes]
-        expected_node_uuids = [row['_nodeId'] for row in rows]
+        expected_node_uuids = [row.node_uuid for row in self.rows]
         self.assertEqual(expected_node_uuids, actual_node_uuids)
 
         # Check that No Response category is created even if not connected
@@ -284,12 +275,11 @@ class TestParsing(unittest.TestCase):
         container.add_flow(tiny_flow)
 
         # Add flow from sheet into container
-        rows = get_dict_from_csv('input/groups_and_flows.csv')
-        switch_node_rows = [self.row_parser.parse_row(row) for row in rows]
-        parser = Parser(container, rows=[], flow_name='groups_and_flows')
-        parser.data_rows = switch_node_rows
+        dict_rows = get_dict_from_csv('input/groups_and_flows.csv')
+        rows = [self.row_parser.parse_row(row) for row in dict_rows]
+        sheet_parser = MockSheetParser(None, rows)
+        parser = FlowParser(container, flow_name='groups_and_flows', sheet_parser=sheet_parser)
         parser.parse()
-
         # Render also invokes filling in all the flow/group UUIDs
         render_output = container.render()
 
@@ -321,3 +311,155 @@ class TestParsing(unittest.TestCase):
         with self.assertRaises(ValueError):
             # The group is referenced by 2 different UUIDs
             container.validate()
+
+
+class TestLoops(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.row_parser = RowParser(FlowRowModel, CellParser())
+
+    def render_output_from_table_data(self, table_data, template_context=None):
+        table = tablib.import_set(table_data, format='csv')
+        parser = FlowParser(RapidProContainer(), 'basic loop', table, context=template_context or {})
+        return parser.parse().render()
+
+    def run_example(self, table_data, messages_exp, context=None, template_context=None):
+        render_output = self.render_output_from_table_data(table_data, template_context or {})
+        actions = traverse_flow(render_output, context or Context())
+        actions_exp = list(zip(['send_msg']*len(messages_exp), messages_exp))
+        self.assertEqual(actions, actions_exp)
+
+    def test_basic_loop(self):
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            '1,begin_for,start,i,1;2;3\n'
+            ',send_message,,,{{i}}. Some text\n'
+            ',end_for,,,\n'
+        )
+        render_output = self.render_output_from_table_data(table_data)
+        nodes = render_output["nodes"]
+        self.assertEqual(len(nodes), 3)
+        self.assertEqual(nodes[0]["actions"][0]["type"], 'send_msg')
+        self.assertEqual(nodes[0]["actions"][0]["text"], '1. Some text')
+        self.assertEqual(nodes[1]["actions"][0]["text"], '2. Some text')
+        self.assertEqual(nodes[2]["actions"][0]["text"], '3. Some text')
+        # Also check that the connectivity is correct
+        messages_exp = ['1. Some text','2. Some text','3. Some text']
+        self.run_example(table_data, messages_exp)
+
+    def test_one_element_loop(self):
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            '1,begin_for,start,i,label\n'
+            ',send_message,,,{{i}}. Some text\n'
+            ',end_for,,,\n'
+        )
+        render_output = self.render_output_from_table_data(table_data)
+        nodes = render_output["nodes"]
+        self.assertEqual(len(nodes), 1)
+        self.assertEqual(nodes[0]["actions"][0]["type"], 'send_msg')
+        self.assertEqual(nodes[0]["actions"][0]["text"], 'label. Some text')
+
+    def test_nested_loop(self):
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            '1,begin_for,start,i,1;2\n'
+            ',begin_for,,j,A;B\n'
+            ',send_message,,,{{i}}{{j}}. Some text\n'
+            ',end_for,,,\n'
+            ',end_for,,,\n'
+        )
+        messages_exp = ['1A. Some text','1B. Some text','2A. Some text','2B. Some text']
+        self.run_example(table_data, messages_exp)
+
+    def test_loop_within_other_nodes(self):
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            ',send_message,start,,Starting text\n'
+            '2,begin_for,,i,1;2\n'
+            ',send_message,,,{{i}}. Some text\n'
+            ',end_for,,,\n'
+            ',send_message,,,Following text\n'
+        )
+        messages_exp = ['Starting text','1. Some text','2. Some text','Following text']
+        self.run_example(table_data, messages_exp)
+
+    def test_nested_loop_with_other_nodes(self):
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            '1,begin_for,start,i,1;2\n'
+            ',begin_for,,j,A;B\n'
+            ',send_message,,,{{i}}{{j}}. Some text\n'
+            ',end_for,,,\n'
+            ',send_message,,,End of inner loop\n'
+            ',end_for,,,\n'
+            ',send_message,,,End of outer loop\n'
+        )
+        messages_exp = ['1A. Some text','1B. Some text','End of inner loop',
+                        '2A. Some text','2B. Some text','End of inner loop','End of outer loop']
+        self.run_example(table_data, messages_exp)
+
+    def test_loop_with_explicit_following_node(self):
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            '2,begin_for,,i,1;2\n'
+            ',send_message,,,{{i}}. Some text\n'
+            ',end_for,,,\n'
+            ',send_message,2,,Following text\n'
+        )
+        messages_exp = ['1. Some text','2. Some text','Following text']
+        self.run_example(table_data, messages_exp)
+
+    def test_loop_with_goto(self):
+        table_data = (
+            'row_id,type,from,condition,loop_variable,message_text\n'
+            '2,begin_for,start,,i,1;2\n'
+            ',send_message,,,,{{i}}. Some text\n'
+            ',end_for,,,,\n'
+            '3,wait_for_response,2,,,\n'
+            ',go_to,3,hello,,2\n'
+            ',send_message,3,,,Following text\n'
+        )
+        messages_exp = ['1. Some text','2. Some text','Following text']
+        self.run_example(table_data, messages_exp, Context(inputs=['goodbye']))
+        messages_exp = ['1. Some text','2. Some text','1. Some text','2. Some text','Following text']
+        self.run_example(table_data, messages_exp, Context(inputs=['hello', 'goodbye']))
+
+    def test_loop_with_goto_into_middle_of_loop(self):
+        table_data = (
+            'row_id,type,from,condition,loop_variable,message_text\n'
+            '2,begin_for,start,,i,1;2\n'
+            'item{{i}},send_message,,,,{{i}}. Some text\n'
+            ',end_for,,,,\n'
+            '3,wait_for_response,2,,,\n'
+            ',go_to,3,hello,,item2\n'
+            ',send_message,3,,,Following text\n'
+        )
+        messages_exp = ['1. Some text','2. Some text','Following text']
+        self.run_example(table_data, messages_exp, Context(inputs=['goodbye']))
+        messages_exp = ['1. Some text','2. Some text','2. Some text','Following text']
+        self.run_example(table_data, messages_exp, Context(inputs=['hello', 'goodbye']))
+
+    def test_loop_over_object(self):
+        class TestObj:
+            def __init__(self, value):
+                self.value = value
+        test_objs = [TestObj('1'), TestObj('2'), TestObj('A')]
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            '2,begin_for,start,obj,{@test_objs@}\n'
+            ',send_message,,,Value: {{obj.value}}\n'
+            ',end_for,,,\n'
+        )
+        messages_exp = ['Value: 1', 'Value: 2', 'Value: A']
+        self.run_example(table_data, messages_exp, template_context={'test_objs' : test_objs})
+
+    def test_loop_over_range(self):
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            '2,begin_for,,i,{@range(5)@}\n'
+            ',send_message,,,{{i}}. Some text\n'
+            ',end_for,,,\n'
+        )
+        messages_exp = [f'{i}. Some text' for i in range(5)]
+        self.run_example(table_data, messages_exp)

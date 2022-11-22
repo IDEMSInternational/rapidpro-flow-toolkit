@@ -1,7 +1,7 @@
 from collections import defaultdict, OrderedDict
 from typing import List
 from pydantic import BaseModel
-
+from collections.abc import Iterable
 
 class ParserModel(BaseModel):
 
@@ -32,10 +32,16 @@ def is_list_type(model):
     # issubclass only works for Python <=3.6
     # model.__dict__.get('__origin__') returns different things in different Python version.
     # This function tries to accommodate both 3.6 and 3.8 (at least)
-    return model == list or model == List or model.__dict__.get('__origin__') in [list, List]
+    return model == List or model.__dict__.get('__origin__') in [list, List]
+
+def is_basic_list_type(model):
+    return model == list
 
 def is_list_instance(value):
     return isinstance(value, list)
+
+def is_iterable_instance(value):
+    return isinstance(value, Iterable) and not type(value) == str
 
 
 def is_parser_model_type(model):
@@ -62,14 +68,10 @@ class RowParser:
     # and the values are the cell content converted into nested lists.
     # Turns this into an instance of the provided model.
 
-    def __init__(self, model, cell_parser, context=None):
+    def __init__(self, model, cell_parser):
         self.model = model
         self.output = None  # Gets reinitialized with each call to parse_row
         self.cell_parser = cell_parser
-        self.context = context or {}
-
-    def update_context(self, context):
-        self.context = context
 
     def try_assign_as_kwarg(self, field, key, value, model):
         # If value can be interpreted as a (field, field_value) pair for a field of model,
@@ -144,6 +146,11 @@ class RowParser:
                 field[key].append(None)
                 self.assign_value(field[key], -1, entry, child_model)
 
+        elif is_basic_list_type(model):
+            if is_iterable_instance(value):
+                field[key] = list(value)
+            else:
+                field[key] = [value]
         else:
             assert is_basic_type(model)
             # The value should be a basic type
@@ -207,7 +214,7 @@ class RowParser:
             # recurse
             return self.find_entry(child_model, output_field[key], field_path[1:])
 
-    def parse_entry(self, column_name, value, value_is_parsed=False):
+    def parse_entry(self, column_name, value, value_is_parsed=False, template_context={}):
         # This creates/populates a field in self.output
         # The field is determined by column_name, its value by value
         field_path = column_name.split(':')
@@ -220,16 +227,16 @@ class RowParser:
         # Ideally we would return a pointer to the destination field.
         # The model of field[key] is model, and thus value should also be interpreted
         # as being of type model.
-        if is_list_type(model) or is_parser_model_type(model) and not value_is_parsed:
+        if is_basic_list_type(model) or is_list_type(model) or is_parser_model_type(model) and not value_is_parsed:
             # If the expected type of the value is list/object,
             # parse the cell content as such.
             # Otherwise leave it as a string
-            value = self.cell_parser.parse(value, context=self.context)
+            value = self.cell_parser.parse(value, context=template_context)
         else:
-            value = self.cell_parser.parse_as_string(value, context=self.context)
+            value = self.cell_parser.parse_as_string(value, context=template_context)
         self.assign_value(field, key, value, model)
 
-    def parse_row(self, data):
+    def parse_row(self, data, template_context={}):
         # data is a dict where the keys are column header names,
         # and the values are the corresponding values of the cells
         # in the spreadsheet (i.e. strings).
@@ -255,7 +262,7 @@ class RowParser:
         for k,v in data.items():
             if '*' in k:
                 prefix = k.split('*')[0]
-                parsed_v = self.cell_parser.parse(v, context=self.context)
+                parsed_v = self.cell_parser.parse(v, context=template_context)
                 if isinstance(parsed_v, list):
                     asterisk_list_lengths[prefix] = max(asterisk_list_lengths[prefix], len(parsed_v))
                     # No else case needed because then the implied list length is 1, i.e. the default value
@@ -265,15 +272,15 @@ class RowParser:
                 # Process each prefix:*:suffix column entry by assigning the individual
                 # list values to prefix:1:suffix, prefix:2:suffix, etc
                 prefix = k.split('*')[0]
-                parsed_v = self.cell_parser.parse(v, context=self.context)
+                parsed_v = self.cell_parser.parse(v, context=template_context)
                 if not isinstance(parsed_v, list):
                     # If there was only one entry, we assume it is used for the entire list
                     parsed_v = [parsed_v]*asterisk_list_lengths[prefix]
                 for i, elem in enumerate(parsed_v):
-                    self.parse_entry(k.replace('*', str(i+1)), elem, value_is_parsed=True)
+                    self.parse_entry(k.replace('*', str(i+1)), elem, value_is_parsed=True, template_context=template_context)
             else:
                 # Normal, non-* column entry.
-                self.parse_entry(k,v)
+                self.parse_entry(k,v, template_context=template_context)
         # Returning an instance of the model rather than the output directly
         # helps us fill in default values where no entries exist.
         return self.model(**self.output)

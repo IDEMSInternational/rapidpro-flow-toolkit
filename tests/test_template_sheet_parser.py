@@ -4,10 +4,9 @@ import copy
 
 from parsers.common.rowparser import RowParser, ParserModel
 from parsers.common.cellparser import CellParser
-from parsers.creation.standard_parser import Parser
 from parsers.creation.template_sheet_parser import TemplateSheetParser
 from rapidpro.models.containers import RapidProContainer
-from .utils import traverse_flow, Context, get_dict_from_csv
+from .utils import traverse_flow, Context, get_dict_from_csv, get_table_from_file
 
 
 class ResponseMessages(ParserModel):
@@ -27,8 +26,8 @@ class TestParsing(unittest.TestCase):
         self.template_sheet_parser = TemplateSheetParser(row_parser)
 
     def test_parse(self):
-        flow_rows = get_dict_from_csv('input/templates/yes_no_template.csv')
-        template_rows = get_dict_from_csv('input/templates/yes_no_template_instances.csv')
+        flow_rows = get_table_from_file('input/templates/yes_no_template.csv')
+        template_rows = get_table_from_file('input/templates/yes_no_template_instances.csv')
         rapidpro_container = self.template_sheet_parser.parse_sheet(template_rows, flow_rows)
 
         self.assertEqual(len(rapidpro_container.flows), 2)

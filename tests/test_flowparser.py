@@ -2,20 +2,21 @@ import unittest
 import json
 import copy
 
-from .utils import traverse_flow, Context, get_dict_from_csv
-from parsers.creation.standard_parser import Parser
+from .utils import traverse_flow, Context, get_dict_from_csv, get_table_from_file
+from parsers.creation.flowparser import FlowParser
 from rapidpro.models.containers import RapidProContainer, FlowContainer
+from parsers.common.tests.mock_sheetparser import MockSheetParser
 
-class TestStandardParser(unittest.TestCase):
+class TestFlowParser(unittest.TestCase):
     def setUp(self) -> None:
         pass
 
     def run_example(self, filename, flow_name, context):
         # Generate a flow from sheet
-        rows = get_dict_from_csv(filename)
-        parser = Parser(RapidProContainer(), rows=rows, flow_name=flow_name)
-        parser.parse()
-        output_flow = parser.flow_container.render()
+        table = get_table_from_file(filename)
+        parser = FlowParser(RapidProContainer(), flow_name, table)
+        flow_container = parser.parse()
+        output_flow = flow_container.render()
         # print(json.dumps(output_flow, indent=2))
 
         # Load the expected output flow
@@ -35,9 +36,10 @@ class TestStandardParser(unittest.TestCase):
         flow_container = FlowContainer.from_dict(flow_exp)
         new_rows = flow_container.to_rows()
         # Now convert the sheet back into a flow
-        parser2 = Parser(RapidProContainer(), rows=new_rows, flow_name=flow_name, preprocess_rows=False)
-        parser2.parse()
-        new_output_flow = parser.flow_container.render()
+        sheet_parser = MockSheetParser(None, new_rows)
+        parser2 = FlowParser(RapidProContainer(), flow_name=flow_name, sheet_parser=sheet_parser)
+        flow_container = parser2.parse()
+        new_output_flow = flow_container.render()
 
         # Ensure the new generated flow and expected flow are functionally equivalent
         new_actions = traverse_flow(new_output_flow, copy.deepcopy(context))
@@ -45,6 +47,9 @@ class TestStandardParser(unittest.TestCase):
 
     def test_no_switch_nodes(self):
         self.run_example('input/no_switch_nodes.csv', 'no_switch_nodes', Context())
+
+    def test_no_switch_nodes(self):
+        self.run_example('input/no_switch_nodes_without_row_ids.csv', 'no_switch_nodes', Context())
 
     def test_switch_nodes(self):
         context = Context(inputs=['b', 'expired'])

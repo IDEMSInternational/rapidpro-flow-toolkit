@@ -1,13 +1,11 @@
 import re
 from abc import ABC, abstractmethod
 
+from parsers.creation.flowrowmodel import FlowRowModel, Edge
 from rapidpro.models.actions import Action, EnterFlowAction
 from rapidpro.models.common import Exit
-
 from rapidpro.models.routers import SwitchRouter, RandomRouter
 from rapidpro.utils import generate_new_uuid
-
-from parsers.creation.standard_models import RowData, Edge, Condition
 
 # TODO: EnterFlowNode and WebhookNode are currently children of BaseNode.
 # Ideal class tree of nodes:
@@ -138,7 +136,7 @@ class BaseNode(ABC):
             for i, action in enumerate(self.actions):
                 action_fields = action.get_row_model_fields()
                 row_id = f'{node_row_id}.{i}' if i else node_row_id
-                row_model = RowData(
+                row_model = FlowRowModel(
                     row_id=row_id,
                     edges=[parent_edge],
                     node_uuid=self.uuid,
@@ -148,7 +146,7 @@ class BaseNode(ABC):
                 self.row_models.append(row_model)
                 parent_edge = Edge(from_=row_id)
         else:
-            self.row_models = [RowData(
+            self.row_models = [FlowRowModel(
                 row_id=node_row_id,
                 edges=[parent_edge],
                 node_uuid=self.uuid,

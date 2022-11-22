@@ -1,14 +1,13 @@
 import unittest
 import json
 
-from parsers.creation.standard_parser import Parser
 from parsers.common.rowdatasheet import RowDataSheet
 from parsers.common.rowparser import RowParser
 from tests.utils import get_dict_from_csv, find_destination_uuid, Context, find_node_by_uuid
 from rapidpro.models.containers import RapidProContainer, FlowContainer
 from rapidpro.models.actions import Group, SendMessageAction, AddContactGroupAction, SetRunResultAction, SetContactFieldAction
 from rapidpro.models.nodes import BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
-from parsers.creation.standard_models import RowData, Edge, Condition
+from parsers.creation.flowrowmodel import FlowRowModel, Edge, Condition
 
 from .row_data import get_start_row, get_unconditional_node_from_1
 
@@ -55,7 +54,7 @@ class TestNodes(TestToRowModels):
         self.compare_row_models_without_uuid(row_models, [row_data1, row_data2])
 
     def test_add_group_node(self):
-        row_data = RowData(**{
+        row_data = FlowRowModel(**{
             'row_id' : '1',
             'type' : 'add_to_group',
             'mainarg_groups' : ['test group'],
@@ -101,13 +100,13 @@ class TestFlowContainer(TestToRowModels):
         self.compare_row_models_without_uuid(row_models, [row_data1, row_data2])
 
     def test_conditional_edge(self):
-        row_data1 = RowData(**{
+        row_data1 = FlowRowModel(**{
             'row_id' : '1',
             'type' : 'split_by_value',
             'edges' : [{ 'from_': 'start' }],
             'mainarg_expression' : '@fields.name',
         })
-        row_data2 = RowData(**{
+        row_data2 = FlowRowModel(**{
             'row_id' : '2',
             'type' : 'send_message',
             'edges' : [
@@ -135,14 +134,14 @@ class TestFlowContainer(TestToRowModels):
         self.compare_row_models_without_uuid(row_models, [row_data1, row_data2])
 
     def test_conditional_edge2(self):
-        row_data1 = RowData(**{
+        row_data1 = FlowRowModel(**{
             'row_id' : '1',
             'type' : 'split_by_group',
             'edges' : [{ 'from_': 'start' }],
             'mainarg_groups' : ['my group'],
             'obj_id' : '12345678'
         })
-        row_data2 = RowData(**{
+        row_data2 = FlowRowModel(**{
             'row_id' : '2',
             'type' : 'save_value',
             'edges' : [
@@ -175,13 +174,13 @@ class TestFlowContainer(TestToRowModels):
         # Two edges into the same node (i.e. forward edge in the tree)
         # Uses random router
 
-        row_data1 = RowData(**{
+        row_data1 = FlowRowModel(**{
             'row_id' : '1',
             'type' : 'split_random',
             'edges' : [{ 'from_': 'start' }],
         })
 
-        row_data2 = RowData(**{
+        row_data2 = FlowRowModel(**{
             'row_id' : '2',
             'type' : 'send_message',
             'edges' : [
@@ -212,7 +211,7 @@ class TestFlowContainer(TestToRowModels):
     def test_cyclic_wait_edge(self):
         # An edge for a wait_for_response node to itself (cycle) via go_to
 
-        row_data1 = RowData(**{
+        row_data1 = FlowRowModel(**{
             'row_id' : '1',
             'type' : 'wait_for_response',
             'save_name' : 'wait_result',
@@ -220,7 +219,7 @@ class TestFlowContainer(TestToRowModels):
             'edges' : [{ 'from_': 'start' }],
         })
         # A proper case
-        row_data2 = RowData(**{
+        row_data2 = FlowRowModel(**{
             'row_id' : '2',
             'type' : 'go_to',
             'edges' : [
@@ -232,14 +231,14 @@ class TestFlowContainer(TestToRowModels):
             'mainarg_destination_row_ids' : ['1'],
         })
         # The 'Other' category
-        row_data3 = RowData(**{
+        row_data3 = FlowRowModel(**{
             'row_id' : '3',
             'type' : 'send_message',
             'edges' : [{ 'from_': '1', }],
             'mainarg_message_text' : 'Second node message',
         })
         # The no response category
-        row_data4 = RowData(**{
+        row_data4 = FlowRowModel(**{
             'row_id' : '4',
             'type' : 'send_message',
             'edges' : [
@@ -277,7 +276,7 @@ class TestFlowContainer(TestToRowModels):
         # Test expired (default) edge of enter_flow node
         # test save_flow_result with a @result (set_run_result in rapidpro)
 
-        row_data1 = RowData(**{
+        row_data1 = FlowRowModel(**{
             'row_id' : '1',
             'type' : 'start_new_flow',
             'mainarg_flow_name' : 'sample_flow',
@@ -285,7 +284,7 @@ class TestFlowContainer(TestToRowModels):
             'edges' : [{ 'from_': 'start' }],
         })
 
-        row_data2 = RowData(**{
+        row_data2 = FlowRowModel(**{
             'row_id' : '2',
             'type' : 'save_flow_result',
             'edges' : [
@@ -317,7 +316,7 @@ class TestFlowContainer(TestToRowModels):
 
 class TestRowModelExport(unittest.TestCase):
     def test_row_model_export(self):
-        row_data = RowData(**{
+        row_data = FlowRowModel(**{
             'row_id' : '1',
             'type' : 'send_message',
             'mainarg_message_text' : 'Hello',
@@ -337,6 +336,7 @@ class TestRowModelExport(unittest.TestCase):
             'edges:0:condition:variable',
             'edges:0:condition:type',
             'edges:0:condition:name',
+            'loop_variable',
             'message_text',
             'choices:0',
             'choices:1',
@@ -363,6 +363,7 @@ class TestRowModelExport(unittest.TestCase):
             '', 
             '', 
             '', 
+            '', 
             'QR1', 
             'QR2', 
             'QR3', 
@@ -380,7 +381,7 @@ class TestRowModelExport(unittest.TestCase):
             '456',
         )
 
-        sheet = RowDataSheet(RowParser(RowData, None), [row_data])
+        sheet = RowDataSheet(RowParser(FlowRowModel, None), [row_data])
         tablib_sheet = sheet.convert_to_tablib()
         self.assertEqual(tablib_sheet.headers, expected_headers)
         self.assertEqual(tablib_sheet[0], expected_content)

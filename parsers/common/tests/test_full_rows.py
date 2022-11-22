@@ -2,7 +2,7 @@ import unittest
 import json
 
 from parsers.common.rowparser import RowParser
-from parsers.creation.standard_models import RowData
+from parsers.creation.flowrowmodel import FlowRowModel
 from .mock_cell_parser import MockCellParser
 
 
@@ -19,7 +19,7 @@ input1 = {
     'ui_position' : '',  # CellParser is unaware of types, so '' is NOT turned into a list by the cell parser.
 }
 
-output1_exp = RowData(**{
+output1_exp = FlowRowModel(**{
     'row_id' : '1',
     'type' : 'send_message',
     'edges' : [
@@ -45,7 +45,7 @@ input2 = {
     'message_text' : 'Text of message',
 }
 
-output2_exp = RowData(**{
+output2_exp = FlowRowModel(**{
     'row_id' : '1',
     'type' : 'send_message',
     'edges' : [
@@ -77,7 +77,7 @@ input3 = {
     'message_text' : 'Text of message',
 }
 
-output3_exp = RowData(**{
+output3_exp = FlowRowModel(**{
     'row_id' : '1',
     'type' : 'send_message',
     'edges' : [
@@ -101,7 +101,7 @@ input4 = {
     'message_text' : 'Group Name',
 }
 
-output4_exp = RowData(**{
+output4_exp = FlowRowModel(**{
     'row_id' : '1',
     'type' : 'add_to_group',
     'edges' : [
@@ -120,7 +120,7 @@ input5 = {
     'message_text' : ['5', '2', '3'],
 }
 
-output5_exp = RowData(**{
+output5_exp = FlowRowModel(**{
     'row_id' : '1',
     'type' : 'go_to',
     'edges' : [
@@ -142,7 +142,7 @@ input6 = {
     'message_text' : 'Text of message',
 }
 
-output6_exp = RowData(**{
+output6_exp = FlowRowModel(**{
     'row_id' : '1',
     'type' : 'send_message',
     'edges' : [
@@ -162,7 +162,7 @@ output6_exp = RowData(**{
 class TestDifferentWays(unittest.TestCase):
 
     def setUp(self):
-        self.parser = RowParser(RowData, MockCellParser())
+        self.parser = RowParser(FlowRowModel, MockCellParser())
 
     def test_input_1(self):
         output1 = self.parser.parse_row(input1)

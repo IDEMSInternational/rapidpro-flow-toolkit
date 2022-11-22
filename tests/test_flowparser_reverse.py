@@ -2,12 +2,11 @@ import unittest
 import json
 import copy
 
-from .utils import traverse_flow, Context, get_dict_from_csv
-from parsers.creation.standard_parser import Parser
+from .utils import traverse_flow, Context, get_dict_from_csv, get_table_from_file
+from parsers.creation.flowparser import FlowParser
 from rapidpro.models.containers import RapidProContainer
-from parsers.creation.standard_models import RowData
 
-class TestStandardParserReverse(unittest.TestCase):
+class TestFlowParserReverse(unittest.TestCase):
     def setUp(self) -> None:
         pass
 
@@ -37,14 +36,15 @@ class TestStandardParserReverse(unittest.TestCase):
 
     def run_example(self, filename, flow_name):
         self.maxDiff = None
-        rows = get_dict_from_csv(filename)
+        table = get_table_from_file(filename)
         container = RapidProContainer()
-        parser = Parser(container, rows=rows, flow_name=flow_name)
-        parser.parse()
+        parser = FlowParser(container, flow_name, table)
+        flow = parser.parse()
         container.validate()
-        row_models = parser.get_flow().to_rows()
-        self.assertEqual(len(row_models), len(parser.data_rows))
-        for model, model_exp in zip(row_models, parser.data_rows):
+        row_models = flow.to_rows()
+        data_rows = parser.sheet_parser.parse_all()
+        self.assertEqual(len(row_models), len(data_rows))
+        for model, model_exp in zip(row_models, data_rows):
             self.compare_models_leniently(model, model_exp)
 
     def test_no_switch_nodes(self):

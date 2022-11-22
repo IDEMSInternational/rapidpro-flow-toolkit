@@ -68,3 +68,29 @@ class TestCellParser(unittest.TestCase):
         # Templating comes first, only then splitting into a list
         out = self.parser.parse('{% for e in list %}{{e}};{% endfor %}', context=context)
         self.assertEqual(out, ['a', 'b', 'c', ''])
+
+    def test_parse_native_type(self):
+        out = self.parser.parse_as_string('{@(1,2,[3,"a"])@}')
+        self.assertEqual(out, (1,2,[3,'a']))
+        out = self.parser.parse_as_string('  {@(1,2,[3,"a"])@} ')
+        self.assertEqual(out, (1,2,[3,'a']))
+        out = self.parser.parse_as_string('{@ ( 1 , 2 , [ 3 , "a" ] ) @}')
+        self.assertEqual(out, (1,2,[3,'a']))
+
+        instance = OuterModel(strings=['a', 'b'], inner=InnerModel(str_field='xyz'))
+        context = {'instance' : instance}
+        out = self.parser.parse_as_string('{@instance@}', context=context)
+        self.assertEqual(out, instance)
+        out = self.parser.parse_as_string('{@instance.inner@}', context=context)
+        self.assertEqual(out, instance.inner)
+        out = self.parser.parse_as_string('{@instance.strings@}', context=context)
+        self.assertEqual(out, ['a', 'b'])
+
+        class TestObj:
+            def __init__(self, value):
+                self.value = value
+        test_objs = [TestObj('1'), TestObj('2'), TestObj('A')]
+        out = self.parser.parse_as_string('{@test_objs@}', context={'test_objs' : test_objs})
+        self.assertEqual(out, test_objs)
+        out = self.parser.parse_as_string('{@range(1,5)@}')
+        self.assertEqual(out, range(1,5))

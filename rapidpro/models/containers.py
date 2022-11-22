@@ -1,7 +1,7 @@
 from rapidpro.utils import generate_new_uuid
 from rapidpro.models.nodes import BaseNode
 from rapidpro.models.actions import Group
-from parsers.creation.standard_models import RowData, Edge
+from parsers.creation.flowrowmodel import FlowRowModel, Edge
 import copy
 
 
@@ -29,6 +29,7 @@ class RapidProContainer:
 
     def add_flow(self, flow):
         self.flows.append(flow)
+        self.record_flow_uuid(flow.name, flow.uuid)
 
     def record_group_uuid(self, name, uuid):
         self.uuid_dict.record_group_uuid(name, uuid)
@@ -180,7 +181,7 @@ class FlowContainer:
             elif child_node.uuid in self.visited_nodes:
                 # This is a backward edge to an ancestor of this node.
                 child_row_id = child_node.get_row_models()[0].row_id
-                self.rows.insert(0, RowData(row_id=generate_new_uuid(), type='go_to', edges=[edge], mainarg_destination_row_ids=[child_row_id]))
+                self.rows.insert(0, FlowRowModel(row_id=generate_new_uuid(), type='go_to', edges=[edge], mainarg_destination_row_ids=[child_row_id]))
             else:
                 # A new node we haven't encountered yet
                 self._to_rows_recurse(child_node, edge)

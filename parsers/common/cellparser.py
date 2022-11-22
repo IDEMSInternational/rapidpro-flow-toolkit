@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from jinja2 import Template
-
+from jinja2.nativetypes import NativeEnvironment
 
 def get_separators(value):
     # TODO: Discuss escape characters
@@ -25,6 +25,10 @@ def get_object_from_cell_value(value):
 
 
 class CellParser:
+
+    def __init__(self):
+        self.native_env = NativeEnvironment(variable_start_string='{@', variable_end_string='@}')
+
     def parse(self, value, context={}):
         value = self.parse_as_string(value, context)
 
@@ -35,4 +39,14 @@ class CellParser:
             return value
 
     def parse_as_string(self, value, context={}):
-        return Template(value).render(context)
+        if not context and '{' not in value:
+            # This is a hacky optimization.
+            return value
+        stripped_value = value.strip()
+        if stripped_value.startswith('{@') and stripped_value.endswith('@}'):
+            # Special case: Return a python object rather than a string,
+            # if possible.
+            template = self.native_env.from_string(stripped_value)
+            return template.render(context)
+        else:
+            return Template(value).render(context)

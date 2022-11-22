@@ -1,5 +1,4 @@
 from rapidpro.utils import generate_new_uuid
-from parsers.creation.standard_models import RowData, Edge, Condition
 
 import copy
 

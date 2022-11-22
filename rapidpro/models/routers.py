@@ -3,8 +3,7 @@ import string
 
 from rapidpro.models.common import Exit
 from rapidpro.utils import generate_new_uuid
-
-from parsers.creation.standard_models import Edge, Condition
+from parsers.creation.flowrowmodel import Condition, Edge
 
 logger = logging.getLogger(__name__)
 
