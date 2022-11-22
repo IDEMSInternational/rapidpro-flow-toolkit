@@ -30,7 +30,10 @@ class SheetParser:
         self.bookmarks[name] = copy.copy(self.iterator)
 
     def go_to_bookmark(self, name):
-        self.iterator = self.bookmarks[name]
+        self.iterator = copy.copy(self.bookmarks[name])
+
+    def remove_bookmark(self, name):
+        self.bookmarks.pop(name)
 
     def parse_next_row(self):
         try:

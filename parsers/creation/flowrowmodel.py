@@ -37,6 +37,7 @@ class FlowRowModel(ParserModel):
     type: str
     edges: List[Edge]
     # These are the fields that message_text can map to
+    loop_variable: str = ''
     mainarg_message_text: str = ''
     mainarg_value: str = ''
     mainarg_groups: List[str] = []
@@ -44,6 +45,7 @@ class FlowRowModel(ParserModel):
     mainarg_destination_row_ids: List[str] = []
     mainarg_flow_name: str = ''
     mainarg_expression: str = ''
+    mainarg_iterlist: list = [] # no specified type of elements
     choices: List[str] = []
     save_name: str = ''
     image: str = ''
@@ -76,6 +78,7 @@ class FlowRowModel(ParserModel):
             'mainarg_destination_row_ids' : 'message_text',
             'mainarg_flow_name' : 'message_text',
             'mainarg_expression' : 'message_text',
+            # 'mainarg_iterlist' : 'message_text',  # Not supported for export
         }
         return field_map.get(field, field)
 
@@ -107,6 +110,8 @@ class FlowRowModel(ParserModel):
             "start_new_flow" : "mainarg_flow_name",
             "split_by_value" : "mainarg_expression",
             "split_by_group" : "mainarg_groups",
+            "begin_for" : "mainarg_iterlist",
+            "end_for" : "mainarg_none",
         }
 
         if header in basic_header_dict:

@@ -21,17 +21,16 @@ class NodeGroup:
         self.loose_exits = []
 
     def is_empty(self):
-        return not self.node_groups
+        return self.node_groups == []
 
     def entry_node(self):
-        return nodes_groups[0].entry_node()
+        return self.node_groups[0].entry_node()
 
     def last_node_group(self):
         return self.node_groups[-1]
 
     def add_exit(self, destination_uuid, condition):
-        # TODO: Implement
-        pass
+        self.last_node_group().add_exit(destination_uuid, condition)
 
     def add_node_group(self, node_group):
         # Node: Connecting of exits is not done here.
@@ -166,19 +165,62 @@ class FlowParser:
         self.node_name_to_node_map = defaultdict()
 
     def current_node_group(self):
+        # New stuff that's created is always added to the current NodeGroup,
+        # i.e. the one at the top of the stack.
         return self.node_group_stack[-1]
 
     def most_recent_node_group(self):
-        return self.current_node_group().last_node_group()
+        # None is returned if no row has been processed yet.
+        for stack_entry in reversed(self.node_group_stack):
+            if not stack_entry.is_empty():
+                return stack_entry.last_node_group()
+        return None
+
+    def append_node_group(self, new_node_group, row_id):
+        self.current_node_group().add_node_group(new_node_group)
+        if row_id:
+            self.row_id_to_nodegroup[row_id] = new_node_group
 
     def parse(self):
-        row = self.sheet_parser.parse_next_row()
-        while row is not None:
-            self._parse_row(row)
-            row = self.sheet_parser.parse_next_row()
+        self._parse_block()
         flow_container = self._compile_flow()
         self.rapidpro_container.add_flow(flow_container)
         return flow_container
+
+    def _parse_block(self, depth=0, block_type='block'):
+        row = self.sheet_parser.parse_next_row()
+        while not self._is_end_of_block(block_type, row):
+            if row.type == 'begin_for':
+                self.sheet_parser.create_bookmark(str(depth))
+                new_node_group = NodeGroup()
+                self.node_group_stack.append(new_node_group)
+                for entry in row.mainarg_iterlist:
+                    self.sheet_parser.go_to_bookmark(str(depth))
+                    self.sheet_parser.add_to_context(row.loop_variable, entry)
+                    self._parse_block(depth+1, 'for')
+                self.node_group_stack.pop()
+                self.append_node_group(new_node_group, row.row_id)
+                self.sheet_parser.remove_from_context(row.loop_variable)
+                self.sheet_parser.remove_bookmark(str(depth))
+            else:
+                self._parse_row(row)
+            row = self.sheet_parser.parse_next_row()
+
+    def _is_end_of_block(self, block_type, row):
+        block_end_map = {
+            'end_for' : 'for',
+        }
+        if row is None:
+            if block_type == 'block':
+                return True
+            else:
+                raise ValueError('Sheet has unterminated block.')
+        elif row.type in block_end_map:
+            if block_end_map[row.type] == block_type:
+                return True
+            else:
+                raise ValueError(f'Wrong block terminator "{row.type}" found for block of type {block_type}.')
+        return False
 
     def _get_row_action(self, row):
         attachment_types = [row.image, row.audio, row.video]
@@ -265,12 +307,17 @@ class FlowParser:
         elif edge.from_:
             if edge.from_ not in self.row_id_to_nodegroup:
                 raise ValueError(f'Edge from row_id "{edge.from_}" which does not exist.')
-                # print(edge.from_, self.row_id_to_nodegroup.keys())
             from_node_group = self.row_id_to_nodegroup[edge.from_]
         else:
-            if self.current_node_group().is_empty():
-                raise ValueError(f'First node must have edge from "start"')
             from_node_group = self.most_recent_node_group()
+            if from_node_group is None:
+                # Doesn't come from 'start', but is the first ACTUAL
+                # node in the flow (the first row could be e.g. begin_for
+                # or begin_block, which doesn't generate a node)
+                # TODO: Make a dummy node group for begin_for/begin_block?
+                # Then we can issue a warning here:
+                # 'First node must have edge from "start"'
+                return
         from_node_group.add_exit(destination_uuid, edge.condition)
 
     def _parse_goto_row(self, row):
@@ -322,9 +369,7 @@ class FlowParser:
             self._add_row_edge(edge, new_node.uuid)
 
         new_node_group = RowNodeGroup(new_node, row.type)
-        self.current_node_group().add_node_group(new_node_group)
-        if row.row_id:
-            self.row_id_to_nodegroup[row.row_id] = new_node_group
+        self.append_node_group(new_node_group, row.row_id)
         self.node_name_to_node_map[self._get_node_name(row)] = new_node
 
     def _compile_flow(self):

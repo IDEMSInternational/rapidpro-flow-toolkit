@@ -1,8 +1,9 @@
 import json
 import unittest
+import tablib
 
 from parsers.creation.flowparser import FlowParser
-from tests.utils import get_dict_from_csv, get_table_from_file, find_destination_uuid, Context, find_node_by_uuid
+from tests.utils import get_dict_from_csv, get_table_from_file, find_destination_uuid, Context, find_node_by_uuid, traverse_flow
 from rapidpro.models.containers import RapidProContainer, FlowContainer
 from rapidpro.models.actions import Group, AddContactGroupAction
 from rapidpro.models.nodes import BasicNode
@@ -310,3 +311,131 @@ class TestParsing(unittest.TestCase):
         with self.assertRaises(ValueError):
             # The group is referenced by 2 different UUIDs
             container.validate()
+
+
+class TestLoops(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.row_parser = RowParser(FlowRowModel, CellParser())
+
+    def render_output_from_table_data(self, table_data):
+        table = tablib.import_set(table_data, format='csv')
+        parser = FlowParser(RapidProContainer(), 'basic loop', table)
+        return parser.parse().render()
+
+    def run_example(self, table_data, messages_exp, context=None):
+        render_output = self.render_output_from_table_data(table_data)
+        actions = traverse_flow(render_output, context or Context())
+        actions_exp = list(zip(['send_msg']*len(messages_exp), messages_exp))
+        self.assertEqual(actions, actions_exp)
+
+    def test_basic_loop(self):
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            '1,begin_for,start,i,1;2;3\n'
+            ',send_message,,,{{i}}. Some text\n'
+            ',end_for,,,\n'
+        )
+        render_output = self.render_output_from_table_data(table_data)
+        nodes = render_output["nodes"]
+        self.assertEqual(len(nodes), 3)
+        self.assertEqual(nodes[0]["actions"][0]["type"], 'send_msg')
+        self.assertEqual(nodes[0]["actions"][0]["text"], '1. Some text')
+        self.assertEqual(nodes[1]["actions"][0]["text"], '2. Some text')
+        self.assertEqual(nodes[2]["actions"][0]["text"], '3. Some text')
+        # Also check that the connectivity is correct
+        messages_exp = ['1. Some text','2. Some text','3. Some text']
+        self.run_example(table_data, messages_exp)
+
+    def test_one_element_loop(self):
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            '1,begin_for,start,i,1\n'
+            ',send_message,,,{{i}}. Some text\n'
+            ',end_for,,,\n'
+        )
+        render_output = self.render_output_from_table_data(table_data)
+        nodes = render_output["nodes"]
+        self.assertEqual(len(nodes), 1)
+        self.assertEqual(nodes[0]["actions"][0]["type"], 'send_msg')
+        self.assertEqual(nodes[0]["actions"][0]["text"], '1. Some text')
+
+    def test_nested_loop(self):
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            '1,begin_for,start,i,1;2\n'
+            ',begin_for,,j,A;B\n'
+            ',send_message,,,{{i}}{{j}}. Some text\n'
+            ',end_for,,,\n'
+            ',end_for,,,\n'
+        )
+        messages_exp = ['1A. Some text','1B. Some text','2A. Some text','2B. Some text']
+        self.run_example(table_data, messages_exp)
+
+    def test_loop_within_other_nodes(self):
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            ',send_message,start,,Starting text\n'
+            '2,begin_for,,i,1;2\n'
+            ',send_message,,,{{i}}. Some text\n'
+            ',end_for,,,\n'
+            ',send_message,,,Following text\n'
+        )
+        messages_exp = ['Starting text','1. Some text','2. Some text','Following text']
+        self.run_example(table_data, messages_exp)
+
+    def test_nested_loop_with_other_nodes(self):
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            '1,begin_for,start,i,1;2\n'
+            ',begin_for,,j,A;B\n'
+            ',send_message,,,{{i}}{{j}}. Some text\n'
+            ',end_for,,,\n'
+            ',send_message,,,End of inner loop\n'
+            ',end_for,,,\n'
+            ',send_message,,,End of outer loop\n'
+        )
+        messages_exp = ['1A. Some text','1B. Some text','End of inner loop',
+                        '2A. Some text','2B. Some text','End of inner loop','End of outer loop']
+        self.run_example(table_data, messages_exp)
+
+    def test_loop_with_explicit_following_node(self):
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            '2,begin_for,,i,1;2\n'
+            ',send_message,,,{{i}}. Some text\n'
+            ',end_for,,,\n'
+            ',send_message,2,,Following text\n'
+        )
+        messages_exp = ['1. Some text','2. Some text','Following text']
+        self.run_example(table_data, messages_exp)
+
+    def test_loop_with_goto(self):
+        table_data = (
+            'row_id,type,from,condition,loop_variable,message_text\n'
+            '2,begin_for,start,,i,1;2\n'
+            ',send_message,,,,{{i}}. Some text\n'
+            ',end_for,,,,\n'
+            '3,wait_for_response,2,,,\n'
+            ',go_to,3,hello,,2\n'
+            ',send_message,3,,,Following text\n'
+        )
+        messages_exp = ['1. Some text','2. Some text','Following text']
+        self.run_example(table_data, messages_exp, Context(inputs=['goodbye']))
+        messages_exp = ['1. Some text','2. Some text','1. Some text','2. Some text','Following text']
+        self.run_example(table_data, messages_exp, Context(inputs=['hello', 'goodbye']))
+
+    def test_loop_with_goto_into_middle_of_loop(self):
+        table_data = (
+            'row_id,type,from,condition,loop_variable,message_text\n'
+            '2,begin_for,start,,i,1;2\n'
+            'item{{i}},send_message,,,,{{i}}. Some text\n'
+            ',end_for,,,,\n'
+            '3,wait_for_response,2,,,\n'
+            ',go_to,3,hello,,item2\n'
+            ',send_message,3,,,Following text\n'
+        )
+        messages_exp = ['1. Some text','2. Some text','Following text']
+        self.run_example(table_data, messages_exp, Context(inputs=['goodbye']))
+        messages_exp = ['1. Some text','2. Some text','2. Some text','Following text']
+        self.run_example(table_data, messages_exp, Context(inputs=['hello', 'goodbye']))

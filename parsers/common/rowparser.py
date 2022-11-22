@@ -32,7 +32,10 @@ def is_list_type(model):
     # issubclass only works for Python <=3.6
     # model.__dict__.get('__origin__') returns different things in different Python version.
     # This function tries to accommodate both 3.6 and 3.8 (at least)
-    return model == list or model == List or model.__dict__.get('__origin__') in [list, List]
+    return model == List or model.__dict__.get('__origin__') in [list, List]
+
+def is_basic_list_type(model):
+    return model == list
 
 def is_list_instance(value):
     return isinstance(value, list)
@@ -140,6 +143,11 @@ class RowParser:
                 field[key].append(None)
                 self.assign_value(field[key], -1, entry, child_model)
 
+        elif is_basic_list_type(model):
+            if is_list_instance(value):
+                field[key] = value
+            else:
+                field[key] = [value]
         else:
             assert is_basic_type(model)
             # The value should be a basic type
@@ -216,7 +224,7 @@ class RowParser:
         # Ideally we would return a pointer to the destination field.
         # The model of field[key] is model, and thus value should also be interpreted
         # as being of type model.
-        if is_list_type(model) or is_parser_model_type(model) and not value_is_parsed:
+        if is_basic_list_type(model) or is_list_type(model) or is_parser_model_type(model) and not value_is_parsed:
             # If the expected type of the value is list/object,
             # parse the cell content as such.
             # Otherwise leave it as a string
