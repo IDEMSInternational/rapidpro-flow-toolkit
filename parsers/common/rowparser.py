@@ -1,7 +1,7 @@
 from collections import defaultdict, OrderedDict
 from typing import List
 from pydantic import BaseModel
-
+from collections.abc import Iterable
 
 class ParserModel(BaseModel):
 
@@ -39,6 +39,9 @@ def is_basic_list_type(model):
 
 def is_list_instance(value):
     return isinstance(value, list)
+
+def is_iterable_instance(value):
+    return isinstance(value, Iterable) and not type(value) == str
 
 
 def is_parser_model_type(model):
@@ -144,8 +147,8 @@ class RowParser:
                 self.assign_value(field[key], -1, entry, child_model)
 
         elif is_basic_list_type(model):
-            if is_list_instance(value):
-                field[key] = value
+            if is_iterable_instance(value):
+                field[key] = list(value)
             else:
                 field[key] = [value]
         else:

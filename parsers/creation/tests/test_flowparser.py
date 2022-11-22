@@ -318,13 +318,13 @@ class TestLoops(unittest.TestCase):
     def setUp(self) -> None:
         self.row_parser = RowParser(FlowRowModel, CellParser())
 
-    def render_output_from_table_data(self, table_data):
+    def render_output_from_table_data(self, table_data, template_context=None):
         table = tablib.import_set(table_data, format='csv')
-        parser = FlowParser(RapidProContainer(), 'basic loop', table)
+        parser = FlowParser(RapidProContainer(), 'basic loop', table, context=template_context or {})
         return parser.parse().render()
 
-    def run_example(self, table_data, messages_exp, context=None):
-        render_output = self.render_output_from_table_data(table_data)
+    def run_example(self, table_data, messages_exp, context=None, template_context=None):
+        render_output = self.render_output_from_table_data(table_data, template_context or {})
         actions = traverse_flow(render_output, context or Context())
         actions_exp = list(zip(['send_msg']*len(messages_exp), messages_exp))
         self.assertEqual(actions, actions_exp)
@@ -350,7 +350,7 @@ class TestLoops(unittest.TestCase):
     def test_one_element_loop(self):
         table_data = (
             'row_id,type,from,loop_variable,message_text\n'
-            '1,begin_for,start,i,1\n'
+            '1,begin_for,start,i,label\n'
             ',send_message,,,{{i}}. Some text\n'
             ',end_for,,,\n'
         )
@@ -358,7 +358,7 @@ class TestLoops(unittest.TestCase):
         nodes = render_output["nodes"]
         self.assertEqual(len(nodes), 1)
         self.assertEqual(nodes[0]["actions"][0]["type"], 'send_msg')
-        self.assertEqual(nodes[0]["actions"][0]["text"], '1. Some text')
+        self.assertEqual(nodes[0]["actions"][0]["text"], 'label. Some text')
 
     def test_nested_loop(self):
         table_data = (
@@ -439,3 +439,27 @@ class TestLoops(unittest.TestCase):
         self.run_example(table_data, messages_exp, Context(inputs=['goodbye']))
         messages_exp = ['1. Some text','2. Some text','2. Some text','Following text']
         self.run_example(table_data, messages_exp, Context(inputs=['hello', 'goodbye']))
+
+    def test_loop_over_object(self):
+        class TestObj:
+            def __init__(self, value):
+                self.value = value
+        test_objs = [TestObj('1'), TestObj('2'), TestObj('A')]
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            '2,begin_for,start,obj,{@test_objs@}\n'
+            ',send_message,,,Value: {{obj.value}}\n'
+            ',end_for,,,\n'
+        )
+        messages_exp = ['Value: 1', 'Value: 2', 'Value: A']
+        self.run_example(table_data, messages_exp, template_context={'test_objs' : test_objs})
+
+    def test_loop_over_range(self):
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            '2,begin_for,,i,{@range(5)@}\n'
+            ',send_message,,,{{i}}. Some text\n'
+            ',end_for,,,\n'
+        )
+        messages_exp = [f'{i}. Some text' for i in range(5)]
+        self.run_example(table_data, messages_exp)
