@@ -32,8 +32,10 @@ class CellParser:
     def parse(self, value, context={}):
         value = self.parse_as_string(value, context)
 
-        # TODO: Implement properly
-        if ';' in value:
+        # TODO: Implement splitting properly
+        # We do the type check because parse_as_string may return a non-string
+        # in the case of {@ @} templating.
+        if type(value) == str and ';' in value:
             return value.split(';')
         else:
             return value

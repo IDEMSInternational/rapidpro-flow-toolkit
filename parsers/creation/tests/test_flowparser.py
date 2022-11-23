@@ -476,6 +476,19 @@ class TestBlocks(unittest.TestCase):
         messages_exp = ['Starting text','Some text','Following text']
         self.run_example(table_data, messages_exp)
 
+    def test_block_with_explicit_from(self):
+        table_data = (
+            'row_id,type,from,message_text\n'
+            ',send_message,start,Starting text\n'
+            'X,begin_block,,\n'
+            ',send_message,,Some text 1\n'
+            ',send_message,,Some text 2\n'
+            ',end_block,,\n'
+            ',send_message,X,Following text\n'
+        )
+        messages_exp = ['Starting text','Some text 1','Some text 2','Following text']
+        self.run_example(table_data, messages_exp)
+
     def test_block_with_goto(self):
         table_data = (
             'row_id,type,from,condition,message_text\n'
@@ -504,3 +517,47 @@ class TestBlocks(unittest.TestCase):
         )
         messages_exp = ['text1', 'text3', 'text7']
         self.run_example(table_data, messages_exp)
+
+    def test_excluded_block_within_other_nodes(self):
+        table_data = (
+            'row_id,type,from,include_if,message_text\n'
+            ',send_message,start,,Starting text\n'
+            ',begin_block,,FALSE,\n'
+            ',send_message,,,Skipped text\n'
+            ',send_message,,TRUE,Skipped text 2\n'  # Should be skipped anyway
+            ',end_block,,,\n'
+            ',send_message,,,Following text\n'
+        )
+        messages_exp = ['Starting text','Following text']
+        self.run_example(table_data, messages_exp)
+
+    def test_excluded_for_block(self):
+        table_data = (
+            'row_id,type,from,include_if,message_text\n'
+            ',begin_for,,FALSE,1;2\n'  # No loop var; but it's not parsed anyway
+            ',send_message,,,Skipped text\n'
+            ',end_for,,,\n'
+            ',send_message,,,Following text\n'
+        )
+        messages_exp = ['Following text']
+        self.run_example(table_data, messages_exp)
+
+    def test_excluded_block_with_nested_stuff(self):
+        table_data = (
+            'row_id,type,from,include_if,message_text\n'
+            ',begin_block,,FALSE,\n'
+            ',begin_block,,,\n'
+            ',send_message,,,Skipped text\n'
+            ',begin_for,,,1;2;3\n'  # No loop var; but it's not parsed anyway
+            ',send_message,,,{{i}}. Some text\n'
+            ',end_for,,,\n'
+            ',end_block,,,\n'
+            ',begin_for,,,A;B\n'
+            ',send_message,,,{{i}}. Some other text\n'
+            ',end_for,,,\n'
+            ',end_block,,,\n'
+            ',send_message,,,Following text\n'
+        )
+        messages_exp = ['Following text']
+        self.run_example(table_data, messages_exp)
+
