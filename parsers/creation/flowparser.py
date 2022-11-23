@@ -187,31 +187,44 @@ class FlowParser:
         self.rapidpro_container.add_flow(flow_container)
         return flow_container
 
-    def _parse_block(self, depth=0, block_type='block'):
+    def _parse_block(self, depth=0, block_type='root_block', omit_content=False):
         row = self.sheet_parser.parse_next_row()
         while not self._is_end_of_block(block_type, row):
-            if row.type == 'begin_for':
-                self.sheet_parser.create_bookmark(str(depth))
-                new_node_group = NodeGroup()
-                self.node_group_stack.append(new_node_group)
-                for entry in row.mainarg_iterlist:
-                    self.sheet_parser.go_to_bookmark(str(depth))
-                    self.sheet_parser.add_to_context(row.loop_variable, entry)
-                    self._parse_block(depth+1, 'for')
-                self.node_group_stack.pop()
-                self.append_node_group(new_node_group, row.row_id)
-                self.sheet_parser.remove_from_context(row.loop_variable)
-                self.sheet_parser.remove_bookmark(str(depth))
+            if omit_content or not row.include_if:
+                if row.type == 'begin_for':
+                    self._parse_block(depth+1, 'for', omit_content=True)
+                elif row.type == 'begin_block':
+                    self._parse_block(depth+1, 'block', omit_content=True)
             else:
-                self._parse_row(row)
+                if row.type == 'begin_for':
+                    self.sheet_parser.create_bookmark(str(depth))
+                    new_node_group = NodeGroup()
+                    self.node_group_stack.append(new_node_group)
+                    for entry in row.mainarg_iterlist:
+                        self.sheet_parser.go_to_bookmark(str(depth))
+                        self.sheet_parser.add_to_context(row.loop_variable, entry)
+                        self._parse_block(depth+1, 'for')
+                    self.node_group_stack.pop()
+                    self.append_node_group(new_node_group, row.row_id)
+                    self.sheet_parser.remove_from_context(row.loop_variable)
+                    self.sheet_parser.remove_bookmark(str(depth))
+                elif row.type == 'begin_block':
+                    new_node_group = NodeGroup()
+                    self.node_group_stack.append(new_node_group)
+                    self._parse_block(depth+1, 'block')
+                    self.node_group_stack.pop()
+                    self.append_node_group(new_node_group, row.row_id)
+                else:
+                    self._parse_row(row)
             row = self.sheet_parser.parse_next_row()
 
     def _is_end_of_block(self, block_type, row):
         block_end_map = {
             'end_for' : 'for',
+            'end_block' : 'block',
         }
         if row is None:
-            if block_type == 'block':
+            if block_type == 'root_block':
                 return True
             else:
                 raise ValueError('Sheet has unterminated block.')
@@ -333,6 +346,9 @@ class FlowParser:
             self._add_row_edge(edge, destination_node_group.entry_node().uuid)
 
     def _parse_row(self, row):
+        if not row.include_if:
+            return
+
         if row.type == 'go_to':
             self._parse_goto_row(row)
             return

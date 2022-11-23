@@ -38,6 +38,7 @@ class FlowRowModel(ParserModel):
     edges: List[Edge]
     # These are the fields that message_text can map to
     loop_variable: str = ''
+    include_if: bool = True
     mainarg_message_text: str = ''
     mainarg_value: str = ''
     mainarg_groups: List[str] = []
@@ -112,6 +113,8 @@ class FlowRowModel(ParserModel):
             "split_by_group" : "mainarg_groups",
             "begin_for" : "mainarg_iterlist",
             "end_for" : "mainarg_none",
+            "begin_block" : "mainarg_none",
+            "end_block" : "mainarg_none",
         }
 
         if header in basic_header_dict:
