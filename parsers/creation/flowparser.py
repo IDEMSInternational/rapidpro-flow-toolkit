@@ -386,6 +386,12 @@ class FlowParser:
         if not row.include_if:
             return
 
+        if row.type in ['hard_exit', 'loose_exit']:
+            destination_uuid = 'HARD_EXIT' if row.type == 'hard_exit' else None
+            for edge in row.edges:
+                self._add_row_edge(edge, destination_uuid)
+            return
+
         if row.type == 'go_to':
             self._parse_goto_row(row)
             return

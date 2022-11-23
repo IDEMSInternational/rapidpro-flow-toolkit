@@ -115,6 +115,8 @@ class FlowRowModel(ParserModel):
             "end_for" : "mainarg_none",
             "begin_block" : "mainarg_none",
             "end_block" : "mainarg_none",
+            "hard_exit" : "mainarg_none",
+            "loose_exit" : "mainarg_none",
         }
 
         if header in basic_header_dict:

@@ -589,6 +589,26 @@ class TestMultiExitBlocks(TestBlocks):
         messages_exp = ['Following text']
         self.run_example(table_data, messages_exp, Context(variables={'@my_field' : 'Other'}))
 
+    def test_split_by_value_hard_loose_exit(self):
+        table_data = (
+            'row_id,type,from,condition,message_text\n'
+            'X,begin_block,,,\n'
+            '1,split_by_value,,,@my_field\n'
+            ',send_message,1,Value,It has the value\n'
+            ',hard_exit,1,Value2,\n'
+            ',loose_exit,1,Value3,\n'
+            ',end_block,,,\n'
+            ',send_message,X,,Following text\n'
+        )
+        messages_exp = ['It has the value','Following text']
+        self.run_example(table_data, messages_exp, Context(variables={'@my_field' : 'Value'}))
+        messages_exp = []
+        self.run_example(table_data, messages_exp, Context(variables={'@my_field' : 'Value2'}))
+        messages_exp = ['Following text']
+        self.run_example(table_data, messages_exp, Context(variables={'@my_field' : 'Value3'}))
+        messages_exp = ['Following text']
+        self.run_example(table_data, messages_exp, Context(variables={'@my_field' : 'Other'}))
+
     def test_wait_for_response(self):
         table_data = (
             'row_id,type,from,condition,message_text,no_response\n'
@@ -605,6 +625,25 @@ class TestMultiExitBlocks(TestBlocks):
         messages_exp = ['No Response','Following text']
         self.run_example(table_data, messages_exp, Context(inputs=[None]))
         messages_exp = ['Other']
+        self.run_example(table_data, messages_exp, Context(inputs=['Something else']))
+
+    def test_wait_for_response_hard_exits(self):
+        table_data = (
+            'row_id,type,from,condition,message_text,no_response\n'
+            'X,begin_block,,,,\n'
+            '1,wait_for_response,,,,60\n'
+            ',send_message,1,Value,It has the value,\n'
+            ',hard_exit,,,,\n'
+            ',send_message,1,No Response,No Response,\n'
+            ',hard_exit,,,,\n'
+            ',end_block,,,\n'
+            ',send_message,X,,Following text,\n'
+        )
+        messages_exp = ['It has the value']
+        self.run_example(table_data, messages_exp, Context(inputs=['Value']))
+        messages_exp = ['No Response']
+        self.run_example(table_data, messages_exp, Context(inputs=[None]))
+        messages_exp = ['Following text']
         self.run_example(table_data, messages_exp, Context(inputs=['Something else']))
 
     def test_enter_flow(self):
