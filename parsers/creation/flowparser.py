@@ -340,6 +340,9 @@ class FlowParser:
             self._add_row_edge(edge, destination_node_group.entry_node().uuid)
 
     def _parse_row(self, row):
+        if not row.include_if:
+            return
+
         if row.type == 'go_to':
             self._parse_goto_row(row)
             return

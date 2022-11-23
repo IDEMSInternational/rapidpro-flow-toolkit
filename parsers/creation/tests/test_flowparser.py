@@ -490,3 +490,17 @@ class TestBlocks(unittest.TestCase):
         self.run_example(table_data, messages_exp, Context(inputs=['goodbye']))
         messages_exp = ['Some text','Some text','Following text']
         self.run_example(table_data, messages_exp, Context(inputs=['hello', 'goodbye']))
+
+    def test_basic_if(self):
+        table_data = (
+            'row_id,type,from,include_if,message_text\n'
+            ',send_message,,,text1\n'
+            ',send_message,,FALSE,text2\n'
+            ',send_message,,something,text3\n'
+            ',send_message,,False,text4\n'
+            ',send_message,,{{1 == 0}},text5\n'
+            ',send_message,,{@1 == 0@},text6\n'
+            ',send_message,,{@1 == 1@},text7\n'
+        )
+        messages_exp = ['text1', 'text3', 'text7']
+        self.run_example(table_data, messages_exp)

@@ -155,7 +155,21 @@ class RowParser:
             assert is_basic_type(model)
             # The value should be a basic type
             # TODO: Ensure the types match. E.g. we don't want value to be a list
-            field[key] = model(value)
+            if model == bool:
+                if type(value) == str:
+                    if value.strip():
+                        # Special case: empty string is not assigned at all;
+                        # in this case, the default value takes effect.
+                        if value.strip().lower() == 'false':
+                            field[key] = False
+                        else:
+                            # This is consistent with python: Anything that's
+                            # not '' or explicitly False is True.
+                            field[key] = True
+                else:
+                    field[key] = bool(value)
+            else:
+                field[key] = model(value)
 
     def find_entry(self, model, output_field, field_path):
         # Within the output_field (which may be a nested structure),
@@ -283,6 +297,10 @@ class RowParser:
                 self.parse_entry(k,v, template_context=template_context)
         # Returning an instance of the model rather than the output directly
         # helps us fill in default values where no entries exist.
+        # Filtering out None values here is a bit of a hack;
+        # the cause of these is the line output_field[key] = None in find_key.
+        # Ideally, we should fix the cause rather than clean up here.
+        self.output = {k:v for k,v in self.output.items() if v is not None}
         return self.model(**self.output)
 
     def unparse_row(self, model_instance):
