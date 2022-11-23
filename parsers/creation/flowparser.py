@@ -187,7 +187,7 @@ class FlowParser:
         self.rapidpro_container.add_flow(flow_container)
         return flow_container
 
-    def _parse_block(self, depth=0, block_type='block'):
+    def _parse_block(self, depth=0, block_type='root_block'):
         row = self.sheet_parser.parse_next_row()
         while not self._is_end_of_block(block_type, row):
             if row.type == 'begin_for':
@@ -202,6 +202,12 @@ class FlowParser:
                 self.append_node_group(new_node_group, row.row_id)
                 self.sheet_parser.remove_from_context(row.loop_variable)
                 self.sheet_parser.remove_bookmark(str(depth))
+            elif row.type == 'begin_block':
+                new_node_group = NodeGroup()
+                self.node_group_stack.append(new_node_group)
+                self._parse_block(depth+1, 'block')
+                self.node_group_stack.pop()
+                self.append_node_group(new_node_group, row.row_id)
             else:
                 self._parse_row(row)
             row = self.sheet_parser.parse_next_row()
@@ -209,9 +215,10 @@ class FlowParser:
     def _is_end_of_block(self, block_type, row):
         block_end_map = {
             'end_for' : 'for',
+            'end_block' : 'block',
         }
         if row is None:
-            if block_type == 'block':
+            if block_type == 'root_block':
                 return True
             else:
                 raise ValueError('Sheet has unterminated block.')

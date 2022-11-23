@@ -313,7 +313,7 @@ class TestParsing(unittest.TestCase):
             container.validate()
 
 
-class TestLoops(unittest.TestCase):
+class TestBlocks(unittest.TestCase):
 
     def setUp(self) -> None:
         self.row_parser = RowParser(FlowRowModel, CellParser())
@@ -375,8 +375,8 @@ class TestLoops(unittest.TestCase):
     def test_loop_within_other_nodes(self):
         table_data = (
             'row_id,type,from,loop_variable,message_text\n'
-            ',send_message,start,,Starting text\n'
-            '2,begin_for,,i,1;2\n'
+            '1,send_message,start,,Starting text\n'
+            '2,begin_for,1,i,1;2\n'
             ',send_message,,,{{i}}. Some text\n'
             ',end_for,,,\n'
             ',send_message,,,Following text\n'
@@ -463,3 +463,30 @@ class TestLoops(unittest.TestCase):
         )
         messages_exp = [f'{i}. Some text' for i in range(5)]
         self.run_example(table_data, messages_exp)
+
+    def test_block_within_other_nodes(self):
+        table_data = (
+            'row_id,type,from,message_text\n'
+            ',send_message,start,Starting text\n'
+            ',begin_block,,\n'
+            ',send_message,,Some text\n'
+            ',end_block,,\n'
+            ',send_message,,Following text\n'
+        )
+        messages_exp = ['Starting text','Some text','Following text']
+        self.run_example(table_data, messages_exp)
+
+    def test_block_with_goto(self):
+        table_data = (
+            'row_id,type,from,condition,message_text\n'
+            '2,begin_block,start,,\n'
+            ',send_message,,,Some text\n'
+            ',end_block,,,\n'
+            '3,wait_for_response,2,,\n'
+            ',go_to,3,hello,2\n'
+            ',send_message,3,,Following text\n'
+        )
+        messages_exp = ['Some text','Following text']
+        self.run_example(table_data, messages_exp, Context(inputs=['goodbye']))
+        messages_exp = ['Some text','Some text','Following text']
+        self.run_example(table_data, messages_exp, Context(inputs=['hello', 'goodbye']))
