@@ -329,6 +329,14 @@ class TestBlocks(unittest.TestCase):
         actions_exp = list(zip(['send_msg']*len(messages_exp), messages_exp))
         self.assertEqual(actions, actions_exp)
 
+    def run_example_with_actions(self, table_data, actions_exp, context=None, template_context=None):
+        render_output = self.render_output_from_table_data(table_data, template_context or {})
+        actions = traverse_flow(render_output, context or Context())
+        self.assertEqual(actions, actions_exp)
+
+
+class TestLoops(TestBlocks):
+
     def test_basic_loop(self):
         table_data = (
             'row_id,type,from,loop_variable,message_text\n'
@@ -464,6 +472,9 @@ class TestBlocks(unittest.TestCase):
         messages_exp = [f'{i}. Some text' for i in range(5)]
         self.run_example(table_data, messages_exp)
 
+
+class TestConditionals(TestBlocks):
+
     def test_block_within_other_nodes(self):
         table_data = (
             'row_id,type,from,message_text\n'
@@ -561,3 +572,61 @@ class TestBlocks(unittest.TestCase):
         messages_exp = ['Following text']
         self.run_example(table_data, messages_exp)
 
+
+class TestMultiExitBlocks(TestBlocks):
+
+    def test_split_by_value(self):
+        table_data = (
+            'row_id,type,from,condition,message_text\n'
+            'X,begin_block,,,\n'
+            '1,split_by_value,,,@my_field\n'
+            ',send_message,1,Value,It has the value\n'
+            ',end_block,,,\n'
+            ',send_message,X,,Following text\n'
+        )
+        messages_exp = ['It has the value','Following text']
+        self.run_example(table_data, messages_exp, Context(variables={'@my_field' : 'Value'}))
+        messages_exp = ['Following text']
+        self.run_example(table_data, messages_exp, Context(variables={'@my_field' : 'Other'}))
+
+    def test_wait_for_response(self):
+        table_data = (
+            'row_id,type,from,condition,message_text,no_response\n'
+            'X,begin_block,,,,\n'
+            '1,wait_for_response,,,,60\n'
+            ',send_message,1,Value,It has the value,\n'
+            ',send_message,1,No Response,No Response,\n'
+            ',end_block,,,\n'
+            ',send_message,1,,Other,\n'
+            ',send_message,X,,Following text,\n'
+        )
+        messages_exp = ['It has the value','Following text']
+        self.run_example(table_data, messages_exp, Context(inputs=['Value']))
+        messages_exp = ['No Response','Following text']
+        self.run_example(table_data, messages_exp, Context(inputs=[None]))
+        messages_exp = ['Other']
+        self.run_example(table_data, messages_exp, Context(inputs=['Something else']))
+
+    def test_enter_flow(self):
+        table_data = (
+            'row_id,type,from,condition,message_text\n'
+            ',send_message,start,,Starting text\n'
+            'X,begin_block,,,\n'
+            '1,start_new_flow,,,Some_flow\n'
+            ',send_message,1,completed,Completed\n'
+            ',end_block,,,\n'
+            ',send_message,X,,Following text\n'
+        )
+        messages_exp = [
+            ('send_msg', 'Starting text'),
+            ('enter_flow','Some_flow'),
+            ('send_msg','Completed'),
+            ('send_msg','Following text'),
+        ]
+        self.run_example_with_actions(table_data, messages_exp, Context(inputs=['completed']))
+        messages_exp = [
+            ('send_msg', 'Starting text'),
+            ('enter_flow','Some_flow'),
+            ('send_msg','Following text'),
+        ]
+        self.run_example_with_actions(table_data, messages_exp, Context(inputs=['expired']))
