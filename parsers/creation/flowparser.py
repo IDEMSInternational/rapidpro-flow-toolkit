@@ -15,10 +15,14 @@ from .flowrowmodel import Condition
 
 
 class NodeGroup:
+    # NodeGroups may have multiple exit nodes.
+    # add_exit connects ALL of them, except for those
+    # which are marked as hard exits
+    # (which are not tracked as loose_exits)
+
     def __init__(self):
         # node_groups may contain NodeGroups and RowNodeGroups
         self.node_groups = []
-        self.loose_exits = []
 
     def is_empty(self):
         return self.node_groups == []
@@ -29,8 +33,24 @@ class NodeGroup:
     def last_node_group(self):
         return self.node_groups[-1]
 
+    def has_loose_exits(self):
+        for node_group in self.node_groups:
+            if node_group.has_loose_exits():
+                return True
+        return False
+
     def add_exit(self, destination_uuid, condition):
-        self.last_node_group().add_exit(destination_uuid, condition)
+        if condition != Condition():
+            raise ValueError('Cannot attach conditional edges to a block.')
+        if not self.has_loose_exits():
+            raise ValueError('Block has no loose exit to connect to.')
+        for node_group in self.node_groups:
+            if node_group.has_loose_exits():
+                node_group.connect_loose_exits(destination_uuid)
+
+    def connect_loose_exits(self, destination_uuid):
+        for node_group in self.node_groups:
+            node_group.connect_loose_exits(destination_uuid)
 
     def add_node_group(self, node_group):
         # Node: Connecting of exits is not done here.
@@ -43,6 +63,8 @@ class NodeGroup:
 
 class RowNodeGroup:
     # Group of nodes representing a row in the sheet.
+    # RowNodeGroups have a single exit node
+    # (which may have multiple conditional exits)
 
     def __init__(self, node, row_type):
         '''node: first node in the group'''
@@ -60,6 +82,20 @@ class RowNodeGroup:
         for node in self.nodes:
             flow_container.add_node(node)
 
+    def has_loose_exits(self):
+        # A loose exit is a default exit (i.e. exit of a router-less node,
+        # or exit connected to the default router case) which is not
+        # connected to any further node.
+        for exit in self.nodes[-1].get_exits():
+            if exit.destination_uuid is None:
+                return True
+        return False
+
+    def connect_loose_exits(self, destination_uuid):
+        for exit in self.nodes[-1].get_exits():
+            if exit.destination_uuid is None:
+                exit.destination_uuid = destination_uuid
+
     def add_exit(self, destination_uuid, condition):
         exit_node = self.nodes[-1]
         # Unconditional/default case edge
@@ -74,6 +110,7 @@ class RowNodeGroup:
         if isinstance(exit_node, EnterFlowNode):
             if condition.value.lower() in ['complete', 'completed']:
                 exit_node.update_completed_exit(destination_uuid)
+                self.has_loose_exit = False
             elif condition.value.lower() == 'expired':
                 exit_node.update_expired_exit(destination_uuid)
             else:
@@ -347,6 +384,12 @@ class FlowParser:
 
     def _parse_row(self, row):
         if not row.include_if:
+            return
+
+        if row.type in ['hard_exit', 'loose_exit']:
+            destination_uuid = 'HARD_EXIT' if row.type == 'hard_exit' else None
+            for edge in row.edges:
+                self._add_row_edge(edge, destination_uuid)
             return
 
         if row.type == 'go_to':
