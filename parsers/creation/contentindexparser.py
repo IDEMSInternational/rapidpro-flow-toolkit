@@ -58,19 +58,31 @@ class ContentIndexParser:
 	def get_template_table(self, name):
 		return self.template_sheets[name]
 
+	def get_node_group(self, template_name, data_sheet, data_row_id):
+		# TODO: Factor out logic duplication between this function and parse_all_flows.
+		if data_sheet and data_row_id:
+			flow_name = ' - '.join([template_name, data_row_id])
+			context = self.get_data_model_instance(data_sheet, data_row_id)
+		elif not data_sheet and not data_row_id:
+			flow_name = template_name  # = row.new_name or row.sheet_name
+			context = {}
+		else:
+			raise ValueError(f'For insert_as_block, either both data_sheet and data_row_id or neither have to be provided.')
+		flow_parser = FlowParser(RapidProContainer(), flow_name, self.get_template_table(template_name), context=context, content_index_parser=self)
+		return flow_parser.parse_as_block()
+
 	def parse_all_flows(self):
 		rapidpro_container = RapidProContainer()
 		for row in self.flow_definition_rows:
 			if row.data_sheet and row.data_row_id:
 				flow_name = ' - '.join([row.sheet_name, row.data_row_id])
 				context = self.get_data_model_instance(row.data_sheet, row.data_row_id)
-				# Is automatically added to the rapidpro_container, for now.
 			elif not row.data_sheet and not row.data_row_id:
 				flow_name = row.sheet_name  # = row.new_name or row.sheet_name
 				context = {}
 			else:
 				raise ValueError(f'For create_flow, either both data_sheet and data_row_id or neither have to be provided.')
-			flow_parser = FlowParser(rapidpro_container, flow_name, self.get_template_table(row.sheet_name), context=context)
+			flow_parser = FlowParser(rapidpro_container, flow_name, self.get_template_table(row.sheet_name), context=context, content_index_parser=self)
 			flow_container = flow_parser.parse()
 			# Is automatically added to the rapidpro_container, for now.
 		return rapidpro_container	

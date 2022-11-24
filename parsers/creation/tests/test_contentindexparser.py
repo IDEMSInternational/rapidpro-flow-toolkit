@@ -123,3 +123,56 @@ class TestParsing(unittest.TestCase):
         self.compare_messages(render_output, 'my_basic_flow', ['Some text'])
         self.compare_messages(render_output, 'my_template - row1', ['Value1', 'Happy1 and Sad1'])
         self.compare_messages(render_output, 'my_template - row2', ['Value2', 'Happy2 and Sad2'])
+
+    def test_insert_as_block(self):
+        ci_sheet = (
+            'type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n'
+            'template_definition,my_template,,,,,\n'
+            'create_flow,my_basic_flow,,,,,\n'
+            'data_sheet,nesteddata,,,,NestedRowModel,\n'
+        )
+        nesteddata = (
+            'ID,value1,custom_field:happy,custom_field:sad\n'
+            'row1,Value1,Happy1,Sad1\n'
+            'row2,Value2,Happy2,Sad2\n'
+        )
+        my_template = (
+            'row_id,type,from,condition,message_text\n'
+            ',send_message,start,,{{value1}}\n'
+            '1,wait_for_response,,,\n'
+            ',send_message,1,happy,I\'m {{custom_field.happy}}\n'
+            ',send_message,1,sad,I\'m {{custom_field.sad}}\n'
+            ',hard_exit,,,\n'
+            ',send_message,1,,I\'m something\n'
+        )
+        my_basic_flow = (
+            'row_id,type,from,message_text,data_sheet,data_row_id\n'
+            ',send_message,start,Some text,,\n'
+            '1,insert_as_block,,my_template,nesteddata,row1\n'
+            ',send_message,,Next message 1,,\n'
+            ',insert_as_block,,my_template,nesteddata,row2\n'
+            ',send_message,,Next message 2,,\n'
+            ',go_to,,1,,\n'
+        )
+        sheet_dict = {
+            'nesteddata' : nesteddata,
+            'my_template' : my_template,
+            'my_basic_flow' : my_basic_flow,
+        }
+
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.nestedmodel')
+        container = ci_parser.parse_all_flows()
+        render_output = container.render()
+        messages_exp = [
+            'Some text',
+            'Value1',
+            "I'm Happy1",
+            'Next message 1',
+            'Value2',
+            "I'm something",
+            'Next message 2',
+            'Value1',
+            "I'm Sad1",  # we're taking the hard exit now, leaving the flow.
+        ]
+        self.compare_messages(render_output, 'my_basic_flow', messages_exp, Context(inputs=['happy', 'else', 'sad']))

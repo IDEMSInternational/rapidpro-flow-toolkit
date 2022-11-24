@@ -47,6 +47,8 @@ class FlowRowModel(ParserModel):
     mainarg_flow_name: str = ''
     mainarg_expression: str = ''
     mainarg_iterlist: list = [] # no specified type of elements
+    data_sheet: str = ''
+    data_row_id: str = ''
     choices: List[str] = []
     save_name: str = ''
     image: str = ''
@@ -111,6 +113,7 @@ class FlowRowModel(ParserModel):
             "start_new_flow" : "mainarg_flow_name",
             "split_by_value" : "mainarg_expression",
             "split_by_group" : "mainarg_groups",
+            "insert_as_block" : "mainarg_flow_name",
             "begin_for" : "mainarg_iterlist",
             "end_for" : "mainarg_none",
             "begin_block" : "mainarg_none",
