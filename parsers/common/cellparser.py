@@ -41,6 +41,8 @@ class CellParser:
             return value
 
     def parse_as_string(self, value, context={}):
+        if value is None:
+            return ''
         if not context and '{' not in value:
             # This is a hacky optimization.
             return value

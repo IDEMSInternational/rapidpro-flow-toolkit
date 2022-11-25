@@ -3,6 +3,7 @@ import argparse
 
 from parsers.creation.contentindexparser import ContentIndexParser
 from parsers.sheets.csv_sheet_reader import CSVSheetReader
+from parsers.sheets.xlsx_sheet_reader import XLSXSheetReader
 from rapidpro.models.containers import RapidProContainer
 
 
@@ -24,6 +25,8 @@ def main():
 
     if args.format == 'csv':
         sheet_reader = CSVSheetReader(args.input)
+    elif args.format == 'xlsx':
+        sheet_reader = XLSXSheetReader(args.input)
     else:
         print(f"Format {args.format} currently unsupported.")
         return
