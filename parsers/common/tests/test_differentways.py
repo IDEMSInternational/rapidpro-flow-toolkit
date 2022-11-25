@@ -17,54 +17,54 @@ output_instance = {
 
 input1 = {
     'row_id': '5',
-    'conditions:*:value' : ['1', '2', '3'],
-    'conditions:*:var' : '',
-    'conditions:*:type' : ['has_phrase', 'has_phrase', 'has_phrase'],
-    'conditions:*:name' : ['A','B',''],
+    'conditions.*.value' : ['1', '2', '3'],
+    'conditions.*.var' : '',
+    'conditions.*.type' : ['has_phrase', 'has_phrase', 'has_phrase'],
+    'conditions.*.name' : ['A','B',''],
 }
 
 input2 = {
     'row_id': '5',
-    'conditions:*:value' : ['1', '2', '3'],
-    'conditions:*:var' : '',
-    'conditions:*:type' : ['has_phrase', 'has_phrase', 'has_phrase'],
-    'conditions:*:name' : ['A','B'],
+    'conditions.*.value' : ['1', '2', '3'],
+    'conditions.*.var' : '',
+    'conditions.*.type' : ['has_phrase', 'has_phrase', 'has_phrase'],
+    'conditions.*.name' : ['A','B'],
 }
 
 input3 = {
     'row_id': '5',
-    'conditions:*:value' : ['1', '2', '3'],
-    'conditions:*:var' : '',
-    'conditions:*:type' : 'has_phrase',
-    'conditions:*:name' : ['A','B',''],
+    'conditions.*.value' : ['1', '2', '3'],
+    'conditions.*.var' : '',
+    'conditions.*.type' : 'has_phrase',
+    'conditions.*.name' : ['A','B',''],
 }
 
 input4 = {
     'row_id': '5',
-    'conditions:1' : ['1', '', 'has_phrase', 'A'],
-    'conditions:2' : ['2', '', 'has_phrase', 'B'],
-    'conditions:3' : ['3', '', 'has_phrase', ''],
+    'conditions.1' : ['1', '', 'has_phrase', 'A'],
+    'conditions.2' : ['2', '', 'has_phrase', 'B'],
+    'conditions.3' : ['3', '', 'has_phrase', ''],
 }
 
 input5 = {
     'row_id': '5',
-    'conditions:1' : ['1', '', 'has_phrase', 'A'],
-    'conditions:2' : ['2', '', 'has_phrase', 'B'],
-    'conditions:3' : ['3', '', 'has_phrase'],
+    'conditions.1' : ['1', '', 'has_phrase', 'A'],
+    'conditions.2' : ['2', '', 'has_phrase', 'B'],
+    'conditions.3' : ['3', '', 'has_phrase'],
 }
 
 input6 = {
     'row_id': '5',
-    'conditions:1' : [['value', '1'], ['type', 'has_phrase'], ['name', 'A']],
-    'conditions:2' : [['value', '2'], ['type', 'has_phrase'], ['name', 'B']],
-    'conditions:3' : [['value', '3'], ['type', 'has_phrase']],
+    'conditions.1' : [['value', '1'], ['type', 'has_phrase'], ['name', 'A']],
+    'conditions.2' : [['value', '2'], ['type', 'has_phrase'], ['name', 'B']],
+    'conditions.3' : [['value', '3'], ['type', 'has_phrase']],
 }
 
 input7 = {
     'row_id': '5',
-    'conditions:1' : ['1', '', 'has_phrase', ['name', 'A']],
-    'conditions:2' : ['2', '', ['type', 'has_phrase'], ['name', 'B']],
-    'conditions:3' : ['3', ['type', 'has_phrase']],
+    'conditions.1' : ['1', '', 'has_phrase', ['name', 'A']],
+    'conditions.2' : ['2', '', ['type', 'has_phrase'], ['name', 'B']],
+    'conditions.3' : ['3', ['type', 'has_phrase']],
 }
 
 input8 = {
@@ -74,20 +74,20 @@ input8 = {
 
 input9 = {
     'row_id': '5',
-    'conditions:1:value' : '1',
-    'conditions:1:type' : 'has_phrase',
-    'conditions:1:name' : 'A',
-    'conditions:2:value' : '2',
-    'conditions:2:type' : 'has_phrase',
-    'conditions:2:name' : 'B',
-    'conditions:3:value' : '3',
-    'conditions:3:type' : 'has_phrase',
+    'conditions.1.value' : '1',
+    'conditions.1.type' : 'has_phrase',
+    'conditions.1.name' : 'A',
+    'conditions.2.value' : '2',
+    'conditions.2.type' : 'has_phrase',
+    'conditions.2.name' : 'B',
+    'conditions.3.value' : '3',
+    'conditions.3.type' : 'has_phrase',
 }
 
 
 input_single_kwarg = {
     'row_id': '5',
-    'conditions:1' : ['value', '3'],
+    'conditions.1' : ['value', '3'],
 }
 
 output_single_kwarg_exp = FromWrong(**{

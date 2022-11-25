@@ -47,6 +47,8 @@ class FlowRowModel(ParserModel):
     mainarg_flow_name: str = ''
     mainarg_expression: str = ''
     mainarg_iterlist: list = [] # no specified type of elements
+    data_sheet: str = ''
+    data_row_id: str = ''
     choices: List[str] = []
     save_name: str = ''
     image: str = ''
@@ -86,13 +88,13 @@ class FlowRowModel(ParserModel):
     def header_name_to_field_name_with_context(header, row):
         # TODO: This should be defined outside of this function
         basic_header_dict = {
-            "from" : "edges:*:from_",
-            "condition" : "edges:*:condition:value",
-            "condition_value" : "edges:*:condition:value",
-            "condition_var" : "edges:*:condition:variable",
-            "condition_variable" : "edges:*:condition:variable",
-            "condition_type" : "edges:*:condition:type",
-            "condition_name" : "edges:*:condition:name",
+            "from" : "edges.*.from_",
+            "condition" : "edges.*.condition.value",
+            "condition_value" : "edges.*.condition.value",
+            "condition_var" : "edges.*.condition.variable",
+            "condition_variable" : "edges.*.condition.variable",
+            "condition_type" : "edges.*.condition.type",
+            "condition_name" : "edges.*.condition.name",
             "_nodeId" : "node_uuid",
             "_ui_type" : "ui_type",
             "_ui_position" : "ui_position",
@@ -111,6 +113,7 @@ class FlowRowModel(ParserModel):
             "start_new_flow" : "mainarg_flow_name",
             "split_by_value" : "mainarg_expression",
             "split_by_group" : "mainarg_groups",
+            "insert_as_block" : "mainarg_flow_name",
             "begin_for" : "mainarg_iterlist",
             "end_for" : "mainarg_none",
             "begin_block" : "mainarg_none",

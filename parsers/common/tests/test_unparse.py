@@ -24,8 +24,8 @@ input1 = MainModel()
 
 output1_exp = OrderedDict([
     ('str_field', ''),
-    ('model_default:int_field', 0),
-    ('model_default:str_field', ''),
+    ('model_default.int_field', 0),
+    ('model_default.str_field', ''),
 ])
 
 input2 = MainModel(**{
@@ -39,11 +39,11 @@ input2 = MainModel(**{
 
 output2_exp = OrderedDict([
     ('str_field', 'main model string'),
-    ('model_default:list_str:0', 'a'),
-    ('model_default:list_str:1', 'b'),
-    ('model_default:list_str:2', 'c'),
-    ('model_default:int_field', 5),
-    ('model_default:str_field', 'string'),
+    ('model_default.list_str.1', 'a'),
+    ('model_default.list_str.2', 'b'),
+    ('model_default.list_str.3', 'c'),
+    ('model_default.int_field', 5),
+    ('model_default.str_field', 'string'),
 ])
 
 input3 = MainModel(**{
@@ -57,8 +57,8 @@ input3 = MainModel(**{
 
 output3_exp = OrderedDict([
     ('str_field', 'main model string'),
-    ('model_default:int_field', 15),
-    ('model_default:str_field', ''),
+    ('model_default.int_field', 15),
+    ('model_default.str_field', ''),
 ])
 
 input4 = MainModel(**{
@@ -86,21 +86,21 @@ input4 = MainModel(**{
 
 output4_exp = OrderedDict([
     ('str_field', 'main model string'),
-    ('model_optional:list_str:0', 'c'),
-    ('model_optional:list_str:1', 'd'),
-    ('model_optional:int_field', 10),
-    ('model_optional:str_field', 'optional'),
-    ('model_default:list_str:0', 'a'),
-    ('model_default:list_str:1', 'b'),
-    ('model_default:int_field', 5),
-    ('model_default:str_field', 'default'),
-    ('model_list:0:list_str:0', 'A'),
-    ('model_list:0:list_str:1', 'B'),
-    ('model_list:0:list_str:2', 'C'),
-    ('model_list:0:int_field', 0),
-    ('model_list:0:str_field', 'string from first model in list'),
-    ('model_list:1:int_field', 15),
-    ('model_list:1:str_field', ''),
+    ('model_optional.list_str.1', 'c'),
+    ('model_optional.list_str.2', 'd'),
+    ('model_optional.int_field', 10),
+    ('model_optional.str_field', 'optional'),
+    ('model_default.list_str.1', 'a'),
+    ('model_default.list_str.2', 'b'),
+    ('model_default.int_field', 5),
+    ('model_default.str_field', 'default'),
+    ('model_list.1.list_str.1', 'A'),
+    ('model_list.1.list_str.2', 'B'),
+    ('model_list.1.list_str.3', 'C'),
+    ('model_list.1.int_field', 0),
+    ('model_list.1.str_field', 'string from first model in list'),
+    ('model_list.2.int_field', 15),
+    ('model_list.2.str_field', ''),
 ])
 
 
@@ -139,9 +139,9 @@ input_remap = ModelWithRemap(**{
 output_remap_exp = OrderedDict([
     ('str_field', 'main model string'),
     ('str_field_2', 'new string'),
-    ('cool_list:0', 'cool'),
-    ('cool_list:1', 'list'),
-    ('child_field:my_field', 'some value'),
+    ('cool_list.1', 'cool'),
+    ('cool_list.2', 'list'),
+    ('child_field.my_field', 'some value'),
 ])
 
 
