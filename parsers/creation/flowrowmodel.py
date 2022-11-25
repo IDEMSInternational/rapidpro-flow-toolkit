@@ -88,13 +88,13 @@ class FlowRowModel(ParserModel):
     def header_name_to_field_name_with_context(header, row):
         # TODO: This should be defined outside of this function
         basic_header_dict = {
-            "from" : "edges:*:from_",
-            "condition" : "edges:*:condition:value",
-            "condition_value" : "edges:*:condition:value",
-            "condition_var" : "edges:*:condition:variable",
-            "condition_variable" : "edges:*:condition:variable",
-            "condition_type" : "edges:*:condition:type",
-            "condition_name" : "edges:*:condition:name",
+            "from" : "edges.*.from_",
+            "condition" : "edges.*.condition.value",
+            "condition_value" : "edges.*.condition.value",
+            "condition_var" : "edges.*.condition.variable",
+            "condition_variable" : "edges.*.condition.variable",
+            "condition_type" : "edges.*.condition.type",
+            "condition_name" : "edges.*.condition.name",
             "_nodeId" : "node_uuid",
             "_ui_type" : "ui_type",
             "_ui_position" : "ui_position",

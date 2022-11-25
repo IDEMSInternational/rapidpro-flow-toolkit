@@ -68,6 +68,8 @@ class RowParser:
     # and the values are the cell content converted into nested lists.
     # Turns this into an instance of the provided model.
 
+    HEADER_FIELD_SEPARATOR = '.'
+
     def __init__(self, model, cell_parser):
         self.model = model
         self.output = None  # Gets reinitialized with each call to parse_row
@@ -231,7 +233,7 @@ class RowParser:
     def parse_entry(self, column_name, value, value_is_parsed=False, template_context={}):
         # This creates/populates a field in self.output
         # The field is determined by column_name, its value by value
-        field_path = column_name.split(':')
+        field_path = column_name.split(RowParser.HEADER_FIELD_SEPARATOR)
         # Find the destination subfield in self.output that corresponds to field_path
         field, key, model = self.find_entry(self.model, self.output, field_path)
         # The destination field in self.output is field[key], its type is model.
@@ -317,10 +319,10 @@ class RowParser:
             self.output_dict[prefix[1:]] = value
         elif is_list_instance(value):
             for i, entry in enumerate(value):
-                self.unparse_row_recurse(entry, f'{prefix}:{i}')
+                self.unparse_row_recurse(entry, f'{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{i+1}')
         elif is_parser_model_instance(value):
             for field, entry in value:
                 mapped_field = type(value).field_name_to_header_name(field)
-                self.unparse_row_recurse(entry, f'{prefix}:{mapped_field}')
+                self.unparse_row_recurse(entry, f'{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{mapped_field}')
         else:
             raise ValueError(f"Unsupported field type {type(value)} of {value}.")

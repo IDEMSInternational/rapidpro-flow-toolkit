@@ -97,7 +97,7 @@ class TestParsing(unittest.TestCase):
             'data_sheet,nesteddata,,,,NestedRowModel,\n'
         )
         nesteddata = (
-            'ID,value1,custom_field:happy,custom_field:sad\n'
+            'ID,value1,custom_field.happy,custom_field.sad\n'
             'row1,Value1,Happy1,Sad1\n'
             'row2,Value2,Happy2,Sad2\n'
         )
@@ -132,7 +132,7 @@ class TestParsing(unittest.TestCase):
             'data_sheet,nesteddata,,,,NestedRowModel,\n'
         )
         nesteddata = (
-            'ID,value1,custom_field:happy,custom_field:sad\n'
+            'ID,value1,custom_field.happy,custom_field.sad\n'
             'row1,Value1,Happy1,Sad1\n'
             'row2,Value2,Happy2,Sad2\n'
         )

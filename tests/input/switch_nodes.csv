@@ -1,4 +1,4 @@
-"row_id","type","from","condition","condition_var","condition_type","condition_name","save_name","message_text","choices:1","choices:2","choices:3","choices:4","choices:5","choices:6","choices:7","choices:8","choices:9","choices:10","image","audio","video","obj_id","_nodeId","no_response","_ui_type","_ui_position"
+"row_id","type","from","condition","condition_var","condition_type","condition_name","save_name","message_text","choices.1","choices.2","choices.3","choices.4","choices.5","choices.6","choices.7","choices.8","choices.9","choices.10","image","audio","video","obj_id","_nodeId","no_response","_ui_type","_ui_position"
 1,"wait_for_response","start",,,,,"Result_wfr",,,,,,,,,,,,,,,,"bb408455-d8f5-4377-a901-717ade84688b",,"wait_for_response","340;0"
 2,"start_new_flow","1;1","a;b",,"has_any_word;has_any_word","A;B",,"loop_and_multiple_conditions",,,,,,,,,,,,,,"c1a32f07-ff0f-4b8b-a700-360c13f53914","3ecfb56f-627b-4afe-8448-a14eaccfbe0e",,"split_by_subflow","360;180"
 3,"split_by_value","2","completed",,,,,"expression",,,,,,,,,,,,,,,"1bf341f3-e043-4024-88bd-271bb61f6f1e",,"split_by_expression","400;360"

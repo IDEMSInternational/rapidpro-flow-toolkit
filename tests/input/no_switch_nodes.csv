@@ -1,4 +1,4 @@
-"row_id","type","from","condition","condition_var","condition_type","condition_name","save_name","message_text","choices:1","choices:2","choices:3","choices:4","choices:5","choices:6","choices:7","choices:8","choices:9","choices:10","image","audio","video","obj_name","obj_id","node_name","_nodeId","no_response","_ui_type","_ui_position"
+"row_id","type","from","condition","condition_var","condition_type","condition_name","save_name","message_text","choices.1","choices.2","choices.3","choices.4","choices.5","choices.6","choices.7","choices.8","choices.9","choices.10","image","audio","video","obj_name","obj_id","node_name","_nodeId","no_response","_ui_type","_ui_position"
 1,"send_message","start",,,,,,"this is a send message node","qr1","qr2",,,,,,,,,,,,,,"A","769804d7-7343-4e78-97f3-7a113e8222d2",,"execute_actions","280;73"
 2,"send_message",1,,,,,,"message with image",,,,,,,,,,,"image u",,,,,"A","769804d7-7343-4e78-97f3-7a113e8222d2",,"execute_actions","280;73"
 3,"send_message",2,,,,,,"message with audio",,,,,,,,,,,,"audio u",,,,"A","769804d7-7343-4e78-97f3-7a113e8222d2",,"execute_actions","280;73"
