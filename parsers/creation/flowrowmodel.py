@@ -76,9 +76,9 @@ class FlowRowModel(ParserModel):
             "ui_position" : "_ui_position",
             'mainarg_message_text' : 'message_text',
             'mainarg_value' : 'message_text',
-            'mainarg_groups' : 'message_text',
+            # 'mainarg_groups' : 'message_text',  # Lists are bad here...
             'mainarg_none' : 'message_text',
-            'mainarg_destination_row_ids' : 'message_text',
+            # 'mainarg_destination_row_ids' : 'message_text',  # Lists are bad here...
             'mainarg_flow_name' : 'message_text',
             'mainarg_expression' : 'message_text',
             # 'mainarg_iterlist' : 'message_text',  # Not supported for export
@@ -98,6 +98,8 @@ class FlowRowModel(ParserModel):
             "_nodeId" : "node_uuid",
             "_ui_type" : "ui_type",
             "_ui_position" : "ui_position",
+            "_ui_position.1" : "ui_position.1",  # This is a hack
+            "_ui_position.2" : "ui_position.2",
         }
         # .update({f"choice_{i}" : f"choices:{i}" for i in range(1,11)})
 
