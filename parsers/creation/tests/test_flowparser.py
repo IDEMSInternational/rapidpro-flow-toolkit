@@ -801,3 +801,19 @@ class TestNoOpRow(TestBlocks):
         self.run_example(table_data, messages_exp, context=Context(variables={'@field':"B"}))
         messages_exp = ['Start message','End Message']
         self.run_example(table_data, messages_exp, context=Context(variables={'@field':"something"}))
+
+    def test_multientry_block(self):
+        table_data = (
+            'row_id,type,from,condition,message_text\n'
+            '1,wait_for_response,start,,\n'
+            '2,send_message,1,A,Message A\n'
+            '3,send_message,1,,Other\n'
+            'X,begin_block,2;3,,\n'
+            ',send_message,,,Some text 1\n'
+            ',end_block,,,\n'
+            ',send_message,,,Following text\n'
+        )
+        messages_exp = ['Message A','Some text 1','Following text']
+        self.run_example(table_data, messages_exp, context=Context(inputs=["A"]))
+        messages_exp = ['Other','Some text 1','Following text']
+        self.run_example(table_data, messages_exp, context=Context(inputs=["something"]))

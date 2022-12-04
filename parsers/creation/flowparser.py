@@ -80,7 +80,8 @@ class NoOpNodeGroup:
                     return True
         else:
             for edge in self.parent_edges:
-                edge.source_node_group.has_loose_exits()
+                if edge.source_node_group.has_loose_exits():
+                    return True
 
     def connect_loose_exits(self, destination_uuid):
         if self.router_node:
@@ -315,6 +316,9 @@ class FlowParser:
                     self.sheet_parser.create_bookmark(str(depth))
                     new_node_group = NodeGroup()
                     self.node_group_stack.append(new_node_group)
+                    # Interpret the row like a no-op to get the edges
+                    if not row.is_starting_row():
+                        self._parse_noop_row(row, store_row_id=False)
                     for entry in row.mainarg_iterlist:
                         self.sheet_parser.go_to_bookmark(str(depth))
                         self.sheet_parser.add_to_context(row.loop_variable, entry)
@@ -326,6 +330,9 @@ class FlowParser:
                 elif row.type == 'begin_block':
                     new_node_group = NodeGroup()
                     self.node_group_stack.append(new_node_group)
+                    # Interpret the row like a no-op to get the edges
+                    if not row.is_starting_row():
+                        self._parse_noop_row(row, store_row_id=False)
                     self._parse_block(depth+1, 'block')
                     self.node_group_stack.pop()
                     self.append_node_group(new_node_group, row.row_id)
@@ -452,8 +459,8 @@ class FlowParser:
             #     # Doesn't come from 'start', but is the first ACTUAL
             #     # node in the flow (the first row could be e.g. begin_for
             #     # or begin_block, which doesn't generate a node)
-            #     # TODO: Make a dummy node group for begin_for/begin_block?
-            #     # Then we can issue a warning here:
+            #     # Because we have a dummy node group for begin_for/begin_block,
+            #     # we actually know this is the first node, and we can issue a warning here:
             #     # 'First node must have edge from "start"'
             #     return None        
 
@@ -474,12 +481,13 @@ class FlowParser:
             destination_node_group = self.row_id_to_nodegroup[destination_row_id]
             self._add_row_edge(edge, destination_node_group.entry_node().uuid)
 
-    def _parse_noop_row(self, row):
+    def _parse_noop_row(self, row, store_row_id=True):
         new_node = NoOpNodeGroup()
         for edge in row.edges:
             source_node_group = self._get_node_group_from_edge(edge)
-            new_node.add_parent_edge(source_node_group, edge.condition)
-        self.append_node_group(new_node, row.row_id)
+            if source_node_group is not None:
+                new_node.add_parent_edge(source_node_group, edge.condition)
+        self.append_node_group(new_node, row.row_id if store_row_id else '')
 
     def _parse_row(self, row):
         if not row.include_if:

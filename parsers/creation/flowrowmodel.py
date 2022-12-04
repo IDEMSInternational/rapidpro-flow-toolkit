@@ -128,3 +128,8 @@ class FlowRowModel(ParserModel):
         if header == "message_text":
             return row_type_to_main_arg[row["type"]]
         return header
+
+    def is_starting_row(self):
+        if len(self.edges) == 1 and self.edges[0].from_ == 'start':
+            return True
+        return False
