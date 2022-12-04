@@ -669,3 +669,135 @@ class TestMultiExitBlocks(TestBlocks):
             ('send_msg','Following text'),
         ]
         self.run_example_with_actions(table_data, messages_exp, Context(inputs=['expired']))
+
+
+class TestNoOpRow(TestBlocks):
+
+    def test_basic_noop(self):
+        table_data = (
+            'row_id,type,from,message_text\n'
+            ',send_message,,Start message\n'
+            ',no_op,,\n'
+            ',send_message,,End message\n'
+        )
+        messages_exp = ['Start message','End message']
+        self.run_example(table_data, messages_exp)
+
+    def test_multientry_noop(self):
+        table_data = (
+            'row_id,type,from,condition,message_text\n'
+            '1,wait_for_response,,,\n'
+            '2,send_message,1,A,Text A\n'
+            '3,send_message,1,,Other\n'
+            ',no_op,2;3,,\n'
+            ',send_message,,,End message\n'
+        )
+        messages_exp = ['Text A','End message']
+        self.run_example(table_data, messages_exp, context=Context(inputs=["A"]))
+        messages_exp = ['Other','End message']
+        self.run_example(table_data, messages_exp, context=Context(inputs=["something"]))
+
+    def test_multiexit_noop(self):
+        table_data = (
+            'row_id,type,from,condition_value,condition_variable,message_text\n'
+            ',send_message,,,,Start message\n'
+            '1,no_op,,,,\n'
+            ',send_message,1,A,@field,Text A\n'
+            ',send_message,1,,@field,Other\n'
+            ',send_message,1,B,@field,Text B\n'
+        )
+        messages_exp = ['Start message','Text A']
+        self.run_example(table_data, messages_exp, context=Context(variables={'@field':"A"}))
+        messages_exp = ['Start message','Text B']
+        self.run_example(table_data, messages_exp, context=Context(variables={'@field':"B"}))
+        messages_exp = ['Start message','Other']
+        self.run_example(table_data, messages_exp, context=Context(variables={'@field':"something"}))
+
+    def test_multiexit_noop2(self):
+        # only two rows are swapped, compared to previous case
+        table_data = (
+            'row_id,type,from,condition_value,condition_variable,message_text\n'
+            ',send_message,,,,Start message\n'
+            '1,no_op,,,,\n'
+            ',send_message,1,,@field,Other\n'
+            ',send_message,1,A,@field,Text A\n'
+            ',send_message,1,B,@field,Text B\n'
+        )
+        messages_exp = ['Start message','Text A']
+        self.run_example(table_data, messages_exp, context=Context(variables={'@field':"A"}))
+        messages_exp = ['Start message','Text B']
+        self.run_example(table_data, messages_exp, context=Context(variables={'@field':"B"}))
+        messages_exp = ['Start message','Other']
+        self.run_example(table_data, messages_exp, context=Context(variables={'@field':"something"}))
+
+    def test_multientryexit_noop(self):
+        # only two rows are swapped, compared to previous case
+        table_data = (
+            'row_id,type,from,condition_value,condition_variable,message_text\n'
+            '1,wait_for_response,,,,\n'
+            '2,send_message,1,A,,Text 1A\n'
+            '3,send_message,1,,,Other\n'
+            '4,no_op,2;3,,,\n'
+            ',send_message,4,A,@field,Text 2A\n'
+            ',send_message,4,,@field,Other\n'
+            ',send_message,4,B,@field,Text 2B\n'
+        )
+        messages_exp = ['Text 1A','Text 2A']
+        self.run_example(table_data, messages_exp, context=Context(inputs=["A"], variables={'@field':"A"}))
+        messages_exp = ['Text 1A','Text 2B']
+        self.run_example(table_data, messages_exp, context=Context(inputs=["A"], variables={'@field':"B"}))
+        messages_exp = ['Text 1A','Other']
+        self.run_example(table_data, messages_exp, context=Context(inputs=["A"], variables={'@field':"something"}))
+        messages_exp = ['Other','Text 2A']
+        self.run_example(table_data, messages_exp, context=Context(inputs=["something"], variables={'@field':"A"}))
+        messages_exp = ['Other','Text 2B']
+        self.run_example(table_data, messages_exp, context=Context(inputs=["something"], variables={'@field':"B"}))
+        messages_exp = ['Other','Other']
+        self.run_example(table_data, messages_exp, context=Context(inputs=["something"], variables={'@field':"something"}))
+
+    def test_noop_in_block_loose(self):
+        # only two rows are swapped, compared to previous case
+        table_data = (
+            'row_id,type,from,condition_value,condition_variable,message_text\n'
+            'X,begin_block,,,,\n'
+            ',send_message,,,,Start message\n'
+            '1,no_op,,,,\n'
+            ',end_block,,,,\n'
+            ',send_message,,,,End message\n'
+        )
+        messages_exp = ['Start message','End message']
+        self.run_example(table_data, messages_exp)
+
+    def test_noop_in_block_notloose(self):
+        # only two rows are swapped, compared to previous case
+        table_data = (
+            'row_id,type,from,condition_value,condition_variable,message_text\n'
+            'X,begin_block,,,,\n'
+            ',send_message,,,,Start message\n'
+            '1,no_op,,,,\n'
+            ',send_message,,,,End message\n'
+            ',end_block,,,,\n'
+            ',send_message,,,,End message 2\n'
+        )
+        messages_exp = ['Start message','End message','End message 2']
+        self.run_example(table_data, messages_exp)
+
+    def test_noop_in_block2(self):
+        # only two rows are swapped, compared to previous case
+        table_data = (
+            'row_id,type,from,condition_value,condition_variable,message_text\n'
+            'X,begin_block,,,,\n'
+            ',send_message,,,,Start message\n'
+            '1,no_op,,,,\n'
+            ',loose_exit,1,,@field,\n'
+            ',hard_exit,1,A,@field,\n'
+            ',loose_exit,1,B,@field,\n'
+            ',end_block,,,,\n'
+            ',send_message,,,,End Message\n'
+        )
+        messages_exp = ['Start message']
+        self.run_example(table_data, messages_exp, context=Context(variables={'@field':"A"}))
+        messages_exp = ['Start message','End Message']
+        self.run_example(table_data, messages_exp, context=Context(variables={'@field':"B"}))
+        messages_exp = ['Start message','End Message']
+        self.run_example(table_data, messages_exp, context=Context(variables={'@field':"something"}))

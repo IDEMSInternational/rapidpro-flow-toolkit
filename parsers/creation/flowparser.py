@@ -61,6 +61,78 @@ class NodeGroup:
             node.add_nodes_to_flow(flow_container)
 
 
+class NoOpNodeGroup:
+    # TODO: Support ui_pos, in case there's a node.
+
+    class ParentEdge:
+        def __init__(self, source_node_group, condition):
+            self.source_node_group = source_node_group
+            self.condition = condition
+
+    def __init__(self):
+        self.parent_edges = []
+        self.router_node = None
+
+    def has_loose_exits(self):
+        if self.router_node:
+            for exit in self.router_node.get_exits():
+                if exit.destination_uuid is None:
+                    return True
+        else:
+            for edge in self.parent_edges:
+                edge.source_node_group.has_loose_exits()
+
+    def connect_loose_exits(self, destination_uuid):
+        if self.router_node:
+            for exit in self.router_node.get_exits():
+                if exit.destination_uuid is None:
+                    exit.destination_uuid = destination_uuid
+        else:
+            for edge in self.parent_edges:
+                edge.source_node_group.connect_loose_exits(destination_uuid)
+
+    def entry_node():
+        raise NotImplementedError("go_to not implemented to link to no_op row.")
+
+    def add_parent_edge(self, source_node_group, condition):
+        self.parent_edges.append(NoOpNodeGroup.ParentEdge(source_node_group,condition))
+        if self.router_node is not None:
+            source_node_group.add_exit(self.router_node.uuid, condition)
+
+    def add_exit(self, destination_uuid, condition):
+        if not self.router_node:
+            if condition == Condition():
+                for edge in self.parent_edges:
+                    edge.source_node_group.add_exit(destination_uuid, edge.condition)
+                return
+            else:
+                assert condition.variable
+                self.router_node = SwitchRouterNode(condition.variable)
+                self.child_node_ref = None
+                for edge in self.parent_edges:
+                    # Update all the parent exits
+                    edge.source_node_group.add_exit(self.router_node.uuid, edge.condition)
+
+        # We now have a router_node
+        # TODO: Code duplication here, especially with respect to default values.
+        # Same functionality is in RowNodeGroup
+        if not condition.value:
+            self.router_node.update_default_exit(destination_uuid)
+        else:
+            self.router_node.add_choice(
+                comparison_variable=condition.variable,
+                comparison_type=condition.type or 'has_any_word',
+                comparison_arguments=[condition.value],
+                category_name=condition.name,
+                destination_uuid=destination_uuid,
+                is_default=False
+            )
+
+    def add_nodes_to_flow(self, flow_container):
+        if self.router_node is not None:
+            flow_container.add_node(self.router_node)
+
+
 class RowNodeGroup:
     # Group of nodes representing a row in the sheet.
     # RowNodeGroups have a single exit node
@@ -367,24 +439,28 @@ class FlowParser:
     def _get_node_name(self, row):
         return row.node_uuid or row.node_name
 
-    def _add_row_edge(self, edge, destination_uuid):
+    def _get_node_group_from_edge(self, edge):
         if edge.from_ == 'start':
-            return
+            return None
         elif edge.from_:
             if edge.from_ not in self.row_id_to_nodegroup:
                 raise ValueError(f'Edge from row_id "{edge.from_}" which does not exist.')
-            from_node_group = self.row_id_to_nodegroup[edge.from_]
+            return self.row_id_to_nodegroup[edge.from_]
         else:
-            from_node_group = self.most_recent_node_group()
-            if from_node_group is None:
-                # Doesn't come from 'start', but is the first ACTUAL
-                # node in the flow (the first row could be e.g. begin_for
-                # or begin_block, which doesn't generate a node)
-                # TODO: Make a dummy node group for begin_for/begin_block?
-                # Then we can issue a warning here:
-                # 'First node must have edge from "start"'
-                return
-        from_node_group.add_exit(destination_uuid, edge.condition)
+            return self.most_recent_node_group()
+            # if from_node_group is None:
+            #     # Doesn't come from 'start', but is the first ACTUAL
+            #     # node in the flow (the first row could be e.g. begin_for
+            #     # or begin_block, which doesn't generate a node)
+            #     # TODO: Make a dummy node group for begin_for/begin_block?
+            #     # Then we can issue a warning here:
+            #     # 'First node must have edge from "start"'
+            #     return None        
+
+    def _add_row_edge(self, edge, destination_uuid):
+        from_node_group = self._get_node_group_from_edge(edge)
+        if from_node_group is not None:
+            from_node_group.add_exit(destination_uuid, edge.condition)
 
     def _parse_goto_row(self, row):
         # If there is a single destination, connect all edges to that destination.
@@ -398,6 +474,13 @@ class FlowParser:
             destination_node_group = self.row_id_to_nodegroup[destination_row_id]
             self._add_row_edge(edge, destination_node_group.entry_node().uuid)
 
+    def _parse_noop_row(self, row):
+        new_node = NoOpNodeGroup()
+        for edge in row.edges:
+            source_node_group = self._get_node_group_from_edge(edge)
+            new_node.add_parent_edge(source_node_group, edge.condition)
+        self.append_node_group(new_node, row.row_id)
+
     def _parse_row(self, row):
         if not row.include_if:
             return
@@ -410,6 +493,10 @@ class FlowParser:
 
         if row.type == 'go_to':
             self._parse_goto_row(row)
+            return
+
+        if row.type == 'no_op':
+            self._parse_noop_row(row)
             return
 
         if row.type == 'insert_as_block':
