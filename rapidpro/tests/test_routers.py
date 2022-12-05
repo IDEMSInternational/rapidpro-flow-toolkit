@@ -56,3 +56,42 @@ class TestRouters(unittest.TestCase):
 
         for name in ['random_1', 'random_2', 'random_3']:
             self.assertIn(name, category_names)
+
+
+class TestDuplicateChoices(unittest.TestCase):
+
+    def test_switch_router_default(self):
+        switch_router = SwitchRouter(operand='@fields.field')
+        switch_router.add_choice('@fields.field', 'has_any_word', ['other'], 'Other', 'test_destination_1',
+                                      is_default=True)
+        switch_router.add_choice('@fields.field', 'has_any_word', ['word'], 'Word', 'test_destination_2',
+                                      is_default=False)
+        # Duplicate case with different destination
+        switch_router.add_choice('@fields.field', 'has_any_word', ['other'], 'Other', 'test_destination_3',
+                                      is_default=True)
+
+        render_output = switch_router.render()
+        self.assertEqual(len(render_output['cases']), 2)
+        self.assertEqual(len(render_output['categories']), 2)
+        self.assertEqual(render_output['categories'][0]['name'], 'Word')
+        self.assertEqual(render_output['categories'][1]['name'], 'Other')
+        self.assertEqual(switch_router.default_category.exit.destination_uuid, 'test_destination_3')
+
+    def test_switch_router_blank(self):
+        switch_router = SwitchRouter(operand='@input.text', result_name=None, wait_timeout=600)
+        switch_router.add_choice('@input.text', 'has_any_word', ['word'], '', 'test_destination_1',
+                                      is_default=False)
+        switch_router.update_default_category('test_destination_2')
+        # Duplicate case with different destination
+        switch_router.add_choice('@input.text', 'has_any_word', ['word'], '', 'test_destination_3',
+                                      is_default=False)
+        switch_router.update_no_response_category('no_response_destination_uuid')
+
+        render_output = switch_router.render()
+        self.assertEqual(len(render_output['cases']), 1)
+        self.assertEqual(len(render_output['categories']), 3)
+        self.assertEqual(render_output['categories'][0]['name'], 'Word')
+        cats = [category for category in switch_router.categories if category.name == 'Word']
+        # There should be exactly one Word category, internally
+        self.assertEqual(len(cats), 1)
+        self.assertEqual(cats[0].exit.destination_uuid, 'test_destination_3')

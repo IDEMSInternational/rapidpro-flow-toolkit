@@ -38,14 +38,28 @@ class BaseRouter:
         if result:
             return result[0]
 
+    def get_category_by_uuid(self, uuid):
+        # It might be better if cases had a reference to
+        # a category, rather than their uuid.
+        result = [c for c in self.get_categories() if c.uuid == uuid]
+        if result:
+            return result[0]
+        else:
+            raise KeyError("No Category with given uuid")
+
     def _add_category(self, category_name, destination_uuid):
         category = RouterCategory(category_name, destination_uuid)
         self.categories.append(category)
         return self.categories[-1]
 
     def get_or_create_category(self, category_name, destination_uuid):
+        # If the category exists, this updates its destination uuid
         category = self._get_category_or_none(category_name)
-        return category if category else self._add_category(category_name, destination_uuid)
+        if category:
+            category.update_destination_uuid(destination_uuid)
+            return category
+        else:
+            return self._add_category(category_name, destination_uuid)
 
     def get_exits(self):
         return [c.get_exit() for c in self.get_categories()]
@@ -123,11 +137,10 @@ class SwitchRouter(BaseRouter):
         other_categories = [category for category in categories if category.uuid not in [data["default_category_uuid"], no_response_category_id]]
         return SwitchRouter(data["operand"], result_name, wait_timeout, cases, other_categories, default_categories[0], no_response_category)
 
-    def _get_case_or_none(self, comparison_type, arguments, category_uuid):
+    def _get_case_or_none(self, comparison_type, arguments):
         for case in self.cases:
             if case.type == comparison_type \
-                    and case.arguments == arguments \
-                    and case.category_uuid == category_uuid:
+                    and case.arguments == arguments:
                 return case
 
     def _add_case(self, comparison_type, arguments, category_uuid):
@@ -135,13 +148,8 @@ class SwitchRouter(BaseRouter):
         self.cases.append(case)
         return self.cases[-1]
 
-    def get_or_create_case(self, comparison_type, arguments, category_name):
-        category = self._get_category_or_none(category_name)
-        if not category:
-            raise ValueError(f'Category ({category_name}) not found. Please add category before adding the case')
-
-        case = self._get_case_or_none(comparison_type, arguments, category.uuid)
-        return case if case else self._add_case(comparison_type, arguments, category.uuid)
+    def create_case(self, comparison_type, arguments, category):
+        return self._add_case(comparison_type, arguments, category.uuid)
 
     def generate_category_name(self, comparison_arguments):
         # Auto-generate a category name that is guaranteed to be unique
@@ -153,6 +161,15 @@ class SwitchRouter(BaseRouter):
 
     def add_choice(self, comparison_variable, comparison_type, comparison_arguments, category_name,
                    destination_uuid, is_default=False):
+        self.set_operand(comparison_variable)
+        case = self._get_case_or_none(comparison_type, comparison_arguments)
+        if case:
+            # Case already exists. Only update the destination
+            # category_name is ignored.
+            category = self.get_category_by_uuid(case.category_uuid)
+            category.update_destination_uuid(destination_uuid)
+            return
+
         if not category_name:
             category_name = self.generate_category_name(comparison_arguments)
         if is_default:
@@ -160,9 +177,7 @@ class SwitchRouter(BaseRouter):
             category = self.default_category
         else:
             category = self.get_or_create_category(category_name, destination_uuid)
-
-        self.get_or_create_case(comparison_type, comparison_arguments, category.name)
-        self.set_operand(comparison_variable)
+        self._add_case(comparison_type, comparison_arguments, category.uuid)
         return category
 
     def update_default_category(self, destination_uuid, category_name=None):
