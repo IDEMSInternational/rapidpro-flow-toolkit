@@ -68,7 +68,7 @@ class ContentIndexParser:
 			context = {}
 		else:
 			raise ValueError(f'For insert_as_block, either both data_sheet and data_row_id or neither have to be provided.')
-		flow_parser = FlowParser(RapidProContainer(), flow_name, self.get_template_table(template_name), context=context, content_index_parser=self)
+		flow_parser = FlowParser(RapidProContainer(), flow_name, self.get_template_table(template_name), context=dict(context), content_index_parser=self)
 		return flow_parser.parse_as_block()
 
 	def parse_all_flows(self):
@@ -82,7 +82,7 @@ class ContentIndexParser:
 				context = {}
 			else:
 				raise ValueError(f'For create_flow, either both data_sheet and data_row_id or neither have to be provided.')
-			flow_parser = FlowParser(rapidpro_container, flow_name, self.get_template_table(row.sheet_name), context=context, content_index_parser=self)
+			flow_parser = FlowParser(rapidpro_container, flow_name, self.get_template_table(row.sheet_name), context=dict(context), content_index_parser=self)
 			flow_container = flow_parser.parse()
 			# Is automatically added to the rapidpro_container, for now.
 		return rapidpro_container	
