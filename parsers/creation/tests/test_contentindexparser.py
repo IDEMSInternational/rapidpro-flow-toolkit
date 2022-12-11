@@ -96,10 +96,18 @@ class TestParsing(unittest.TestCase):
             'create_flow,my_basic_flow,,,,,\n'
             'data_sheet,nesteddata,,,,NestedRowModel,\n'
         )
+        # The templates are instantiated implicitly with all data rows
+        ci_sheet_alt = (
+            'type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n'
+            'create_flow,my_template,nesteddata,,,,\n'
+            'create_flow,my_basic_flow,,,,,\n'
+            'data_sheet,nesteddata,,,,NestedRowModel,\n'
+        )
         nesteddata = (
             'ID,value1,custom_field.happy,custom_field.sad\n'
             'row1,Value1,Happy1,Sad1\n'
             'row2,Value2,Happy2,Sad2\n'
+            'row3,Value3,Happy3,Sad3\n'
         )
         my_template = (
             'row_id,type,from,message_text\n'
@@ -123,6 +131,15 @@ class TestParsing(unittest.TestCase):
         self.compare_messages(render_output, 'my_basic_flow', ['Some text'])
         self.compare_messages(render_output, 'my_template - row1', ['Value1', 'Happy1 and Sad1'])
         self.compare_messages(render_output, 'my_template - row2', ['Value2', 'Happy2 and Sad2'])
+
+        sheet_reader = MockSheetReader(ci_sheet_alt, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.nestedmodel')
+        container = ci_parser.parse_all_flows()
+        render_output = container.render()
+        self.compare_messages(render_output, 'my_basic_flow', ['Some text'])
+        self.compare_messages(render_output, 'my_template - row1', ['Value1', 'Happy1 and Sad1'])
+        self.compare_messages(render_output, 'my_template - row2', ['Value2', 'Happy2 and Sad2'])
+        self.compare_messages(render_output, 'my_template - row3', ['Value3', 'Happy3 and Sad3'])
 
     def test_insert_as_block(self):
         ci_sheet = (
