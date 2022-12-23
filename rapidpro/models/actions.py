@@ -124,7 +124,8 @@ class SetContactFieldAction(Action):
         self.field_name = field["name"]
 
     def _get_field_key(self, field_name):
-        return field_name.strip().replace(' ', '_')
+        return field_name.strip().replace(' ', '_').lower()
+
 
     def render(self):
         return {
