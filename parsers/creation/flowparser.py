@@ -313,19 +313,30 @@ class FlowParser:
                     self._parse_block(depth+1, 'block', omit_content=True)
             else:
                 if row.type == 'begin_for':
+                    if len(row.loop_variable) >= 1 and row.loop_variable[0]:
+                        iteration_variable = row.loop_variable[0]
+                    else:
+                        raise ValueError('begin_for must have a loop_variable')
+                    index_variable = None
+                    if len(row.loop_variable) >= 2 and row.loop_variable[1]:
+                        index_variable = row.loop_variable[1]
                     self.sheet_parser.create_bookmark(str(depth))
                     new_node_group = NodeGroup()
                     self.node_group_stack.append(new_node_group)
                     # Interpret the row like a no-op to get the edges
                     if not row.is_starting_row():
                         self._parse_noop_row(row, store_row_id=False)
-                    for entry in row.mainarg_iterlist:
+                    for i, entry in enumerate(row.mainarg_iterlist):
                         self.sheet_parser.go_to_bookmark(str(depth))
-                        self.sheet_parser.add_to_context(row.loop_variable, entry)
+                        self.sheet_parser.add_to_context(iteration_variable, entry)
+                        if index_variable:
+                            self.sheet_parser.add_to_context(index_variable, i)
                         self._parse_block(depth+1, 'for')
                     self.node_group_stack.pop()
                     self.append_node_group(new_node_group, row.row_id)
-                    self.sheet_parser.remove_from_context(row.loop_variable)
+                    self.sheet_parser.remove_from_context(iteration_variable)
+                    if index_variable:
+                        self.sheet_parser.remove_from_context(index_variable)
                     self.sheet_parser.remove_bookmark(str(depth))
                 elif row.type == 'begin_block':
                     new_node_group = NodeGroup()

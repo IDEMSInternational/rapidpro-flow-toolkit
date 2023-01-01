@@ -37,7 +37,7 @@ class FlowRowModel(ParserModel):
     type: str
     edges: List[Edge]
     # These are the fields that message_text can map to
-    loop_variable: str = ''
+    loop_variable: List[str] = []
     include_if: bool = True
     mainarg_message_text: str = ''
     mainarg_value: str = ''
