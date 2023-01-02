@@ -12,3 +12,11 @@ class AnswerRowModel(DataRowModel):
 	FEMALE: GenderAnswerModel = GenderAnswerModel()
 	MALE: GenderAnswerModel = GenderAnswerModel()
 	prompt: List[str] = []
+
+class TopicItemModel(ParserModel):
+	topic: str = ''
+	subtopic: str = ''
+	ID: str = ''
+
+class NavigationModel(DataRowModel):
+	item: List[TopicItemModel] = []
