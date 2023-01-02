@@ -355,6 +355,21 @@ class TestLoops(TestBlocks):
         messages_exp = ['1. Some text','2. Some text','3. Some text']
         self.run_example(table_data, messages_exp)
 
+    def test_enumerate(self):
+        table_data = (
+            'row_id,type,from,loop_variable,message_text\n'
+            '1,begin_for,start,text;i,A;B;C\n'
+            ',send_message,,,{{i+1}}. {{text}}\n'
+            ',end_for,,,\n'
+        )
+        render_output = self.render_output_from_table_data(table_data)
+        nodes = render_output["nodes"]
+        self.assertEqual(len(nodes), 3)
+        self.assertEqual(nodes[0]["actions"][0]["type"], 'send_msg')
+        self.assertEqual(nodes[0]["actions"][0]["text"], '1. A')
+        self.assertEqual(nodes[1]["actions"][0]["text"], '2. B')
+        self.assertEqual(nodes[2]["actions"][0]["text"], '3. C')
+
     def test_one_element_loop(self):
         table_data = (
             'row_id,type,from,loop_variable,message_text\n'
