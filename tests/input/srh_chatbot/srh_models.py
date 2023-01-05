@@ -14,18 +14,20 @@ class AnswerRowModel(DataRowModel):
 	prompt: List[str] = []
 	ID2: str = ''
 
-class TopicItemModel(ParserModel):
+class TopicItemModel(DataRowModel):
 	topic: str = ''
 	subtopic: str = ''
-	ID: str = ''
+	info: str = ''
+
+class TopicNavigationModel(ParserModel):
+	name: str = ''
+	is_flow: str = ''
 
 class NavigationModel(DataRowModel):
-	item: List[TopicItemModel] = []
+	topic: List[TopicNavigationModel] = []
+	level: str = ''
 
-class NavigationListsModel(DataRowModel):
-	topic: List[str] = []
-	subtopic: List[str] = []
-	IDlist: List[str] = []
+
 
 class QuestionsEntryModel(ParserModel):
 	qst: str = ''
