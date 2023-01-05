@@ -1,6 +1,7 @@
 from rapidpro.utils import generate_new_uuid
 
 import copy
+import re
 
 # TODO: Check enter flow
 # Node classification:
@@ -124,8 +125,12 @@ class SetContactFieldAction(Action):
         self.field_name = field["name"]
 
     def _get_field_key(self, field_name):
-        return field_name.strip().replace(' ', '_').lower()
-
+        field_key = field_name.strip().lower().replace(' ', '_')
+        # Field keys should be no longer than 36 characters
+        # and contain at least one letter.
+        assert len(field_key) <= 36
+        assert re.search('[A-Za-z]', field_key)
+        return field_key
 
     def render(self):
         return {
