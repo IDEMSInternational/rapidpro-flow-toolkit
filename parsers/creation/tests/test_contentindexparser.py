@@ -196,16 +196,18 @@ class TestParsing(unittest.TestCase):
 
     def test_insert_as_block_with_extra_data(self):
         ci_sheet = (
-            'type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n'
-            'template_definition,my_template,,,,,\n'
-            'create_flow,my_basic_flow,,,,,\n'
-            'data_sheet,nesteddata,,,,ListRowModel,\n'
-            'data_sheet,string_lookup,,,,LookupRowModel,\n'
+            'type,sheet_name,data_sheet,data_row_id,extra_data_sheets,new_name,data_model,status\n'
+            'template_definition,my_template,,,,,,\n'
+            'create_flow,my_template,nesteddata,row3,string_lookup,,,\n'
+            'create_flow,my_basic_flow,,,,,,\n'
+            'data_sheet,nesteddata,,,,,ListRowModel,\n'
+            'data_sheet,string_lookup,,,,,LookupRowModel,\n'
         )
         nesteddata = (
             'ID,messages.1,messages.2\n'
             'row1,hello,nicetosee\n'
             'row2,nicetosee,bye\n'
+            'row3,hello,bye\n'
         )
         string_lookup = (
             'ID,happy,sad,neutral\n'
@@ -259,3 +261,8 @@ class TestParsing(unittest.TestCase):
             'Nice to see youBye',
         ]
         self.compare_messages(render_output, 'my_basic_flow', messages_exp, Context(variables={'@field.mood':'something else'}))
+
+        messages_exp = [
+            'Hello :)Bye :)',
+        ]
+        self.compare_messages(render_output, 'my_template - row3', messages_exp, Context(variables={'@field.mood':'happy'}))

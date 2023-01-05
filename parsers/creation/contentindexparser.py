@@ -76,11 +76,11 @@ class ContentIndexParser:
 			if row.data_sheet and not row.data_row_id:
 				data_rows = self.get_all_data_model_instances(row.data_sheet)
 				for data_row_id in data_rows.keys():
-					self.parse_flow(row.sheet_name, row.data_sheet, data_row_id, [], rapidpro_container)
+					self.parse_flow(row.sheet_name, row.data_sheet, data_row_id, row.extra_data_sheets, rapidpro_container)
 			elif not row.data_sheet and row.data_row_id:
 				raise ValueError(f'For create_flow, if data_row_id is provided, data_sheet must also be provided.')
 			else:
-				self.parse_flow(row.sheet_name, row.data_sheet, row.data_row_id, [], rapidpro_container)
+				self.parse_flow(row.sheet_name, row.data_sheet, row.data_row_id, row.extra_data_sheets, rapidpro_container)
 		return rapidpro_container	
 
 	def parse_flow(self, sheet_name, data_sheet, data_row_id, extra_data_sheets, rapidpro_container, parse_as_block=False):
