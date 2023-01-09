@@ -3,10 +3,10 @@ from typing import List
 
 class ContentIndexRowModel(ParserModel):
     type: str = ''
-    sheet_name: str = ''
+    new_name: str = ''
+    sheet_name: List[str] = []
     data_sheet: str = ''
     data_row_id: str = ''
     extra_data_sheets: List[str] = []
-    new_name: str = ''
     data_model: str = ''
     status: str = ''
