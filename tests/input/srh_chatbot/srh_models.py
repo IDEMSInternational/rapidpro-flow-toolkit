@@ -32,6 +32,7 @@ class NavigationModel(DataRowModel):
 class QuestionsEntryModel(ParserModel):
 	qst: str = ''
 	has_children: str = ''
+	has_answer: str = ''
 
 class TopEntryModel(DataRowModel):
 	intro: str = ''
