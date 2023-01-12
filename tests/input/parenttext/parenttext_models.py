@@ -60,15 +60,18 @@ class ComicBlockModel(DataRowModel):
 	comic_attachment: str = ''
 	n_comic_attachments: int = 0
 	comic_text: List[str] = []
+	comic_interaction: str = ''
+	comic_no_message: str = ''
+
+class TipsBlockModel(DataRowModel):
+	tip_introduction: str = ''
+	tip_interaction: str = ''
+	tip_next_button: str = ''
+	tip_no_message: str = ''
+	tip_message: List[List[str]] = []
 
 """
 class InteractionBlockModel(DataRowModel):
-
-
-class TipsBlockModel(DataRowModel):
-
-
-
 
 """
 
