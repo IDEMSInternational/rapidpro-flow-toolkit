@@ -59,6 +59,7 @@ class ComicBlockModel(DataRowModel):
 	comic_introduction: str = ''
 	comic_attachment: str = ''
 	n_comic_attachments: int = 0
+	comic_next_button: str = ''
 	comic_text: List[str] = []
 	comic_interaction: str = ''
 	comic_no_message: str = ''
