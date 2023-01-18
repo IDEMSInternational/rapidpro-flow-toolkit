@@ -379,13 +379,12 @@ class FlowParser:
             self.row_id_to_nodegroup[row.row_id] = node_group
 
     def _get_row_action(self, row):
-        attachment_types = [row.image, row.audio, row.video]
         if row.type == 'send_message':
             send_message_action = SendMessageAction(text=row.mainarg_message_text)
-            for attachment in [row.image, row.audio, row.video]:
+            for att_type, attachment in zip(["image", "audio", "video"], [row.image, row.audio, row.video]):
                 if attachment:
                     # TODO: Add depending on prefix.
-                    send_message_action.add_attachment(attachment)
+                    send_message_action.add_attachment(f'{att_type}:{attachment}')
 
             quick_replies = [qr for qr in row.choices if qr]
             if quick_replies:
