@@ -88,6 +88,33 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(datamodelB.value1, '1B')
         self.assertEqual(datamodelB.value2, '2B')
 
+    def test_concat(self):
+        ci_sheet = (
+            'type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n'
+            'data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,\n'
+        )
+        simpleA = (
+            'ID,value1,value2\n'
+            'rowA,1A,2A\n'
+        )
+        simpleB = (
+            'ID,value1,value2\n'
+            'rowB,1B,2B\n'
+        )
+        sheet_dict = {
+            'simpleA' : simpleA,
+            'simpleB' : simpleB,
+        }
+
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.simplemodel')
+        datamodelA = ci_parser.get_data_model_instance('simpledata', 'rowA')
+        datamodelB = ci_parser.get_data_model_instance('simpledata', 'rowB')
+        self.assertEqual(datamodelA.value1, '1A')
+        self.assertEqual(datamodelA.value2, '2A')
+        self.assertEqual(datamodelB.value1, '1B')
+        self.assertEqual(datamodelB.value2, '2B')
+
     def test_generate_flows(self):
         ci_sheet = (
             'type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n'

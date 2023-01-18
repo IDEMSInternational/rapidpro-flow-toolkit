@@ -139,19 +139,19 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(node_0_actions[1]['type'], 'send_msg')
         self.assertEqual(node_0_actions[1]['text'], 'message with image')
         self.assertEqual(len(node_0_actions[1]['attachments']), 1)
-        self.assertEqual(node_0_actions[1]['attachments'][0], 'image u')
+        self.assertEqual(node_0_actions[1]['attachments'][0], 'image:image u')
         self.assertEqual(len(node_0_actions[1]['quick_replies']), 0)
 
         self.assertEqual(node_0_actions[2]['type'], 'send_msg')
         self.assertEqual(node_0_actions[2]['text'], 'message with audio')
         self.assertEqual(len(node_0_actions[2]['attachments']), 1)
-        self.assertEqual(node_0_actions[2]['attachments'][0], 'audio u')
+        self.assertEqual(node_0_actions[2]['attachments'][0], 'audio:audio u')
         self.assertEqual(len(node_0_actions[2]['quick_replies']), 0)
 
         self.assertEqual(node_0_actions[3]['type'], 'send_msg')
         self.assertEqual(node_0_actions[3]['text'], 'message with video')
         self.assertEqual(len(node_0_actions[3]['attachments']), 1)
-        self.assertEqual(node_0_actions[3]['attachments'][0], 'video u')
+        self.assertEqual(node_0_actions[3]['attachments'][0], 'video:video u')
         self.assertEqual(len(node_0_actions[3]['quick_replies']), 0)
 
         node_1 = render_output['nodes'][1]
