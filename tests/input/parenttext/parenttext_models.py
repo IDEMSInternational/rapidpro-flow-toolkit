@@ -25,6 +25,8 @@ class TemplateTypeModel(DataRowModel):
 # block models
 class IntroductionBlockModel(DataRowModel):
 	skill_introduction_msg_list: List[str] = []
+
+class ImportanceBlockModel(DataRowModel):
 	skill_importance: str = ''
 
 
