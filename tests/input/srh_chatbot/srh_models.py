@@ -3,6 +3,8 @@ from parsers.common.rowparser import ParserModel
 from typing import List
 
 
+
+## to keep
 class GenderAnswerModel(ParserModel):
 	question: str = ''
 	answer_msg: List[str] = []
@@ -12,30 +14,28 @@ class AnswerRowModel(DataRowModel):
 	FEMALE: GenderAnswerModel = GenderAnswerModel()
 	MALE: GenderAnswerModel = GenderAnswerModel()
 	prompt: List[str] = []
-	ID2: str = ''
+	external_links: str = '' #remove?
 
-class TopicItemModel(DataRowModel):
-	topic: str = ''
-	subtopic: str = ''
-	info: str = ''
-
-class TopicNavigationModel(ParserModel):
-	name: str = ''
-	is_flow: str = ''
-
-class NavigationModel(DataRowModel):
-	topic: List[TopicNavigationModel] = []
-	level: str = ''
-
-
-
-class QuestionsEntryModel(ParserModel):
+class NavigationQuestionModel(ParserModel):
 	qst: str = ''
-	has_children: str = ''
+	child: str = ''
 	has_answer: str = ''
 
-class TopEntryModel(DataRowModel):
-	intro: str = ''
-	questions: List[QuestionsEntryModel] = []
+class GenderModel(ParserModel):
+	NEUTRAL: str = ''
+	FEMALE: str = ''
+	MALE: str = ''
+
+class NavigationModel(DataRowModel):
+	intro: GenderModel = GenderModel()
+	top: str =''
+	questions: List[NavigationQuestionModel] = []
+
+
+
+
+
+
+
 
 
