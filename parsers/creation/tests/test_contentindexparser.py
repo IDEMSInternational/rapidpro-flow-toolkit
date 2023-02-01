@@ -299,7 +299,8 @@ class TestParsing(unittest.TestCase):
         ci_sheet = (
             'type,sheet_name,data_sheet,data_row_id,template_arguments,new_name,data_model,status\n'
             'template_definition,my_template,,,arg1|arg2;;default2,,,\n'
-            'create_flow,my_template,,,value1,,,\n'
+            'create_flow,my_template,,,value1,my_template_default,,\n'
+            'create_flow,my_template,,,value1;value2,my_template_explicit,,\n'
         )
         my_template = (
             'row_id,type,from,condition,message_text\n'
@@ -316,4 +317,8 @@ class TestParsing(unittest.TestCase):
         messages_exp = [
             'value1 default2',
         ]
-        self.compare_messages(render_output, 'my_template', messages_exp)
+        self.compare_messages(render_output, 'my_template_default', messages_exp)
+        messages_exp = [
+            'value1 value2',
+        ]
+        self.compare_messages(render_output, 'my_template_explicit', messages_exp)

@@ -83,26 +83,25 @@ class ContentIndexParser:
 	def get_node_group(self, template_name, data_sheet, data_row_id, template_arguments):
 		# TODO: Factor out logic duplication between this function and parse_all_flows.
 		if (data_sheet and data_row_id) or (not data_sheet and not data_row_id):
-			flow_name = template_name  # = row.new_name or row.sheet_name
+			flow_name = template_name
 			return self.parse_flow(template_name, data_sheet, data_row_id, template_arguments, RapidProContainer(), parse_as_block=True)
 		else:
 			raise ValueError(f'For insert_as_block, either both data_sheet and data_row_id or neither have to be provided.')		
 
 	def parse_all_flows(self):
 		rapidpro_container = RapidProContainer()
-		# sheet_name = row.new_name or row.sheet_name
 		for row in self.flow_definition_rows:
 			if row.data_sheet and not row.data_row_id:
 				data_rows = self.get_all_data_model_instances(row.data_sheet)
 				for data_row_id in data_rows.keys():
-					self.parse_flow(row.sheet_name[0], row.data_sheet, data_row_id, row.template_arguments, rapidpro_container)
+					self.parse_flow(row.sheet_name[0], row.data_sheet, data_row_id, row.template_arguments, rapidpro_container, row.new_name)
 			elif not row.data_sheet and row.data_row_id:
 				raise ValueError(f'For create_flow, if data_row_id is provided, data_sheet must also be provided.')
 			else:
-				self.parse_flow(row.sheet_name[0], row.data_sheet, row.data_row_id, row.template_arguments, rapidpro_container)
+				self.parse_flow(row.sheet_name[0], row.data_sheet, row.data_row_id, row.template_arguments, rapidpro_container, row.new_name)
 		return rapidpro_container	
 
-	def parse_flow(self, sheet_name, data_sheet, data_row_id, template_arguments, rapidpro_container, parse_as_block=False):
+	def parse_flow(self, sheet_name, data_sheet, data_row_id, template_arguments, rapidpro_container, new_name='', parse_as_block=False):
 		if data_sheet and data_row_id:
 			flow_name = ' - '.join([sheet_name, data_row_id])
 			context = self.get_data_model_instance(data_sheet, data_row_id)
@@ -110,6 +109,8 @@ class ContentIndexParser:
 			assert not data_sheet and not data_row_id
 			flow_name = sheet_name
 			context = {}
+		if new_name:
+			flow_name = new_name
 		template_sheet = self.get_template_sheet(sheet_name)
 		template_table = template_sheet.table
 		template_argument_definitions = template_sheet.argument_definitions
