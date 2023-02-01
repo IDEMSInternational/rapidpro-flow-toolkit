@@ -8,6 +8,9 @@ class CellParser:
         def __init__(self, val=False):
             self.boolean = val
 
+    def escape_string(string):
+        return string.replace('\\', '\\\\').replace('|', '\\|').replace(';', '\\;')
+
     def __init__(self):
         self.native_env = NativeEnvironment(variable_start_string='{@', variable_end_string='@}')
 

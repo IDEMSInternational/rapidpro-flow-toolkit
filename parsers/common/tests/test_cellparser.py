@@ -67,6 +67,8 @@ class TestStringSplitter(unittest.TestCase):
         self.compare_split_into_lists('1;2|3;4;', [['1', '2'], ['3', '4']])
         self.compare_split_into_lists('1;2|3;4\\;', [['1', '2'], ['3', '4;']])
         self.compare_split_into_lists('1;2|3;4\\|', [['1', '2'], ['3', '4|']])
+        self.compare_split_into_lists(CellParser.escape_string('|;;|\\;\\\\\\|'), '|;;|\\;\\\\\\|')
+
 
 class TestCellParser(unittest.TestCase):
 
