@@ -371,7 +371,7 @@ class FlowParser:
     def _parse_insert_as_block_row(self, row):
         if self.content_index_parser is None:
             raise ValueError('insert_as_block only works if FlowParser has a ContentIndexParser')
-        node_group = self.content_index_parser.get_node_group(row.mainarg_flow_name, row.data_sheet, row.data_row_id, row.extra_data_sheets)
+        node_group = self.content_index_parser.get_node_group(row.mainarg_flow_name, row.data_sheet, row.data_row_id, row.template_arguments)
         for edge in row.edges:
             self._add_row_edge(edge, node_group.entry_node().uuid)
         self.append_node_group(node_group, row.row_id)
