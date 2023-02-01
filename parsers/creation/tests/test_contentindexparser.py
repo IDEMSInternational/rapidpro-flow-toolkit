@@ -31,11 +31,11 @@ class TestParsing(unittest.TestCase):
 
         sheet_reader = MockSheetReader(ci_sheet, {'my_template' : my_template})
         ci_parser = ContentIndexParser(sheet_reader)
-        template_table = ci_parser.get_template_table('my_template')
-        self.assertEqual(template_table[0][1], 'send_message')
-        self.assertEqual(template_table[0][3], 'Some text')
+        template_sheet = ci_parser.get_template_sheet('my_template')
+        self.assertEqual(template_sheet.table[0][1], 'send_message')
+        self.assertEqual(template_sheet.table[0][3], 'Some text')
         with self.assertRaises(KeyError):
-            ci_parser.get_template_table('my_template2')
+            ci_parser.get_template_sheet('my_template2')
 
     def test_basic_nesting(self):
         ci_sheet = (
@@ -63,10 +63,10 @@ class TestParsing(unittest.TestCase):
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
         ci_parser = ContentIndexParser(sheet_reader)
-        template_table = ci_parser.get_template_table('my_template')
-        self.assertEqual(template_table[0][3], 'Some text')
-        template_table = ci_parser.get_template_table('my_template2')
-        self.assertEqual(template_table[0][3], 'Other text')
+        template_sheet = ci_parser.get_template_sheet('my_template')
+        self.assertEqual(template_sheet.table[0][3], 'Some text')
+        template_sheet = ci_parser.get_template_sheet('my_template2')
+        self.assertEqual(template_sheet.table[0][3], 'Other text')
 
     def test_basic_user_model(self):
         ci_sheet = (
@@ -221,10 +221,10 @@ class TestParsing(unittest.TestCase):
         ]
         self.compare_messages(render_output, 'my_basic_flow', messages_exp, Context(inputs=['happy', 'else', 'sad']))
 
-    def test_insert_as_block_with_extra_data(self):
+    def test_insert_as_block_with_sheet_arguments(self):
         ci_sheet = (
-            'type,sheet_name,data_sheet,data_row_id,extra_data_sheets,new_name,data_model,status\n'
-            'template_definition,my_template,,,,,,\n'
+            'type,sheet_name,data_sheet,data_row_id,template_arguments,new_name,data_model,status\n'
+            'template_definition,my_template,,,lookup;sheet|,,,\n'
             'create_flow,my_template,nesteddata,row3,string_lookup,,,\n'
             'create_flow,my_basic_flow,,,,,,\n'
             'data_sheet,nesteddata,,,,,ListRowModel,\n'
@@ -245,12 +245,12 @@ class TestParsing(unittest.TestCase):
         my_template = (
             'row_id,type,from,condition,message_text\n'
             '1,split_by_value,,,@field.mood\n'
-            ',send_message,1,happy,{% for msg in messages %}{{_data.string_lookup[msg].happy}}{% endfor %}\n'
-            ',send_message,1,sad,{% for msg in messages %}{{_data.string_lookup[msg].sad}}{% endfor %}\n'
-            ',send_message,1,,{% for msg in messages %}{{_data.string_lookup[msg].neutral}}{% endfor %}\n'
+            ',send_message,1,happy,{% for msg in messages %}{{lookup[msg].happy}}{% endfor %}\n'
+            ',send_message,1,sad,{% for msg in messages %}{{lookup[msg].sad}}{% endfor %}\n'
+            ',send_message,1,,{% for msg in messages %}{{lookup[msg].neutral}}{% endfor %}\n'
         )
         my_basic_flow = (
-            'row_id,type,from,message_text,data_sheet,data_row_id,extra_data_sheets\n'
+            'row_id,type,from,message_text,data_sheet,data_row_id,template_arguments\n'
             ',send_message,start,Some text,,,\n'
             ',insert_as_block,,my_template,nesteddata,row1,string_lookup\n'
             ',send_message,,Intermission,,,\n'
@@ -293,3 +293,27 @@ class TestParsing(unittest.TestCase):
             'Hello :)Bye :)',
         ]
         self.compare_messages(render_output, 'my_template - row3', messages_exp, Context(variables={'@field.mood':'happy'}))
+
+
+    def test_insert_as_block_with_arguments(self):
+        ci_sheet = (
+            'type,sheet_name,data_sheet,data_row_id,template_arguments,new_name,data_model,status\n'
+            'template_definition,my_template,,,arg1|arg2;;default2,,,\n'
+            'create_flow,my_template,,,value1,,,\n'
+        )
+        my_template = (
+            'row_id,type,from,condition,message_text\n'
+            ',send_message,,,{{arg1}} {{arg2}}\n'
+        )
+        sheet_dict = {
+            'my_template' : my_template,
+        }
+
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.listmodel')
+        container = ci_parser.parse_all_flows()
+        render_output = container.render()
+        messages_exp = [
+            'value1 default2',
+        ]
+        self.compare_messages(render_output, 'my_template', messages_exp)

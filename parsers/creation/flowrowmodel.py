@@ -49,7 +49,7 @@ class FlowRowModel(ParserModel):
     mainarg_iterlist: list = [] # no specified type of elements
     data_sheet: str = ''
     data_row_id: str = ''
-    extra_data_sheets: List[str] = []
+    template_arguments: list = []
     choices: List[str] = []
     save_name: str = ''
     image: str = ''
