@@ -1,7 +1,7 @@
 import unittest
 from typing import List
 
-from parsers.common.cellparser import CellParser, get_object_from_cell_value, get_separators
+from parsers.common.cellparser import CellParser
 from parsers.common.rowparser import ParserModel
 
 
@@ -13,37 +13,65 @@ class OuterModel(ParserModel):
     strings: List[str]
 
 
-class TestCellParser(unittest.TestCase):
+class TestStringSplitter(unittest.TestCase):
 
     def setUp(self):
         self.parser = CellParser()
 
-    def test_get_object_from_cell_value(self):
-        obj = get_object_from_cell_value('condition;a|condition_type;has_any_word|condition_name;A')
-        self.assertDictEqual(
-            {'condition': 'a', 'condition_type': 'has_any_word', 'condition_name': 'A'},
-            obj)
+    def compare_split_by_separator(self, string, exp):
+        out = self.parser.split_by_separator(string, '|')
+        self.assertEqual(out, exp)
 
-    def test_get_separators(self):
-        s_1, s_2, s_3 = get_separators('|;::;|')
-        self.assertEqual('|', s_1)
-        self.assertEqual(';', s_2)
-        self.assertEqual(':', s_3)
+    def compare_cleanse(self, string, exp):
+        out = self.parser.cleanse(string)
+        self.assertEqual(out, exp)
 
-        s_1, s_2, s_3 = get_separators('|;|;|')
-        self.assertEqual('|', s_1)
-        self.assertEqual(';', s_2)
-        self.assertIsNone(s_3)
+    def compare_split_into_lists(self, string, exp):
+        out = self.parser.split_into_lists(string)
+        self.assertEqual(out, exp)
 
-        s_1, s_2, s_3 = get_separators('|:|:|')
-        self.assertEqual('|', s_1)
-        self.assertEqual(':', s_2)
-        self.assertIsNone(s_3)
+    def test_split_by_separator(self):
+        self.compare_split_by_separator('a', 'a')
+        self.compare_split_by_separator('a|b', ['a', 'b'])
+        self.compare_split_by_separator('a|b|', ['a', 'b'])
+        self.compare_split_by_separator('a|', ['a'])
+        self.compare_split_by_separator('a\\|', 'a\\|')
 
-        s_1, s_2, s_3 = get_separators(';:;:')
-        self.assertEqual(';', s_1)
-        self.assertEqual(':', s_2)
-        self.assertIsNone(s_3)
+    def test_cleanse(self):
+        self.compare_cleanse('a', 'a')
+        self.compare_cleanse('a\\|', 'a|')
+        self.compare_cleanse('a\\;', 'a;')
+        self.compare_cleanse('a\\\\', 'a\\')
+        self.compare_cleanse('a\\\\;', 'a\\;')
+        self.compare_cleanse([[['a\\;']]], [[['a;']]])
+        self.compare_cleanse(['\\\\', '\n\\;\n'], ['\\', '\n;\n'])
+
+    def test_split_into_lists(self):
+        self.compare_split_into_lists('1', '1')
+        self.compare_split_into_lists('1;', ['1'])
+        self.compare_split_into_lists('1;2', ['1','2'])
+        self.compare_split_into_lists('1;2;', ['1','2'])
+        self.compare_split_into_lists('1;2;;', ['1','2',''])
+        self.compare_split_into_lists('1;2|', [['1','2']])
+        self.compare_split_into_lists('1;|2;', [['1'],['2']])
+        self.compare_split_into_lists('1;|2', [['1'],'2'])
+        self.compare_split_into_lists('|a', ['', 'a'])
+        self.compare_split_into_lists('a|b', ['a', 'b'])
+        self.compare_split_into_lists('a|b|', ['a', 'b'])
+        self.compare_split_into_lists('a|', ['a'])
+        self.compare_split_into_lists('a\\|', 'a|')
+        self.compare_split_into_lists('a\\;', 'a;')
+        self.compare_split_into_lists('a|\\;', ['a', ';'])
+        self.compare_split_into_lists('a|;', ['a', ['']])
+        self.compare_split_into_lists('1;2|3;4', [['1', '2'], ['3', '4']])
+        self.compare_split_into_lists('1;2|3;4;', [['1', '2'], ['3', '4']])
+        self.compare_split_into_lists('1;2|3;4\\;', [['1', '2'], ['3', '4;']])
+        self.compare_split_into_lists('1;2|3;4\\|', [['1', '2'], ['3', '4|']])
+
+class TestCellParser(unittest.TestCase):
+
+    def setUp(self):
+        self.parser = CellParser()
 
     def test_parse_as_string(self):
         out = self.parser.parse_as_string('plain string')
@@ -67,9 +95,9 @@ class TestCellParser(unittest.TestCase):
         self.assertEqual(out, 'abc')
         # Templating comes first, only then splitting into a list
         out = self.parser.parse('{% for e in list %}{{e}};{% endfor %}', context=context)
-        self.assertEqual(out, ['a', 'b', 'c', ''])
+        self.assertEqual(out, ['a', 'b', 'c'])
 
-    def test_parse_native_type(self):
+    def test_parse_native_tpye(self):
         out = self.parser.parse_as_string('{@(1,2,[3,"a"])@}')
         self.assertEqual(out, (1,2,[3,'a']))
         out = self.parser.parse_as_string('  {@(1,2,[3,"a"])@} ')
