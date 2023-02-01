@@ -1,4 +1,4 @@
-from jinja2 import Template
+from jinja2 import Environment
 from jinja2.nativetypes import NativeEnvironment
 
 
@@ -12,7 +12,10 @@ class CellParser:
         return string.replace('\\', '\\\\').replace('|', '\\|').replace(';', '\\;')
 
     def __init__(self):
+        self.env = Environment()
+        self.env.filters['escape'] = CellParser.escape_string
         self.native_env = NativeEnvironment(variable_start_string='{@', variable_end_string='@}')
+        self.native_env.filters['escape'] = CellParser.escape_string
 
     def split_into_lists(self, string):
         l1 = self.split_by_separator(string, '|')
@@ -84,9 +87,5 @@ class CellParser:
             template = self.native_env.from_string(stripped_value)
             return template.render(context)
         else:
-            try:
-                return Template(value).render(context)
-            except Exception as e:
-                print(value, context, str(e))
-                raise Exception
-
+            template = self.env.from_string(stripped_value)
+            return template.render(context)

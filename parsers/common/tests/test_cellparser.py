@@ -99,6 +99,15 @@ class TestCellParser(unittest.TestCase):
         out = self.parser.parse('{% for e in list %}{{e}};{% endfor %}', context=context)
         self.assertEqual(out, ['a', 'b', 'c'])
 
+    def test_escape_filter(self):
+        out = self.parser.parse('{{"a;b;c"}}')
+        self.assertEqual(out, ['a', 'b', 'c'])
+        out = self.parser.parse('{{"a;b;c"|escape}}')
+        self.assertEqual(out, 'a;b;c')
+        string = '\\|;\\'
+        out = self.parser.parse('{{string|escape}}', context={'string':string})
+        self.assertEqual(out, string)
+
     def test_parse_native_tpye(self):
         out = self.parser.parse_as_string('{@(1,2,[3,"a"])@}')
         self.assertEqual(out, (1,2,[3,'a']))
