@@ -92,7 +92,7 @@ class NoOpNodeGroup:
             for edge in self.parent_edges:
                 edge.source_node_group.connect_loose_exits(destination_uuid)
 
-    def entry_node():
+    def entry_node(self):
         raise NotImplementedError("go_to not implemented to link to no_op row.")
 
     def add_parent_edge(self, source_node_group, condition):
