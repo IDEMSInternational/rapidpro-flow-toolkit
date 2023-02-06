@@ -88,3 +88,5 @@ class QuizBlockModel(DataRowModel):
 	quiz_options: List[QuizOptionModel] = []
 	
 
+class SingleTipModel(DataRowModel):
+	single_tip_message: str = ''
