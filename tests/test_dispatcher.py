@@ -27,4 +27,4 @@ class TestParsing(unittest.TestCase):
         messages_exp = [
             'Nice to see you :)Bye :)',
         ]
-        self.compare_messages(render_output, 'dispatcher_main', messages_exp, Context(variables={'@field.mood':'happy'}))
+        self.compare_messages(render_output, 'dispatcher_main', messages_exp, Context(variables={'@fields.mood':'happy'}))
