@@ -304,7 +304,7 @@ class FlowParser:
         return flow_container
 
     def _parse_block(self, depth=0, block_type='root_block', omit_content=False):
-        row = self.sheet_parser.parse_next_row()
+        row = self.sheet_parser.parse_next_row(omit_templating=omit_content)
         while not self._is_end_of_block(block_type, row):
             if omit_content or not row.include_if:
                 if row.type == 'begin_for':
@@ -349,7 +349,7 @@ class FlowParser:
                     self.append_node_group(new_node_group, row.row_id)
                 else:
                     self._parse_row(row)
-            row = self.sheet_parser.parse_next_row()
+            row = self.sheet_parser.parse_next_row(omit_templating=omit_content)
 
     def _is_end_of_block(self, block_type, row):
         block_end_map = {

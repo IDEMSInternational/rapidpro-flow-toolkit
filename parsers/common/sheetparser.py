@@ -35,12 +35,13 @@ class SheetParser:
     def remove_bookmark(self, name):
         self.bookmarks.pop(name)
 
-    def parse_next_row(self):
+    def parse_next_row(self, omit_templating=False):
         try:
             input_row = next(self.iterator)
         except StopIteration:
             return None
-        row = self.row_parser.parse_row(input_row, self.context)
+        context = self.context if not omit_templating else None
+        row = self.row_parser.parse_row(input_row, context)
         return row
 
     def parse_all(self):

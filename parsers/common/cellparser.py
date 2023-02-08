@@ -67,16 +67,18 @@ class CellParser:
             return self.split_into_lists(value)
 
     def parse_as_string(self, value, context={}, is_object=None):
+        # If context is None, template parsing is omitted entirely.
         # is_object is a pass-by-reference boolean, realised via
         # the class BooleanWrapper, to indicate to the caller
         # whether the parsing result represents an object that
         # is not to be processed any further.
         if value is None:
             return ''
-        if not context and '{' not in value:
+        if context is None or (not context and '{' not in value):
             # This is a hacky optimization.
             return value
         stripped_value = value.strip()
+        env = self.env
         if stripped_value.startswith('{@') and stripped_value.endswith('@}'):
             # Special case: Return a python object rather than a string,
             # if possible.
@@ -84,8 +86,10 @@ class CellParser:
             assert stripped_value[2:].find('{@') == -1
             if is_object is not None:
                 is_object.boolean = True
-            template = self.native_env.from_string(stripped_value)
+            env = self.native_env
+
+        try:
+            template = env.from_string(stripped_value)
             return template.render(context)
-        else:
-            template = self.env.from_string(stripped_value)
-            return template.render(context)
+        except Exception as e:
+            raise ValueError(str(e), stripped_value, context)
