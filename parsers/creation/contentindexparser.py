@@ -142,8 +142,8 @@ class ContentIndexParser:
 		for arg_def, arg in zip(arg_defs, args + args_padding):
 			if arg_def.name in context:
 				raise ValueError(f'Template argument "{arg_def.name}" doubly defined in context')
-			arg_value = arg or arg_def.default_value
-			if not arg_value:
+			arg_value = arg if arg != '' else arg_def.default_value
+			if arg_value == '':
 				raise ValueError(f'Required template argument "{arg_def.name}" not provided')
 			if arg_def.type == 'sheet':
 				context[arg_def.name] = self.data_sheets[arg_value]
