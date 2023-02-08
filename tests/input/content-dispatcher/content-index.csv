@@ -1,0 +1,6 @@
+"type","sheet_name","data_sheet","data_row_id","new_name","data_model","template_arguments","status"
+"data_sheet","content-cycle-data",,,"content_cycles","ContentModel",,
+"template_definition","dispatcher_main",,,,,"property_names|cycles;sheet",
+"template_definition","dispatcher_branch",,,,,"property_names|cycles|pidx",
+"template_definition","dispatcher_cycle",,,,,,"draft"
+"create_flow","dispatcher_main",,,,,"@fields.gender;@fields.mood|content_cycles",
