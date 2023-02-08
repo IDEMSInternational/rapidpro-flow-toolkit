@@ -28,7 +28,8 @@ class CellParser:
     def cleanse(self, nested_list):
         # Unescape escaped characters (\, |, ;) 
         if type(nested_list) == str:
-            return nested_list.replace('\\\\', '\1') \
+            return nested_list.strip() \
+                              .replace('\\\\', '\1') \
                               .replace('\\|', '|') \
                               .replace('\\;', ';') \
                               .replace('\1', '\\')

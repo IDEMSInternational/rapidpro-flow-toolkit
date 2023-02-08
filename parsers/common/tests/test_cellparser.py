@@ -44,7 +44,7 @@ class TestStringSplitter(unittest.TestCase):
         self.compare_cleanse('a\\\\', 'a\\')
         self.compare_cleanse('a\\\\;', 'a\\;')
         self.compare_cleanse([[['a\\;']]], [[['a;']]])
-        self.compare_cleanse(['\\\\', '\n\\;\n'], ['\\', '\n;\n'])
+        self.compare_cleanse(['\\\\', '\\;'], ['\\', ';'])
 
     def test_split_into_lists(self):
         self.compare_split_into_lists('1', '1')
@@ -68,6 +68,12 @@ class TestStringSplitter(unittest.TestCase):
         self.compare_split_into_lists('1;2|3;4\\;', [['1', '2'], ['3', '4;']])
         self.compare_split_into_lists('1;2|3;4\\|', [['1', '2'], ['3', '4|']])
         self.compare_split_into_lists(CellParser.escape_string('|;;|\\;\\\\\\|'), '|;;|\\;\\\\\\|')
+
+    def test_string_stripping(self):
+        self.compare_cleanse(' a;\n', 'a;')
+        self.compare_cleanse([' a;\n'], ['a;'])
+        self.compare_split_into_lists(' a\n|\nb ', ['a', 'b'])
+        self.compare_split_into_lists('1; 2\n|\n3; 4', [['1', '2'], ['3', '4']])
 
 
 class TestCellParser(unittest.TestCase):
