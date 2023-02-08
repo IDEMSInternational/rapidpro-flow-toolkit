@@ -15,6 +15,7 @@ class AnswerRowModel(DataRowModel):
 	MALE: GenderAnswerModel = GenderAnswerModel()
 	prompt: List[str] = []
 	external_links: str = '' #remove?
+	NOTES_EO: str = '' #remove?
 
 class NavigationQuestionModel(ParserModel):
 	qst: str = ''
