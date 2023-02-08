@@ -52,7 +52,7 @@ class VideoBlockModel(DataRowModel):
 	expiration_time_minutes: int = 2
 
 class CongratulationsBlockModel(DataRowModel):
-	congratulations_message: str = ''
+	congratulations_message_list: List[str] = []
 
 class HomeActivityOptionModel(ParserModel):
 	option: str = ''
@@ -88,5 +88,8 @@ class QuizBlockModel(DataRowModel):
 	quiz_options: List[QuizOptionModel] = []
 	
 
-class SingleTipModel(DataRowModel):
+class SingleTipBlockModel(DataRowModel):
 	single_tip_message: str = ''
+
+class ReferralsBlockModel(DataRowModel):
+	referrals_message: str = ''
