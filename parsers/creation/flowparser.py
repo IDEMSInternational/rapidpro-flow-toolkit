@@ -92,7 +92,7 @@ class NoOpNodeGroup:
             for edge in self.parent_edges:
                 edge.source_node_group.connect_loose_exits(destination_uuid)
 
-    def entry_node():
+    def entry_node(self):
         raise NotImplementedError("go_to not implemented to link to no_op row.")
 
     def add_parent_edge(self, source_node_group, condition):
@@ -304,7 +304,7 @@ class FlowParser:
         return flow_container
 
     def _parse_block(self, depth=0, block_type='root_block', omit_content=False):
-        row = self.sheet_parser.parse_next_row()
+        row = self.sheet_parser.parse_next_row(omit_templating=omit_content)
         while not self._is_end_of_block(block_type, row):
             if omit_content or not row.include_if:
                 if row.type == 'begin_for':
@@ -349,7 +349,7 @@ class FlowParser:
                     self.append_node_group(new_node_group, row.row_id)
                 else:
                     self._parse_row(row)
-            row = self.sheet_parser.parse_next_row()
+            row = self.sheet_parser.parse_next_row(omit_templating=omit_content)
 
     def _is_end_of_block(self, block_type, row):
         block_end_map = {
@@ -371,7 +371,7 @@ class FlowParser:
     def _parse_insert_as_block_row(self, row):
         if self.content_index_parser is None:
             raise ValueError('insert_as_block only works if FlowParser has a ContentIndexParser')
-        node_group = self.content_index_parser.get_node_group(row.mainarg_flow_name, row.data_sheet, row.data_row_id, row.extra_data_sheets)
+        node_group = self.content_index_parser.get_node_group(row.mainarg_flow_name, row.data_sheet, row.data_row_id, row.template_arguments)
         for edge in row.edges:
             self._add_row_edge(edge, node_group.entry_node().uuid)
         self.append_node_group(node_group, row.row_id)

@@ -17,7 +17,7 @@ class MockSheetParser(SheetParser):
         self.iterator = iter(self.input_rows)
         self.context = copy.deepcopy(context)
 
-    def parse_next_row(self):
+    def parse_next_row(self, omit_templating=False):
         # Simply return the input.
         try:
             input_row = next(self.iterator)
