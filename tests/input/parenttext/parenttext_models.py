@@ -93,3 +93,33 @@ class SingleTipBlockModel(DataRowModel):
 
 class ReferralsBlockModel(DataRowModel):
 	referrals_message: str = ''
+
+
+## check-ins
+
+class TroubleModel(ParserModel):
+	problem: str = ''
+	tip: List[str] = []
+
+class TroubleshootingModel(DataRowModel):
+	question: str = ''
+	tbs: List[TroubleModel] = []
+
+class CheckInWrapperModel(DataRowModel):
+	managed_message: str = ''
+	positive_label : str = ''
+	negative_label: str = ''
+	positive_message: str = ''
+	negative_message: str = ''
+	how_message: str = ''
+	good_label: str = ''
+	good_message: str = ''
+	good_message_attachment: str = ''
+	neutral_label: str = ''
+	neutral_message: str = ''
+	bad_label: str = ''
+	bad_message: str = ''
+	other_label: str = '' #remove?
+	other_message: str = '' #remove?
+	content_offer: str = ''
+	no_content_message: str = ''												
