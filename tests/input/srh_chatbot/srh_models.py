@@ -33,6 +33,30 @@ class NavigationModel(DataRowModel):
 	questions: List[NavigationQuestionModel] = []
 
 
+class IDsInteractionModel(DataRowModel):
+	NEUTRAL: str =''
+	MALE: str =''
+	FEMALE: str =''
+
+class OptionModel(ParserModel):
+	choice: str =''
+	flow: str =''
+
+class InteractionModel(DataRowModel):
+	intro_message: str =''
+	intro_question: str =''
+	option: List[OptionModel] = []
+
+class InteractionDispatcherModel(DataRowModel):
+	top: str=''
+	intro_message: str =''
+	intro_question: str =''
+	option: List[OptionModel] = []
+	properties: List[str] = []
+
+
+
+
 
 
 
