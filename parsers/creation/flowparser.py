@@ -403,7 +403,7 @@ class FlowParser:
             remove_group_action = RemoveContactGroupAction(groups=[group])
             return remove_group_action
         elif row.type == 'save_flow_result':
-            set_run_result_action = SetRunResultAction(row.save_name, row.mainarg_value, category=None)
+            set_run_result_action = SetRunResultAction(row.save_name, row.mainarg_value, category=row.result_category)
             return set_run_result_action
         elif row.type in ['wait_for_response', 'split_by_value', 'split_by_group', 'split_random', 'start_new_flow']:
             return None

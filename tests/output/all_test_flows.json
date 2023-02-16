@@ -127,7 +127,7 @@
               "type": "set_run_result",
               "name": "result name",
               "value": "result value",
-              "category": "",
+              "category": "my_result_cat",
               "uuid": "37a7ce3d-c258-4a09-9396-bd8bdc9a11bb"
             }
           ],

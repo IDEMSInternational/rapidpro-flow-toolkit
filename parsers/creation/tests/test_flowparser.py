@@ -195,6 +195,7 @@ class TestParsing(unittest.TestCase):
         self.assertEqual('set_run_result', node_4_actions[0]['type'])
         self.assertEqual('result name', node_4_actions[0]['name'])
         self.assertEqual('result value', node_4_actions[0]['value'])
+        self.assertEqual('my_result_cat', node_4_actions[0]['category'])
 
         self.assertIsNone(node_4['exits'][0]['destination_uuid'])
 
