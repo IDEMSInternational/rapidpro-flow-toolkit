@@ -52,6 +52,7 @@ class FlowRowModel(ParserModel):
     template_arguments: list = []
     choices: List[str] = []
     save_name: str = ''
+    result_category: str = ''
     image: str = ''
     audio: str = ''
     video: str = ''

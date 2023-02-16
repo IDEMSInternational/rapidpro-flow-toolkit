@@ -278,6 +278,7 @@ class SetRunResultAction(Action):
             'type' : 'save_flow_result',
             'mainarg_value' : self.value,
             'save_name' : self.name,
+            'result_category' : self.category,
         }
 
 
