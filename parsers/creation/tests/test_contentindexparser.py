@@ -322,3 +322,45 @@ class TestParsing(unittest.TestCase):
             'value1 value2',
         ]
         self.compare_messages(render_output, 'my_template_explicit', messages_exp)
+
+
+    def test_eval(self):
+        ci_sheet = (
+            'type,sheet_name,data_sheet,data_row_id,new_name,data_model,template_arguments,status\n'
+            'template_definition,flow,,,,,metadata;sheet|,\n'
+            'data_sheet,content,,,,EvalContentModel,,\n'
+            'data_sheet,metadata,,,,EvalMetadataModel,,\n'
+            'create_flow,flow,content,,,,metadata,\n'
+        )
+        metadata = (
+            'ID,include_if\n'
+            'a,text\n'
+        )
+        flow = (
+            '"row_id","type","from","loop_variable","include_if","message_text"\n'
+            ',"send_message",,,,"hello"\n'
+            ',"send_message",,,"{@metadata[""a""].include_if|eval == ""yes""@}","{{text}}"\n'
+        )
+        content = (
+            'ID,text\n'
+            'id1,yes\n'
+            'id2,no\n'
+        )
+        sheet_dict = {
+            'metadata' : metadata,
+            'content' : content,
+            'flow' : flow,
+        }
+
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.evalmodels')
+        container = ci_parser.parse_all_flows()
+        render_output = container.render()
+        messages_exp = [
+            'hello', 'yes',
+        ]
+        self.compare_messages(render_output, 'flow - id1', messages_exp)
+        messages_exp = [
+            'hello',
+        ]
+        self.compare_messages(render_output, 'flow - id2', messages_exp)

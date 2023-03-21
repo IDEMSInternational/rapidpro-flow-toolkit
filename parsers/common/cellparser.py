@@ -1,6 +1,6 @@
 from jinja2 import Environment
 from jinja2.nativetypes import NativeEnvironment
-
+from jinja2 import contextfilter
 
 class CellParser:
 
@@ -10,12 +10,17 @@ class CellParser:
 
     def escape_string(string):
         return string.replace('\\', '\\\\').replace('|', '\\|').replace(';', '\\;')
+    @contextfilter
+    def evaluate_string(context, string):
+        return eval(string, {}, context)
 
     def __init__(self):
         self.env = Environment()
         self.env.filters['escape'] = CellParser.escape_string
+        self.env.filters['eval'] = CellParser.evaluate_string
         self.native_env = NativeEnvironment(variable_start_string='{@', variable_end_string='@}')
         self.native_env.filters['escape'] = CellParser.escape_string
+        self.native_env.filters['eval'] = CellParser.evaluate_string
 
     def split_into_lists(self, string):
         l1 = self.split_by_separator(string, '|')
