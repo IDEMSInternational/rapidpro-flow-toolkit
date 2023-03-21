@@ -9,12 +9,18 @@ class GenderAnswerModel(ParserModel):
 	question: str = ''
 	answer_msg: List[str] = []
 
+class PromptModel(ParserModel):
+	qst: str = ''
+	no_msg: str = ''
+
 class AnswerRowModel(DataRowModel):
 	NEUTRAL: GenderAnswerModel = GenderAnswerModel()
 	FEMALE: GenderAnswerModel = GenderAnswerModel()
 	MALE: GenderAnswerModel = GenderAnswerModel()
-	prompt: List[str] = []
+	media: List[str] = []
+	prompt: List[PromptModel] = []
 	external_links: str = '' #remove?
+	external_links_2: str = '' #remove?
 	NOTES_EO: str = '' #remove?
 
 class NavigationQuestionModel(ParserModel):
@@ -51,6 +57,7 @@ class InteractionDispatcherModel(DataRowModel):
 	top: str=''
 	intro_message: str =''
 	intro_question: str =''
+	intro_image: str = ''
 	option: List[OptionModel] = []
 	properties: List[str] = []
 
