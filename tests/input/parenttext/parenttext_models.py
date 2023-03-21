@@ -197,4 +197,5 @@ class FlowStructureModel(DataRowModel):
 class BlockMetadataModel(DataRowModel):
 	include_if_cond: str = ''
 	args: str = ''
-	tracker: str = ''
+	tracker_tot: str = ''
+	has_tracker: str = ''
