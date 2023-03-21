@@ -2,7 +2,7 @@ from parsers.creation.datarowmodel import DataRowModel
 from parsers.common.rowparser import ParserModel
 from typing import List
 
-
+'''
 class GoalModel(DataRowModel):
 	goal: str = ''
 	modules: List[str] = []
@@ -123,3 +123,78 @@ class CheckInWrapperModel(DataRowModel):
 	other_message: str = '' #remove?
 	content_offer: str = ''
 	no_content_message: str = ''												
+'''
+
+###################################################################
+class IntroductionBlockModel(ParserModel):
+	msg_list: List[str] = []
+
+class ImportanceBlockModel(ParserModel):
+	msg_list: List[str] = []
+
+class QuizContentModel(ParserModel):
+	question: str = ''
+	values: List[str] = []
+	answer: str = ''
+	feedback_correct: str = ''
+	feedback_incorrect: str = ''
+
+class QuizBlockModel(ParserModel):
+	intro: str = ''
+	content: List[QuizContentModel] = []
+	progress_report: str = ''
+
+class TipsBlockModel(ParserModel):
+	intro: str = ''
+	next_button: str = ''
+	message: List[str] = []
+	progress_report: str = ''
+
+class ComicBlockModel(ParserModel):
+	intro: str = ''
+	attachment: str = ''
+	n_attachments: str = ''
+	next_button: str = ''
+	text: List[str] = []
+	progress_report: str = ''
+
+class HomeActivityBlockModel(ParserModel):
+	activity: str = ''
+	positive_msg: str = ''
+	negative_msg: str = ''
+
+class CongratulationsBlockModel(ParserModel):
+	msg_list: List[str] = []
+
+
+class VideoBlockModel(ParserModel):
+	message: str = ''
+	file_name: str = ''
+	expiration_time_min: str = ''
+
+
+class AudioBlockModel(ParserModel):
+	message: str = ''
+	file_name: str = ''
+	expiration_time_min: str = ''
+
+class PlhContentModel(DataRowModel):
+	introduction: IntroductionBlockModel = IntroductionBlockModel()
+	importance: ImportanceBlockModel = ImportanceBlockModel()
+	quiz: QuizBlockModel = QuizBlockModel()
+	tips: TipsBlockModel = TipsBlockModel()
+	comic: ComicBlockModel = ComicBlockModel()
+	home_activity: HomeActivityBlockModel = HomeActivityBlockModel()
+	video: VideoBlockModel = VideoBlockModel()
+	audio: AudioBlockModel = AudioBlockModel()
+	congratulations: CongratulationsBlockModel = CongratulationsBlockModel()
+
+
+class FlowStructureModel(DataRowModel):
+	block: List[str] = []
+
+
+class BlockMetadataModel(DataRowModel):
+	include_if_cond: str = ''
+	args: str = ''
+	tracker: str = ''
