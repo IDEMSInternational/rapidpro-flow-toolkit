@@ -190,12 +190,16 @@ class PlhContentModel(DataRowModel):
 	congratulations: CongratulationsBlockModel = CongratulationsBlockModel()
 
 
+class TrackerInfoModel(ParserModel):
+	name: str = ''
+	tracker_tot: str = ''
+	has_tracker: str = ''
+
 class FlowStructureModel(DataRowModel):
-	block: List[str] = []
+	block: List[TrackerInfoModel] = []
 
 
 class BlockMetadataModel(DataRowModel):
 	include_if_cond: str = ''
 	args: str = ''
-	tracker_tot: str = ''
-	has_tracker: str = ''
+
