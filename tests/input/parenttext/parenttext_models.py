@@ -2,21 +2,93 @@ from parsers.creation.datarowmodel import DataRowModel
 from parsers.common.rowparser import ParserModel
 from typing import List
 
+
+
+###################################################################
+class IntroductionBlockModel(ParserModel):
+	msg_list: List[str] = []
+
+class ImportanceBlockModel(ParserModel):
+	msg_list: List[str] = []
+
+class QuizContentModel(ParserModel):
+	question: str = ''
+	values: List[str] = []
+	answer: str = ''
+	feedback_correct: str = ''
+	feedback_incorrect: str = ''
+
+class QuizBlockModel(ParserModel):
+	intro: str = ''
+	content: List[QuizContentModel] = []
+
+
+class TipsBlockModel(ParserModel):
+	intro: str = ''
+	next_button: str = ''
+	message: List[str] = []
+
+class ComicBlockModel(ParserModel):
+	intro: str = ''
+	attachment: str = ''
+	n_attachments: str = ''
+	next_button: str = ''
+	text: List[str] = []
+
+class HomeActivityBlockModel(ParserModel):
+	activity: str = ''
+	positive_msg: str = ''
+	negative_msg: str = ''
+
+class CongratulationsBlockModel(ParserModel):
+	msg_list: List[str] = []
+
+
+class VideoBlockModel(ParserModel):
+	message: str = ''
+	file_name: str = ''
+	expiration_time_min: str = ''
+
+
+class AudioBlockModel(ParserModel):
+	message: str = ''
+	file_name: str = ''
+	expiration_time_min: str = ''
+
+class PlhContentModel(DataRowModel):
+	introduction: IntroductionBlockModel = IntroductionBlockModel()
+	importance: ImportanceBlockModel = ImportanceBlockModel()
+	quiz: QuizBlockModel = QuizBlockModel()
+	tips: TipsBlockModel = TipsBlockModel()
+	comic: ComicBlockModel = ComicBlockModel()
+	home_activity: HomeActivityBlockModel = HomeActivityBlockModel()
+	video: VideoBlockModel = VideoBlockModel()
+	audio: AudioBlockModel = AudioBlockModel()
+	congratulations: CongratulationsBlockModel = CongratulationsBlockModel()
+
+
+class TrackerInfoModel(ParserModel):
+	name: str = ''
+	tracker_tot: str = ''
+	has_tracker: str = ''
+
+class FlowStructureModel(DataRowModel):
+	block: List[TrackerInfoModel] = []
+
+
+class BlockMetadataModel(DataRowModel):
+	include_if_cond: str = ''
+	args: str = ''
+
+#########################################################
+class PreGoalCheckInModel(DataRowModel):
+	question: str = ''
+	options: str = ''
+	threshold_positive: str = ''
+	above_threshold_msg: str = ''
+	below_threshold_msg: str = ''
+	
 '''
-class GoalModel(DataRowModel):
-	goal: str = ''
-	modules: List[str] = []
-	modules_concat: str = ''
-
-class HandlerModel(DataRowModel):
-	split_variable: str = ''
-	module: List[str] = []
-
-class ModuleModel(DataRowModel):
-	age_baby: bool = True
-	age_child: bool = True
-	age_teen: bool = True
-	template_type: str = ''
 
 class TemplateTypeModel(DataRowModel):
 	blocks: List[str] = []
@@ -124,82 +196,3 @@ class CheckInWrapperModel(DataRowModel):
 	content_offer: str = ''
 	no_content_message: str = ''												
 '''
-
-###################################################################
-class IntroductionBlockModel(ParserModel):
-	msg_list: List[str] = []
-
-class ImportanceBlockModel(ParserModel):
-	msg_list: List[str] = []
-
-class QuizContentModel(ParserModel):
-	question: str = ''
-	values: List[str] = []
-	answer: str = ''
-	feedback_correct: str = ''
-	feedback_incorrect: str = ''
-
-class QuizBlockModel(ParserModel):
-	intro: str = ''
-	content: List[QuizContentModel] = []
-	progress_report: str = ''
-
-class TipsBlockModel(ParserModel):
-	intro: str = ''
-	next_button: str = ''
-	message: List[str] = []
-	progress_report: str = ''
-
-class ComicBlockModel(ParserModel):
-	intro: str = ''
-	attachment: str = ''
-	n_attachments: str = ''
-	next_button: str = ''
-	text: List[str] = []
-	progress_report: str = ''
-
-class HomeActivityBlockModel(ParserModel):
-	activity: str = ''
-	positive_msg: str = ''
-	negative_msg: str = ''
-
-class CongratulationsBlockModel(ParserModel):
-	msg_list: List[str] = []
-
-
-class VideoBlockModel(ParserModel):
-	message: str = ''
-	file_name: str = ''
-	expiration_time_min: str = ''
-
-
-class AudioBlockModel(ParserModel):
-	message: str = ''
-	file_name: str = ''
-	expiration_time_min: str = ''
-
-class PlhContentModel(DataRowModel):
-	introduction: IntroductionBlockModel = IntroductionBlockModel()
-	importance: ImportanceBlockModel = ImportanceBlockModel()
-	quiz: QuizBlockModel = QuizBlockModel()
-	tips: TipsBlockModel = TipsBlockModel()
-	comic: ComicBlockModel = ComicBlockModel()
-	home_activity: HomeActivityBlockModel = HomeActivityBlockModel()
-	video: VideoBlockModel = VideoBlockModel()
-	audio: AudioBlockModel = AudioBlockModel()
-	congratulations: CongratulationsBlockModel = CongratulationsBlockModel()
-
-
-class TrackerInfoModel(ParserModel):
-	name: str = ''
-	tracker_tot: str = ''
-	has_tracker: str = ''
-
-class FlowStructureModel(DataRowModel):
-	block: List[TrackerInfoModel] = []
-
-
-class BlockMetadataModel(DataRowModel):
-	include_if_cond: str = ''
-	args: str = ''
-
