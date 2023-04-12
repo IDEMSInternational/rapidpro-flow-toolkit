@@ -6,9 +6,9 @@ from rapidpro.models.routers import SwitchRouter, RandomRouter
 class TestRouters(unittest.TestCase):
     def setUp(self) -> None:
         self.switch_router = SwitchRouter(operand='@input.text', result_name=None, wait_timeout=600)
-        self.switch_router.add_choice('@input.text', 'has_any_word', None, 'Add', 'test_destination_1',
+        self.switch_router.add_choice('@input.text', 'has_any_word', ['word'], 'Add', 'test_destination_1',
                                       is_default=False)
-        self.switch_router.add_choice('@input.text', 'has_any_word', None, 'Other', 'test_destination_2',
+        self.switch_router.add_choice('@input.text', 'has_any_word', ['word'], 'Other', 'test_destination_2',
                                       is_default=True)
         self.switch_router.update_no_response_category('no_response_destination_uuid')
 
@@ -27,7 +27,7 @@ class TestRouters(unittest.TestCase):
         self.assertEqual(render_output['type'], 'switch')
         self.assertEqual(render_output['operand'], '@input.text')
         self.assertEqual(render_output['cases'][0]['type'], 'has_any_word')
-        self.assertEqual(render_output['cases'][0]['arguments'], None)
+        self.assertEqual(render_output['cases'][0]['arguments'], ['word'])
 
         self.assertEqual(len(render_output['categories']), 3)
         self.assertEqual(render_output['categories'][0]['name'], 'Add')
@@ -95,3 +95,26 @@ class TestDuplicateChoices(unittest.TestCase):
         # There should be exactly one Word category, internally
         self.assertEqual(len(cats), 1)
         self.assertEqual(cats[0].exit.destination_uuid, 'test_destination_3')
+
+
+class TestNoArgsTests(unittest.TestCase):
+
+    def test_no_args_tests(self):
+        switch_router = SwitchRouter(operand='@fields.field')
+        switch_router.add_choice('@fields.field', 'has_text', ['junk'], 'Has Text', 'test_destination_1',
+                                      is_default=False)
+
+        render_output = switch_router.render()
+        self.assertEqual(len(render_output['cases']), 1)
+        self.assertEqual(len(render_output['categories']), 2)
+        self.assertEqual(render_output['cases'][0]['arguments'], [])
+        self.assertEqual(render_output['categories'][0]['name'], 'Has Text')
+        self.assertEqual(render_output['categories'][1]['name'], 'Other')
+        self.assertEqual(switch_router.default_category.exit.destination_uuid, None)
+        self.assertEqual(switch_router.categories[0].exit.destination_uuid, 'test_destination_1')
+
+    def test_invalid_test(self):
+        switch_router = SwitchRouter(operand='@fields.field')
+        with self.assertRaises(ValueError):
+            switch_router.add_choice('@fields.field', 'has_junk', ['junk'], 'Has Just', 'test_destination_1',
+                                          is_default=False)
