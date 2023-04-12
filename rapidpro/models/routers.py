@@ -380,11 +380,24 @@ class RouterCategory:
 
 
 class RouterCase:
+    NO_ARGS_TESTS = {
+        "has_date", 
+        "has_email", 
+        "has_error", 
+        "has_number", 
+        "has_state", 
+        "has_text", 
+        "has_time", 
+    }
+
     def __init__(self, comparison_type, arguments, category_uuid, uuid=None):
         self.uuid = uuid or generate_new_uuid()
         self.type = comparison_type
-        self.arguments = arguments
         self.category_uuid = category_uuid
+        if self.type in RouterCase.NO_ARGS_TESTS:
+            self.arguments = []
+        else:
+            self.arguments = arguments
 
     def from_dict(data):
         return RouterCase(data["type"], data["arguments"], data["category_uuid"], data["uuid"])
