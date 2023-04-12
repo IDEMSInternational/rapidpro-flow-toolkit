@@ -160,7 +160,7 @@ class TestFlowContainer(TestToRowModels):
         node2 = BasicNode()
 
         # The arguments for this choice is [group uuid, group name]
-        node1.add_choice(case.variable, case.type, [row_data1.obj_id, case.value], case.name, node2.uuid)
+        node1.add_choice(case.variable, case.type or 'has_group', [row_data1.obj_id, case.value], case.name, node2.uuid)
         container.add_node(node1)
 
         action2 = SetContactFieldAction(row_data2.save_name, row_data2.mainarg_value)
@@ -303,7 +303,7 @@ class TestFlowContainer(TestToRowModels):
 
         node1 = EnterFlowNode(row_data1.mainarg_flow_name, row_data1.obj_id)
         node2 = BasicNode()
-        node1.add_choice(case1.variable, case1.type, [case1.value], case1.name, node2.uuid, is_default=True)
+        node1.add_choice(case1.variable, case1.type or 'has_only_text', [case1.value], case1.name, node2.uuid, is_default=True)
         container.add_node(node1)
 
         action2 = SetRunResultAction(row_data2.save_name, row_data2.mainarg_value)
