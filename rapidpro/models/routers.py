@@ -380,16 +380,70 @@ class RouterCategory:
 
 
 class RouterCase:
+    NO_ARGS_TESTS = {
+        "has_date", 
+        "has_email", 
+        "has_error", 
+        "has_number", 
+        "has_state", 
+        "has_text", 
+        "has_time", 
+    }
+
+    TEST_VALIDATIONS = {
+        "all_words" : lambda x: len(x) == 1,
+        "has_any_word" : lambda x: len(x) == 1,
+        "has_beginning" : lambda x: len(x) == 1,
+        "has_category" : lambda x: len(x) >= 1,
+        "has_date" : lambda x: len(x) == 0,
+        "has_date_eq" : lambda x: len(x) == 1,
+        "has_date_gt" : lambda x: len(x) == 1,
+        "has_date_lt" : lambda x: len(x) == 1,
+        "has_district" : lambda x: len(x) == 1,
+        "has_email" : lambda x: len(x) == 0,
+        "has_error" : lambda x: len(x) == 0,
+        "has_group" : lambda x: len(x) in {1, 2},  # uuid obligatory, name optional?
+        "has_intent" : lambda x: len(x) == 2,
+        "has_number" : lambda x: len(x) == 0,
+        "has_number_between" : lambda x: len(x) == 2,
+        "has_number_eq" : lambda x: len(x) == 1,
+        "has_number_gt" : lambda x: len(x) == 1,
+        "has_number_gte" : lambda x: len(x) == 1,
+        "has_number_lt" : lambda x: len(x) == 1,
+        "has_number_lte" : lambda x: len(x) == 1,
+        "has_only_phrase" : lambda x: len(x) == 1,
+        "has_only_text" : lambda x: len(x) == 1,
+        "has_pattern" : lambda x: len(x) == 1,
+        "has_phone" : lambda x: len(x) in {0, 1},
+        "has_phrase" : lambda x: len(x) == 1,
+        "has_state" : lambda x: len(x) == 0,
+        "has_text" : lambda x: len(x) == 0,
+        "has_time" : lambda x: len(x) == 0,
+        "has_top_intent" : lambda x: len(x) == 2,
+        "has_ward" : lambda x: len(x) == 2,
+    }
+
     def __init__(self, comparison_type, arguments, category_uuid, uuid=None):
         self.uuid = uuid or generate_new_uuid()
         self.type = comparison_type
-        self.arguments = arguments
         self.category_uuid = category_uuid
+        if self.type in RouterCase.NO_ARGS_TESTS:
+            self.arguments = []
+        else:
+            self.arguments = arguments
+        self.validate()
 
     def from_dict(data):
         return RouterCase(data["type"], data["arguments"], data["category_uuid"], data["uuid"])
 
+    def validate(self):
+        if not self.type in RouterCase.TEST_VALIDATIONS:
+            raise ValueError(f'Invalid router test type: "{self.type}"')
+        if not RouterCase.TEST_VALIDATIONS[self.type](self.arguments):
+            print(f'Warning: Invalid number of arguments {len(self.arguments)} for router test type "{self.type}"')
+
     def render(self):
+        self.validate()
         return {
             'uuid': self.uuid,
             'type': self.type,
