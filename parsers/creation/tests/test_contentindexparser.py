@@ -168,6 +168,35 @@ class TestParsing(unittest.TestCase):
         self.compare_messages(render_output, 'my_template - row2', ['Value2', 'Happy2 and Sad2'])
         self.compare_messages(render_output, 'my_template - row3', ['Value3', 'Happy3 and Sad3'])
 
+    def test_bulk_flows_with_args(self):
+        ci_sheet = (
+            'type,sheet_name,data_sheet,data_row_id,template_arguments,new_name,data_model,status\n'
+            'template_definition,my_template,,,arg1;arg2,,,\n'
+            'create_flow,my_template,nesteddata,,ARG1;ARG2,,,\n'
+            'data_sheet,nesteddata,,,,,NestedRowModel,\n'
+        )
+        nesteddata = (
+            'ID,value1,custom_field.happy,custom_field.sad\n'
+            'row1,Value1,Happy1,Sad1\n'
+            'row2,Value2,Happy2,Sad2\n'
+        )
+        my_template = (
+            'row_id,type,from,message_text\n'
+            ',send_message,start,{{value1}} {{arg1}} {{arg2}}\n'
+            ',send_message,,{{custom_field.happy}} and {{custom_field.sad}}\n'
+        )
+        sheet_dict = {
+            'nesteddata' : nesteddata,
+            'my_template' : my_template,
+        }
+
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.nestedmodel')
+        container = ci_parser.parse_all_flows()
+        render_output = container.render()
+        self.compare_messages(render_output, 'my_template - row1', ['Value1 ARG1 ARG2', 'Happy1 and Sad1'])
+        self.compare_messages(render_output, 'my_template - row2', ['Value2 ARG1 ARG2', 'Happy2 and Sad2'])
+
     def test_insert_as_block(self):
         ci_sheet = (
             'type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n'
