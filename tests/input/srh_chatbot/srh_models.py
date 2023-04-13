@@ -54,7 +54,7 @@ class InteractionModel(DataRowModel):
 	option: List[OptionModel] = []
 
 class InteractionDispatcherModel(DataRowModel):
-	top: str=''
+	top: str = ''
 	intro_message: str =''
 	intro_question: str =''
 	intro_image: str = ''
@@ -62,9 +62,21 @@ class InteractionDispatcherModel(DataRowModel):
 	properties: List[str] = []
 
 
+class SgReferralsModel(DataRowModel):
+	intro: str = ''
+	referrals: str = ''
+	ending: str = ''
+	prompt: str = ''
 
 
+class SgRedirectModel(DataRowModel):
+	flow: str = ''
+	expiration_msg: str = ''
 
+class SgEntryModel(DataRowModel):
+	question: str = ''
+	yes_flow: str = ''
+	no_message: str = ''
 
 
 
