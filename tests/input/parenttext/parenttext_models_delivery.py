@@ -54,6 +54,7 @@ class ProceedModel(ParserModel):
 	no_opt: str = ''
 	no_msg: str = ''
 
+
 class SelectGoalModel(DataRowModel):
 	update_prog_var_flow: str = ''
 	split_by_goal_update_flow: str = ''	
@@ -61,9 +62,22 @@ class SelectGoalModel(DataRowModel):
 
 class InteractionOptionModel(ParserModel):
 	text: str = ''
-	proceed: str = ''
+	proceed_result_value: str = ''
+	stop_message: str = ''
 
 class InteractionModel(DataRowModel):
 	question: str = ''
 	options: List[InteractionOptionModel] = []
 	wa_template: str = ''
+
+class MenuOptionModel(ParserModel):
+	text: str = ''
+	flow: str = ''
+	
+class MessageMenuModel(ParserModel):
+	text: str = ''
+	image: str = ''
+
+class MenuModel(DataRowModel):
+	message: MessageMenuModel = MessageMenuModel()
+	options: List[MenuOptionModel] = []
