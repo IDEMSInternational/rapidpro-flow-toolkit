@@ -72,6 +72,7 @@ class SgReferralsModel(DataRowModel):
 class SgRedirectModel(DataRowModel):
 	flow: str = ''
 	expiration_msg: str = ''
+	proceed: str = ''
 
 class SgEntryModel(DataRowModel):
 	question: str = ''
