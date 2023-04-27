@@ -134,6 +134,27 @@
           "exits": [
             {
               "uuid": "d39165f3-d55e-41df-8c47-529d602968c0",
+              "destination_uuid": "711ea340-dc20-4471-a0e4-6af2c4a278b9"
+            }
+          ]
+        },
+        {
+          "uuid": "711ea340-dc20-4471-a0e4-6af2c4a278b9",
+          "actions": [
+            {
+              "uuid": "d171f6e0-f7fe-46c6-967d-fb42a54e34ea",
+              "type": "set_contact_language",
+              "language": "eng"
+            },
+            {
+              "uuid": "00d71625-95ba-4da3-a044-adc155150aa9",
+              "type": "set_contact_name",
+              "name": "John Doe"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "6d7c4c09-366c-41cf-a0ef-ce0ec45c8f4a",
               "destination_uuid": null
             }
           ]
@@ -175,8 +196,16 @@
               "top": 900
             },
             "type": "execute_actions"
+          },
+          "711ea340-dc20-4471-a0e4-6af2c4a278b9": {
+            "position": {
+              "left": 280,
+              "top": 1020
+            },
+            "type": "execute_actions"
           }
         },
+
         "stickies": {}
       },
       "revision": 27,

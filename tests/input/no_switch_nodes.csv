@@ -7,3 +7,5 @@
 6,"add_to_group",5,,,,,,"test group",,,,,,,,,,,,,,,"A","8224bfe2-acec-434f-bc7c-14c584fc4bc8","C","db66d0df-0906-45ca-8378-cf1d39ce0281",,"execute_actions","280;700"
 7,"remove_from_group",6,,,,,,"test group",,,,,,,,,,,,,,,"A","8224bfe2-acec-434f-bc7c-14c584fc4bc8","D","21be0fc2-f28c-4ad0-8c02-4afd63ad31ab",,"execute_actions","280;800"
 8,"save_flow_result",7,,,,,"result name","result value","my_result_cat",,,,,,,,,,,,,,,,"E","88c593b0-22ba-4a36-8f6a-ffe4e41818d1",,"execute_actions","280;900"
+9,"set_contact_language",8,,,,,,"eng",,,,,,,,,,,,,,,,,,"711ea340-dc20-4471-a0e4-6af2c4a278b9",,"execute_actions","280;1020"
+10,"set_contact_name",9,,,,,,"John Doe",,,,,,,,,,,,,,,,,,"711ea340-dc20-4471-a0e4-6af2c4a278b9",,"execute_actions","280;1020"

@@ -151,6 +151,44 @@ class SetContactFieldAction(Action):
         }
 
 
+# This action captures the following action types:
+# set_contact_channel
+# set_contact_language
+# set_contact_name
+# set_contact_status
+# set_contact_timezone
+class SetContactPropertyAction(Action):
+    def __init__(self, property, value):
+        super().__init__(f'set_contact_{property}')
+        self.property = property
+        self.value = value
+
+    def _assign_fields_from_dict(self, data):
+        assert "type" in data
+        action_type = data['type']
+        assert action_type.find('set_contact_') != -1
+        property = action_type.replace('set_contact_', '')
+        assert property in data
+        assert property in ['channel', 'language', 'name', 'status', 'timezone']
+        data_copy = copy.deepcopy(data)
+        super()._assign_fields_from_dict(data_copy)
+        self.property = property
+        self.value = data_copy.pop(property)
+
+    def render(self):
+        return {
+            "uuid": self.uuid,
+            "type": self.type,
+            self.property: self.value
+        }
+
+    def get_row_model_fields(self):
+        return {
+            'type' : self.type,
+            'mainarg_value' : self.value,
+        }
+
+
 class Group:
     def from_dict(data):
         return Group(**data)
@@ -326,12 +364,12 @@ action_map = {
     "send_broadcast" : UnclassifiedAction,
     "send_email" : UnclassifiedAction,
     "send_msg" : SendMessageAction,
-    "set_contact_channel" : UnclassifiedAction,
+    "set_contact_channel" : SetContactPropertyAction,
     "set_contact_field" : SetContactFieldAction,
-    "set_contact_language" : UnclassifiedAction,
-    "set_contact_name" : UnclassifiedAction,
-    "set_contact_status" : UnclassifiedAction,
-    "set_contact_timezone" : UnclassifiedAction,
+    "set_contact_language" : SetContactPropertyAction,
+    "set_contact_name" : SetContactPropertyAction,
+    "set_contact_status" : SetContactPropertyAction,
+    "set_contact_timezone" : SetContactPropertyAction,
     "set_run_result" : SetRunResultAction,
     "start_session" : UnclassifiedAction,
     "transfer_airtime" : UnclassifiedAction,
