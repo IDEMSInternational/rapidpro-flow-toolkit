@@ -88,6 +88,25 @@ class PreGoalCheckInModel(DataRowModel):
 	above_threshold_msg: str = ''
 	below_threshold_msg: str = ''
 	
+
+
+###########################################################
+# onboarding
+
+class OnboardingStepsModel(DataRowModel):
+	flow: str = ''
+	variable: str = ''
+
+class OnboardingQuestionOptionModel(ParserModel):
+	text: str = ''
+	value: str = ''
+
+class OnboardingQuestionModel(DataRowModel):
+	question: str = ''
+	image: str = ''
+	variable: str = ''
+	options : List[OnboardingQuestionOptionModel] = []
+
 '''
 
 class TemplateTypeModel(DataRowModel):
