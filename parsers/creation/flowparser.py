@@ -3,7 +3,7 @@ import json
 from collections import defaultdict
 
 from rapidpro.models.actions import SendMessageAction, SetContactFieldAction, AddContactGroupAction, \
-    RemoveContactGroupAction, SetRunResultAction, Group
+    RemoveContactGroupAction, SetRunResultAction, SetContactPropertyAction, Group
 from rapidpro.models.containers import FlowContainer
 from rapidpro.models.nodes import BaseNode, BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
 from rapidpro.models.routers import SwitchRouter, RandomRouter
@@ -405,6 +405,11 @@ class FlowParser:
         elif row.type == 'save_flow_result':
             set_run_result_action = SetRunResultAction(row.save_name, row.mainarg_value, category=row.result_category)
             return set_run_result_action
+        elif row.type.startswith('set_contact_'):
+            property = row.type.replace('set_contact_', '')
+            assert property in ['channel', 'language', 'name', 'status', 'timezone']
+            action = SetContactPropertyAction(property, row.mainarg_value)
+            return action
         elif row.type in ['wait_for_response', 'split_by_value', 'split_by_group', 'split_random', 'start_new_flow']:
             return None
         else:
