@@ -4,7 +4,6 @@ from typing import List
 
 
 
-## to keep
 class GenderAnswerModel(ParserModel):
 	question: str = ''
 	answer_msg: List[str] = []
