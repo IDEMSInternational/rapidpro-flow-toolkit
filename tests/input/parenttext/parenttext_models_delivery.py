@@ -82,3 +82,13 @@ class MenuModel(DataRowModel):
 	message: MessageMenuModel = MessageMenuModel()
 	return_option: str = ''
 	options: List[MenuOptionModel] = []
+
+
+class TimedProgrammeModel(DataRowModel):
+	completion_variable: str = ''
+	incomplete_value: str = ''
+	incomplete_test: str = ''
+	incomplete_name: str = ''
+	interaction_flow: str = ''
+	interaction_proceed_value: str = ''
+	flow: str = ''
