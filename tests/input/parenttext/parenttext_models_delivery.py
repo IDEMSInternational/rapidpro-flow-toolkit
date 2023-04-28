@@ -80,4 +80,5 @@ class MessageMenuModel(ParserModel):
 
 class MenuModel(DataRowModel):
 	message: MessageMenuModel = MessageMenuModel()
+	return_option: str = ''
 	options: List[MenuOptionModel] = []
