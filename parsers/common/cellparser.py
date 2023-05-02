@@ -1,6 +1,10 @@
 from jinja2 import Environment
 from jinja2.nativetypes import NativeEnvironment
 from jinja2 import contextfilter
+from logger.logger import get_logger, logging_context
+
+LOGGER = get_logger()
+
 
 class CellParser:
 
@@ -98,4 +102,5 @@ class CellParser:
             template = env.from_string(stripped_value)
             return template.render(context)
         except Exception as e:
+            LOGGER.critical(f'Error while parsing cell "{stripped_value}" with context "{context}": {str(e)}')
             raise ValueError(str(e), stripped_value, context)

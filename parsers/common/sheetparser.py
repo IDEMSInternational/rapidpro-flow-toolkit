@@ -1,5 +1,9 @@
 import copy
 from .rowdatasheet import RowDataSheet
+from logger.logger import get_logger, logging_context
+
+LOGGER = get_logger()
+
 
 class SheetParser:
 
@@ -14,9 +18,9 @@ class SheetParser:
         self.row_parser = row_parser
         self.bookmarks = {}
         self.input_rows = []
-        for row in table:
+        for row_idx, row in enumerate(table):
             row_dict = {h : e for h, e in zip(table.headers, row)}
-            self.input_rows.append(row_dict)
+            self.input_rows.append((row_idx+2, row_dict))
         self.iterator = iter(self.input_rows)
         self.context = copy.deepcopy(context)
 
@@ -37,11 +41,12 @@ class SheetParser:
 
     def parse_next_row(self, omit_templating=False):
         try:
-            input_row = next(self.iterator)
+            row_idx, input_row = next(self.iterator)
         except StopIteration:
             return None
         context = self.context if not omit_templating else None
-        row = self.row_parser.parse_row(input_row, context)
+        with logging_context(f"row {row_idx}"):
+            row = self.row_parser.parse_row(input_row, context)
         return row
 
     def parse_all(self):
