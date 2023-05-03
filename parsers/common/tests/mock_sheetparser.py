@@ -17,10 +17,10 @@ class MockSheetParser(SheetParser):
         self.iterator = iter(self.input_rows)
         self.context = copy.deepcopy(context)
 
-    def parse_next_row(self, omit_templating=False):
+    def parse_next_row(self, omit_templating=False, return_index=False):
         # Simply return the input.
         try:
             input_row = next(self.iterator)
         except StopIteration:
-            return None
-        return input_row
+            return (None, None) if return_index else None
+        return (input_row, -1) if return_index else None

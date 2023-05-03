@@ -73,7 +73,7 @@ def initialize_main_logger():
     # We're currently not using the context_variables, so don't print them.
     # If needed, add "Context: %(context_variables)s" to the format string below
     stdout_formatter = logging.Formatter("%(levelname)s: %(processing_stack)s: %(message)s\n")
-    stdout_handler = ShutdownHandler("errors.log")
+    stdout_handler = ShutdownHandler("errors.log", 'w')
     stdout_handler.setFormatter(stdout_formatter)
     LOGGER.addHandler(stdout_handler)
     return LOGGER

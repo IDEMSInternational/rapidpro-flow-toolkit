@@ -40,16 +40,19 @@ class ContentIndexParser:
 				if row.status == 'draft':
 					continue
 				if row.type == 'content_index':
-					assert len(row.sheet_name) == 1
+					if not len(row.sheet_name) == 1:
+						LOGGER.critical('For content_index rows, exactly one sheet_name has to be specified')
 					sheet_name = row.sheet_name[0]
 					sheet = self.sheet_reader.get_sheet(sheet_name)
 					with logging_context(f"{sheet_name}"):
 						self.process_content_index_table(sheet, sheet_name)
 				elif row.type == 'data_sheet':
-					assert len(row.sheet_name) >= 1
+					if not len(row.sheet_name) >= 1:
+						LOGGER.critical('For data_sheet rows, at least one sheet_name has to be specified')
 					self.process_data_sheet(row.sheet_name, row.new_name, row.data_model)
 				elif row.type in ['template_definition', 'create_flow']:
-					assert len(row.sheet_name) == 1
+					if not len(row.sheet_name) == 1:
+						LOGGER.critical('For template_definition/create_flow rows, exactly one sheet_name has to be specified')
 					sheet_name = row.sheet_name[0]
 					if sheet_name not in self.template_sheets:
 						sheet = self.sheet_reader.get_sheet(sheet_name)
@@ -100,9 +103,10 @@ class ContentIndexParser:
 		# TODO: Factor out logic duplication between this function and parse_all_flows.
 		if (data_sheet and data_row_id) or (not data_sheet and not data_row_id):
 			flow_name = template_name
-			return self.parse_flow(template_name, data_sheet, data_row_id, template_arguments, RapidProContainer(), parse_as_block=True)
+			with logging_context(f'{template_name}'):
+				return self.parse_flow(template_name, data_sheet, data_row_id, template_arguments, RapidProContainer(), parse_as_block=True)
 		else:
-			raise ValueError(f'For insert_as_block, either both data_sheet and data_row_id or neither have to be provided.')		
+			LOGGER.critical(f'For insert_as_block, either both data_sheet and data_row_id or neither have to be provided.')
 
 	def parse_all_flows(self):
 		rapidpro_container = RapidProContainer()

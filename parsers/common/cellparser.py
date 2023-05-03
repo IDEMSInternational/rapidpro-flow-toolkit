@@ -93,7 +93,8 @@ class CellParser:
             # Special case: Return a python object rather than a string,
             # if possible.
             # Ensure this is a single template, not e.g. '{@ x @} {@ y @}'
-            assert stripped_value[2:].find('{@') == -1
+            if not stripped_value[2:].find('{@') == -1:
+                LOGGER.critical(f'Cell may not contain nested "{{@" templates. Cell content: "{stripped_value}"')
             if is_object is not None:
                 is_object.boolean = True
             env = self.native_env
@@ -103,4 +104,3 @@ class CellParser:
             return template.render(context)
         except Exception as e:
             LOGGER.critical(f'Error while parsing cell "{stripped_value}" with context "{context}": {str(e)}')
-            raise ValueError(str(e), stripped_value, context)
