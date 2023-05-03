@@ -112,8 +112,8 @@ class OnboardingQuestionInputModel(DataRowModel):
 	variable: str = ''
 
 class OnboardingRangeModel(ParserModel):
-	limits: str = ''
-	var_values: str = ''
+	limit: str = ''
+	var_value: str = ''
 
 class OnboardingQuestionRangeModel(DataRowModel):
 	question: str = ''
