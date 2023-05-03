@@ -101,11 +101,31 @@ class OnboardingQuestionOptionModel(ParserModel):
 	text: str = ''
 	value: str = ''
 
-class OnboardingQuestionModel(DataRowModel):
+class OnboardingQuestionWithOptionsModel(DataRowModel):
 	question: str = ''
 	image: str = ''
 	variable: str = ''
 	options : List[OnboardingQuestionOptionModel] = []
+
+class OnboardingQuestionInputModel(DataRowModel):
+	question: str = ''
+	variable: str = ''
+
+class OnboardingRangeModel(ParserModel):
+	limits: str = ''
+	var_values: str = ''
+
+class OnboardingQuestionRangeModel(DataRowModel):
+	question: str = ''
+	variable: str = ''
+	grouping_variable: str = ''
+	lower_bound: int = 0
+	low_error_msg: str = ''
+	upper_bound: int = 0
+	up_error_msg: str = ''
+	general_error_msg: str = ''
+	ranges: List[OnboardingRangeModel] = []
+
 
 '''
 
