@@ -124,16 +124,15 @@ class ContentIndexParser:
 		return rapidpro_container	
 
 	def parse_flow(self, sheet_name, data_sheet, data_row_id, template_arguments, rapidpro_container, new_name='', parse_as_block=False):
+		base_name = new_name or sheet_name
 		if data_sheet and data_row_id:
-			flow_name = ' - '.join([sheet_name, data_row_id])
+			flow_name = ' - '.join([base_name, data_row_id])
 			context = self.get_data_model_instance(data_sheet, data_row_id)
 		else:
 			if data_sheet or data_row_id:
 				LOGGER.warn(f'For create_flow, if no data_sheet is provided, data_row_id should be blank as well.')
-			flow_name = sheet_name
+			flow_name = base_name
 			context = {}
-		if new_name:
-			flow_name = new_name
 		template_sheet = self.get_template_sheet(sheet_name)
 		template_table = template_sheet.table
 		template_argument_definitions = template_sheet.argument_definitions
