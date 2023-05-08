@@ -11,12 +11,12 @@ In the future this should also include a rewrite of https://github.com/geoo89/ra
 
 ## Console tool
 ```
-main.py {create_flows,flow_to_sheet} input output --format {csv,xlsx,google_sheets} [--datamodels DATAMODELS]
+main.py {create_flows,flow_to_sheet} input1 input2 ... -o output --format {csv,xlsx,google_sheets} [--datamodels DATAMODELS]
 ```
 
 Example:
 ```
-main.py create_flows tests/input/example1/content_index.csv out.json --format=csv --datamodels=tests.input.example1.nestedmodel
+main.py create_flows tests/input/example1/content_index.csv -o out.json --format=csv --datamodels=tests.input.example1.nestedmodel
 ```
 
 `main.py -h` for more details.
