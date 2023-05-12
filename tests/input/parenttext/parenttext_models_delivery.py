@@ -92,3 +92,7 @@ class TimedProgrammeModel(DataRowModel):
 	interaction_flow: str = ''
 	interaction_proceed_value: str = ''
 	flow: str = ''
+
+
+class ActivityTypeModel(DataRowModel):
+	option_name: str = ''
