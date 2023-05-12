@@ -17,16 +17,19 @@ class TemplateSheet:
 class ContentIndexParser:
 
 	def  __init__(self, sheet_reader, user_data_model_module_name=None):
-		self.sheet_reader = sheet_reader
 		self.template_sheets = {}  # values: tablib tables
 		self.data_sheets = {}  # values: OrderedDicts of RowModels
 		self.flow_definition_rows = []  # list of ContentIndexRowModel
 		if user_data_model_module_name:
 			self.user_models_module = importlib.import_module(user_data_model_module_name)
-		main_sheet = self.sheet_reader.get_main_sheet()
-		self.process_content_index_table(main_sheet)
+		main_sheet = sheet_reader.get_main_sheet()
+		self.process_content_index_table(sheet_reader, main_sheet)
 
-	def process_content_index_table(self, content_index_table):
+	def add_content_index(self, sheet_reader):
+		main_sheet = sheet_reader.get_main_sheet()
+		self.process_content_index_table(sheet_reader, main_sheet)
+
+	def process_content_index_table(self, sheet_reader, content_index_table):
 		# content_index_table is in tablib table format
 		row_parser = RowParser(ContentIndexRowModel, CellParser())
 		sheet_parser = SheetParser(row_parser, content_index_table)
@@ -37,23 +40,23 @@ class ContentIndexParser:
 			if row.type == 'content_index':
 				assert len(row.sheet_name) == 1
 				sheet_name = row.sheet_name[0]
-				sheet = self.sheet_reader.get_sheet(sheet_name)
-				self.process_content_index_table(sheet)
+				sheet = sheet_reader.get_sheet(sheet_name)
+				self.process_content_index_table(sheet_reader, sheet)
 			elif row.type == 'data_sheet':
 				assert len(row.sheet_name) >= 1
-				self.process_data_sheet(row.sheet_name, row.new_name, row.data_model)
+				self.process_data_sheet(sheet_reader, row.sheet_name, row.new_name, row.data_model)
 			elif row.type in ['template_definition', 'create_flow']:
 				assert len(row.sheet_name) == 1
 				sheet_name = row.sheet_name[0]
 				if sheet_name not in self.template_sheets:
-					sheet = self.sheet_reader.get_sheet(sheet_name)
+					sheet = sheet_reader.get_sheet(sheet_name)
 					self.template_sheets[sheet_name] = TemplateSheet(sheet, row.template_argument_definitions)
 				if row.type == 'create_flow':
 					self.flow_definition_rows.append(row)
 			else:
 				raise ValueError(f'ContentIndex has row with invalid type: {row.type}.')
 
-	def process_data_sheet(self, sheet_names, new_name, data_model_name):
+	def process_data_sheet(self, sheet_reader, sheet_names, new_name, data_model_name):
 		if not hasattr(self, 'user_models_module'):
 			raise ValueError("If there are data sheets, a user_data_model_module_name has to be provided")
 		if len(sheet_names) > 1 and not new_name:
@@ -62,7 +65,7 @@ class ContentIndexParser:
 			new_name = sheet_names[0]
 		content = OrderedDict()
 		for sheet_name in sheet_names:
-			data_table = self.sheet_reader.get_sheet(sheet_name)
+			data_table = sheet_reader.get_sheet(sheet_name)
 			user_model = getattr(self.user_models_module, data_model_name)
 			row_parser = RowParser(user_model, CellParser())
 			sheet_parser = SheetParser(row_parser, data_table)

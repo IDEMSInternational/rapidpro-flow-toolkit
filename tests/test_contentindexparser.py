@@ -19,23 +19,31 @@ class TestParsing(unittest.TestCase):
         if not flow_found:
             self.assertTrue(False, msg=f'Flow with name "{flow_name}" does not exist in output.')
 
-    def test_example1_csv(self):
-        # Same test as test_generate_flows in parsers/creation/tests/test_contentindexparser
-        # but with csvs
-        sheet_reader = CSVSheetReader('tests/input/example1/content_index.csv')
-        ci_parser = ContentIndexParser(sheet_reader, 'tests.input.example1.nestedmodel')
+    def check_example1(self, ci_parser):
         container = ci_parser.parse_all_flows()
         render_output = container.render()
         self.compare_messages(render_output, 'my_basic_flow', ['Some text'])
         self.compare_messages(render_output, 'my_template - row1', ['Value1', 'Happy1 and Sad1'])
         self.compare_messages(render_output, 'my_template - row2', ['Value2', 'Happy2 and Sad2'])
 
+    def test_example1_csv(self):
+        # Same test as test_generate_flows in parsers/creation/tests/test_contentindexparser
+        # but with csvs
+        sheet_reader = CSVSheetReader('tests/input/example1/content_index.csv')
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.input.example1.nestedmodel')
+        self.check_example1(ci_parser)
+
+    def test_example1_split_csv(self):
+        # Same test as test_generate_flows in parsers/creation/tests/test_contentindexparser
+        # but with csvs
+        sheet_reader = CSVSheetReader('tests/input/example1/content_index1.csv')
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.input.example1.nestedmodel')
+        sheet_reader = CSVSheetReader('tests/input/example1/content_index2.csv')
+        ci_parser.add_content_index(sheet_reader)
+        self.check_example1(ci_parser)
+
     def test_example1_xlsx(self):
         # Same test as above
         sheet_reader = XLSXSheetReader('tests/input/example1/content_index.xlsx')
         ci_parser = ContentIndexParser(sheet_reader, 'tests.input.example1.nestedmodel')
-        container = ci_parser.parse_all_flows()
-        render_output = container.render()
-        self.compare_messages(render_output, 'my_basic_flow', ['Some text'])
-        self.compare_messages(render_output, 'my_template - row1', ['Value1', 'Happy1 and Sad1'])
-        self.compare_messages(render_output, 'my_template - row2', ['Value2', 'Happy2 and Sad2'])
+        self.check_example1(ci_parser)
