@@ -1,4 +1,5 @@
 from rapidpro.utils import generate_new_uuid
+from .exceptions import RapidProActionError
 
 import copy
 import re
@@ -16,7 +17,8 @@ class Action:
     def from_dict(data):
         # Create a generic Action, and cast it to the specific Action subclass
         # in order to bypass the constructor of the subclass
-        assert "type" in data
+        if not "type" in data:
+            raise RapidProActionError('RapidProAction must have a type.')
         action_type = data['type']
         # TODO: Can we make this more smooth by invoking subclass constructors?
         # And make the Action class abstract?
@@ -63,6 +65,8 @@ class UnclassifiedAction(Action):
 class SendMessageAction(Action):
     def __init__(self, text, attachments=None, quick_replies=None, all_urns=None):
         super().__init__('send_msg')
+        if not text:
+            raise RapidProActionError('send_msg action requires non-empty text.')
         self.text = text
         self.attachments = attachments or list()
         self.quick_replies = quick_replies or list()
@@ -126,10 +130,10 @@ class SetContactFieldAction(Action):
 
     def _get_field_key(self, field_name):
         field_key = field_name.strip().lower().replace(' ', '_')
-        # Field keys should be no longer than 36 characters
-        # and contain at least one letter.
-        assert len(field_key) <= 36
-        assert re.search('[A-Za-z]', field_key)
+        if not len(field_key) <= 36:
+            raise RapidProActionError('Field keys for set_contact_field should be no longer than 36 characters.')
+        if not re.search('[A-Za-z]', field_key):
+            raise RapidProActionError('Field keys for set_contact_field should contain at least one letter.')
         return field_key
 
     def render(self):
@@ -161,6 +165,8 @@ class SetContactPropertyAction(Action):
     def __init__(self, property, value):
         super().__init__(f'set_contact_{property}')
         self.property = property
+        if not value:
+            raise RapidProActionError(f'{property} must be non-empty for set_contact_{property}.')
         self.value = value
 
     def _assign_fields_from_dict(self, data):
