@@ -39,6 +39,7 @@ class ComicBlockModel(ParserModel):
 	text: List[str] = []
 
 class HomeActivityBlockModel(ParserModel):
+	intro: List[str] = []
 	activity: str = ''
 	positive_msg: str = ''
 	negative_msg: str = ''
@@ -86,13 +87,30 @@ class BlockMetadataModel(DataRowModel):
 	args: str = ''
 
 #########################################################
-class PreGoalCheckInModel(DataRowModel):
+##goal check in
+
+class TroubleModel(ParserModel):
+	pb: str = ''
+	tip: List[str] = []
+
+class TroubleshootingModel(DataRowModel):
 	question: str = ''
-	options: str = ''
-	threshold_positive: str = ''
-	above_threshold_msg: str = ''
-	below_threshold_msg: str = ''
-	
+	problems: List[TroubleModel] = []
+
+class GoalCheckInModel(DataRowModel):
+	intro_pre_goal: str = ''
+	intro_post_goal: str = ''
+	pre_question: str = ''
+	question: str = ''
+	options: List[str] = []
+	negative: List[str] = []
+	positive: List[str] = []
+	improvement: str = ''
+	response_positive: str = ''
+	response_negative_pre_goal: str = ''
+	response_negative_post_goal: str = ''
+	troubleshooting: TroubleshootingModel = TroubleshootingModel()
+	conclusion: str = ''
 
 
 ###########################################################
@@ -139,7 +157,18 @@ class LtpActivityModel (DataRowModel):
 	act_type: List[str] = ["Active"] #???
 	act_age: List[int] = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17] #???
 
+################################
+## home activity check-in
 
+class HomeActivityCheckInModel(DataRowModel):
+	activity: str = ''
+	positive_message: str = ''
+	negative_message: str = ''
+
+class WhatsappTemplateModel(DataRowModel):
+	name: str = ''
+	uuid: str = ''
+	text: str = ''
 
 #########################
 ## delivery
