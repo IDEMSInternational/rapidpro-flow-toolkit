@@ -11,6 +11,20 @@ def get_start_row():
         'choices' : ['Answer 1', 'Answer 2'],
     })
 
+def get_message_with_templating():
+    return FlowRowModel(**{
+        'edges' : [{
+            'from_': '',
+        }],
+        'type' : 'send_message',
+        'mainarg_message_text' : 'Default text of message',
+        'wa_template' : {
+            'name' : 'template name',
+            'uuid' : 'template uuid',
+            'variables' : ['var1', 'var2']
+        }
+    })
+
 def get_unconditional_node_from_1():
     return FlowRowModel(**{
         'row_id' : '2',

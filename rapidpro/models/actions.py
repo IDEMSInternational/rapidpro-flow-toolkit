@@ -62,8 +62,26 @@ class UnclassifiedAction(Action):
         return NotImplementedError
 
 
+class WhatsAppMessageTemplating:
+    def __init__(self, name, template_uuid, variables, uuid=None):
+        self.name = name
+        self.uuid = uuid or generate_new_uuid()
+        self.template_uuid = template_uuid
+        self.variables = variables
+
+    def render(self):
+        return {
+            "template": {
+              "name": self.name,
+              "uuid": self.template_uuid,
+            },
+            "uuid": self.uuid,
+            "variables": self.variables,
+        }
+
+
 class SendMessageAction(Action):
-    def __init__(self, text, attachments=None, quick_replies=None, all_urns=None):
+    def __init__(self, text, attachments=None, quick_replies=None, all_urns=None, templating=None):
         super().__init__('send_msg')
         if not text:
             raise RapidProActionError('send_msg action requires non-empty text.')
@@ -71,6 +89,15 @@ class SendMessageAction(Action):
         self.attachments = attachments or list()
         self.quick_replies = quick_replies or list()
         self.all_urns = all_urns
+        self.templating = templating
+
+    def _assign_fields_from_dict(self, data):
+        data_copy = copy.deepcopy(data)
+        if "templating" in data:
+            templating = data_copy.pop("templating")
+        super()._assign_fields_from_dict(data_copy)
+        if "templating" in data:
+            self.templating = WhatsAppMessageTemplating(templating["template"]["name"], templating["template"]["uuid"], templating["variables"], templating["uuid"])
 
     def add_attachment(self, attachment):
         self.attachments.append(attachment)
@@ -99,13 +126,14 @@ class SendMessageAction(Action):
             })
         if hasattr(self, "templating") and self.templating:
             render_dict.update({
-                'templating': self.templating
+                'templating': self.templating.render()
             })
 
         return render_dict
 
     def get_row_model_fields(self):
         # TODO: image/audio/video. Have to consider: multiple attachments per type?
+        # TODO: templating
         return {
             'type' : 'send_message',
             'mainarg_message_text' : self.text,

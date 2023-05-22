@@ -3,7 +3,7 @@ import json
 from collections import defaultdict
 
 from rapidpro.models.actions import SendMessageAction, SetContactFieldAction, AddContactGroupAction, \
-    RemoveContactGroupAction, SetRunResultAction, SetContactPropertyAction, Group
+    RemoveContactGroupAction, SetRunResultAction, SetContactPropertyAction, Group, WhatsAppMessageTemplating
 from rapidpro.models.containers import FlowContainer
 from rapidpro.models.nodes import BaseNode, BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
 from rapidpro.models.routers import SwitchRouter, RandomRouter
@@ -389,7 +389,10 @@ class FlowParser:
 
     def _get_row_action(self, row):
         if row.type == 'send_message':
-            send_message_action = SendMessageAction(text=row.mainarg_message_text)
+            templating = None
+            if row.wa_template.name:
+                templating = WhatsAppMessageTemplating(name=row.wa_template.name, template_uuid=row.wa_template.uuid, variables=row.wa_template.variables)
+            send_message_action = SendMessageAction(text=row.mainarg_message_text, templating=templating)
             for att_type, attachment in zip(["image", "audio", "video"], [row.image, row.audio, row.video]):
                 if attachment:
                     # TODO: Add depending on prefix.
