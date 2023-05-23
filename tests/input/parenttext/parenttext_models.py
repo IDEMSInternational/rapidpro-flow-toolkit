@@ -12,18 +12,18 @@ class ImportanceBlockModel(ParserModel):
 	msg_list: List[str] = []
 
 class QuizContentModel(ParserModel):
-	question: str = ''
+	question: List[str] = []
 	values: List[str] = []
 	answer: str = ''
-	feedback_correct: str = ''
-	feedback_incorrect: str = ''
+	feedback_correct: List[str] = []
+	feedback_incorrect: List[str] = []
 
 class QuizBlockModel(ParserModel):
 	intro: str = ''
 	content: List[QuizContentModel] = []
 
 class TipModel(ParserModel):
-	text: str = ''
+	text: List[str] = []
 	image: str = ''
 
 class TipsBlockModel(ParserModel):
@@ -245,7 +245,8 @@ class InteractionOptionModel(ParserModel):
 class InteractionModel(DataRowModel):
 	question: str = ''
 	options: List[InteractionOptionModel] = []
-	wa_template: str = ''
+	wa_template_ID: str = ''
+	wa_template_vars: List[str] = []
 
 class MenuOptionModel(ParserModel):
 	text: str = ''
@@ -277,6 +278,9 @@ class ActivityTypeModel(DataRowModel):
 
 class ComicNamesModel(DataRowModel):
 	names: List[str] = []
+
+class ComicNamesKeyModel(DataRowModel):
+	languages: List[str] = []
 '''
 
 class TemplateTypeModel(DataRowModel):
