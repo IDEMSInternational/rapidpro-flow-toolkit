@@ -13,7 +13,7 @@ from parsers.creation.flowrowmodel import FlowRowModel
 from parsers.common.cellparser import CellParser
 from parsers.common.tests.mock_sheetparser import MockSheetParser
 
-from .row_data import get_start_row, get_unconditional_node_from_1, get_conditional_node_from_1
+from .row_data import get_start_row, get_message_with_templating, get_unconditional_node_from_1, get_conditional_node_from_1
 
 class TestParsing(unittest.TestCase):
 
@@ -41,6 +41,23 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(node_0_actions[0]['text'], 'Text of message')
         self.assertEqual(len(node_0_actions[0]['attachments']), 0)
         self.assertEqual(node_0_actions[0]['quick_replies'], ['Answer 1', 'Answer 2'])
+
+    def test_send_message_with_template(self):
+        data_row1 = get_start_row()
+        data_row2 = get_message_with_templating()
+        render_output = self.get_render_output('send_message_with_template', [data_row1, data_row2])
+
+        node_0 = render_output['nodes'][0]
+        node_0_action = node_0['actions'][0]
+        self.assertNotIn('templating', node_0_action)
+
+        node_1 = render_output['nodes'][1]
+        node_1_action = node_1['actions'][0]
+        self.assertIn('templating', node_1_action)
+        self.assertIn('uuid', node_1_action['templating'])
+        self.assertEqual(node_1_action['templating']['template']['name'], 'template name')
+        self.assertEqual(node_1_action['templating']['template']['uuid'], 'template uuid')
+        self.assertEqual(node_1_action['templating']['variables'], ['var1', 'var2'])
 
     def test_linear(self):
         data_row1 = get_start_row()
