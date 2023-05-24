@@ -1,0 +1,11 @@
+row_id,type,from,condition,condition_var,condition_type,condition_name,save_name,message_text,image,audio,video,obj_id,_nodeId,no_response,_ui_type,_ui_position
+1,split_random,start,,,,,,,,,,,cedbf060-c089-4fdc-9180-53a641ac1a22,,split_by_random,980;60
+2,send_message,1,1,,,,,4,,,,,ac27aa95-6481-4315-af9b-5d08ebcab0a7,,execute_actions,1060;280
+3,wait_for_response,2,,,,,Result 2,,,,,,ba28528e-d19f-4951-8025-9507e7e5bb01,,wait_for_response,1080;420
+4,send_message,1,2,,,,,ddf,,,,,316af706-dc6e-486a-8ec1-f20f423a8217,,execute_actions,1280;300
+5,send_message,1,3,,,,,1,,,,,ee74eaef-e8dd-42bb-965a-03e34cb5ef13,,execute_actions,820;200
+6,send_message,5,,,,,,2,,,,,60b0ffd3-6235-438f-b356-ed8f72e5404d,,execute_actions,820;320
+7,wait_for_response,6,,,,,Result 1,,,,,,29a56881-3388-4e7b-abcb-8c1ad080cb98,300,wait_for_response,740;480
+8,go_to,7,b,,has_any_word,B,,5,,,,,,,,
+9,send_message,3;4;7;7;7,adfgyh;;a;c;,,has_any_word;;has_any_word;has_any_word;,Add;;A;C;,,3,,,,,369811ce-9dd7-4f69-b554-fb8bbbe505ac,,execute_actions,820;700
+10,send_message,9,,,,,,3.1,,,,,369811ce-9dd7-4f69-b554-fb8bbbe505ac,,execute_actions,820;700

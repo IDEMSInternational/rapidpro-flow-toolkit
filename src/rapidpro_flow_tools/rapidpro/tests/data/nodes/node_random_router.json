@@ -1,0 +1,29 @@
+{
+  "uuid": "37538d9a-7920-474e-aeea-69037a39f111",
+  "actions": [],
+  "router": {
+    "type": "random",
+    "categories": [
+      {
+        "uuid": "ea0fa9ca-b919-4025-ba04-e54b7c09d36f",
+        "name": "Bucket 1",
+        "exit_uuid": "c0bc00fb-9713-4723-8a3a-9d3fd452d8cf"
+      },
+      {
+        "uuid": "030264a9-99e0-4b58-a590-bcee20bb9209",
+        "name": "Bucket 2",
+        "exit_uuid": "b9fed198-c4e9-43f1-8299-9661a8ee8ac6"
+      }
+    ]
+  },
+  "exits": [
+    {
+      "uuid": "c0bc00fb-9713-4723-8a3a-9d3fd452d8cf",
+      "destination_uuid": "8e97560c-a019-44bd-b65d-ae9e025e97cc"
+    },
+    {
+      "uuid": "b9fed198-c4e9-43f1-8299-9661a8ee8ac6",
+      "destination_uuid": "224f6caa-fd25-47d3-96a9-3d43506b7878"
+    }
+  ]
+}

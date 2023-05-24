@@ -1,0 +1,9 @@
+"row_id","type","from","condition","condition_var","condition_type","condition_name","save_name","message_text","obj_id","_nodeId"
+"1","add_to_group","start",,,,,,"test group",,"db66d0df-0906-45ca-8378-cf1d39ce0281"
+"2","start_new_flow","1",,,,,,"tiny_flow",,"3ecfb56f-627b-4afe-8448-a14eaccfbe0e"
+"3","remove_from_group","2;2","completed;expired",,,,,"test group","8224bfe2-acec-434f-bc7c-14c584fc4bc8","21be0fc2-f28c-4ad0-8c02-4afd63ad31ab"
+"4","split_by_group","3",,,,,,"test group",,"bac467c9-e699-4211-bc70-3440414fd301"
+"5","send_message","4","test group",,,,,"this is a send message node",,"769804d7-7343-4e78-97f3-7a113e8222d2"
+"6","start_new_flow","5",,,,,,"tiny_flow",,
+"7","add_to_group","6","completed",,,,,"other group",,
+"8","save_flow_result","4",,,,,"result name","result value",,"88c593b0-22ba-4a36-8f6a-ffe4e41818d1"

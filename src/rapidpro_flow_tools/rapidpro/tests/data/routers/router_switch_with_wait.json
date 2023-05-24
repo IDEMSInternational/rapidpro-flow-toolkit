@@ -1,0 +1,30 @@
+{
+  "type": "switch",
+  "default_category_uuid": "f3e14dc3-721e-4f8a-80bb-45a7ad6e5195",
+  "cases": [
+    {
+      "arguments": [
+        "a"
+      ],
+      "type": "has_any_word",
+      "uuid": "762d87ed-48b2-4fb0-991d-6d96c0310a36",
+      "category_uuid": "f98e5149-b6e6-47f2-bc04-428a2c1e0578"
+    }
+  ],
+  "categories": [
+    {
+      "uuid": "f98e5149-b6e6-47f2-bc04-428a2c1e0578",
+      "name": "A",
+      "exit_uuid": "6e72636e-7300-4cda-a675-3a5009a8f4e1"
+    },
+    {
+      "uuid": "f3e14dc3-721e-4f8a-80bb-45a7ad6e5195",
+      "name": "Other",
+      "exit_uuid": "19c23a60-a734-465f-b55a-efe15e7c2537"
+    }
+  ],
+  "operand": "@input.text",
+  "wait": {
+    "type": "msg"
+  }
+}

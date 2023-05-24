@@ -1,0 +1,7 @@
+"row_id","type","from","condition","condition_var","condition_type","condition_name","save_name","message_text","choices.1","choices.2"
+1,"send_message","start",,,,,,"{{prompt}}","Yes","No"
+3,"wait_for_response",1,,,,,"know_more",,,
+4,"send_message",3,"no n",,"has_any_word","No",,"{{response_messages.negative}}",,
+7,"send_message",3,,,,,,"Sorry, I don't understand what you mean.",,
+8,"go_to",7,,,,,,1,,
+9,"send_message",3,"yes y",,"has_any_word","Yes",,"{{response_messages.positive}}",,

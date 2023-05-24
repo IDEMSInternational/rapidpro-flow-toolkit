@@ -1,0 +1,21 @@
+{
+  "categories": [
+    {
+      "exit_uuid": "6e72636e-7300-4cda-a675-3a5009a8f4e1",
+      "name": "Bucket 1",
+      "uuid": "94d46453-0fe5-4a44-b29b-82871b9a48f3"
+    },
+    {
+      "exit_uuid": "64120394-ece0-4cd7-9870-3625a61549ca",
+      "name": "Bucket 2",
+      "uuid": "13f9044d-ee6f-4be7-8936-1933b5190592"
+    },
+    {
+      "exit_uuid": "19c23a60-a734-465f-b55a-efe15e7c2537",
+      "name": "Bucket 3",
+      "uuid": "72fa75ef-0b8f-434a-923f-87804061266e"
+    }
+  ],
+  "type": "random",
+  "result_name": "Dice roll"
+}

@@ -1,0 +1,6 @@
+flow_type,flow_name,sheet_name,status
+flow,no_switch_nodes,no_switch_nodes,released
+flow,loop_and_multiple_conditions,loop_and_multiple_conditions,released
+flow,rejoin,rejoin,released
+flow,switch_nodes,switch_nodes,released
+flow,loop_from_start,loop_from_start,released

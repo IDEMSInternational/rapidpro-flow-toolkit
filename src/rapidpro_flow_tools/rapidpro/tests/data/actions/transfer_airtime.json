@@ -1,0 +1,9 @@
+{
+    "type": "transfer_airtime",
+    "uuid": "8eebd020-1af5-431c-b943-aa670fc74da9",
+    "amounts": {
+        "RWF": 500,
+        "USD": 0.5
+    },
+    "result_name": "Reward Transfer"
+}

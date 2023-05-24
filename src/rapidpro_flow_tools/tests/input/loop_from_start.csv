@@ -1,0 +1,6 @@
+"row_id","type","from","condition","condition_var","condition_type","condition_name","save_name","message_text","obj_id","_nodeId","no_response","_ui_position"
+1,"send_message","start",,,,,,"first message",,"f9c19f9e-04d2-437c-a9ff-f3906e436391",,"480;20"
+2,"save_value",1,,,,,"favourite_number",3,,"c7e71caa-1887-4eb6-98b7-f3d23451ef70",,"460;180"
+3,"wait_for_response",2,,,,,"Result",,,"c952a38d-7479-41a2-8382-8221e27ccabe",,"440;320"
+4,"go_to",3,"a",,"has_any_word","A",,1,,,,
+5,"send_message",3,,,,,,"no condition",,"a6ade3d1-2b8f-4c8c-bc25-aba8d1cb3195",,"480;540"

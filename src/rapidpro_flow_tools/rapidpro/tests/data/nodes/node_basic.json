@@ -1,0 +1,30 @@
+{
+  "uuid": "224f6caa-fd25-47d3-96a9-3d43506b7878",
+  "actions": [
+    {
+      "attachments": [],
+      "text": "this is a send message node",
+      "type": "send_msg",
+      "quick_replies": [
+        "qr1",
+        "qr2"
+      ],
+      "uuid": "10d736b0-7c01-4023-8d18-ced3c6bf53a9"
+    },
+    {
+      "attachments": [
+        "image:image url"
+      ],
+      "text": "message with image",
+      "type": "send_msg",
+      "quick_replies": [],
+      "uuid": "c58d0fde-557f-4e8c-ba45-d9f0384d3853"
+    }
+  ],
+  "exits": [
+    {
+      "uuid": "d347ecb7-a7c8-464f-b87b-8f10aff16d26",
+      "destination_uuid": null
+    }
+  ]
+}
