@@ -172,7 +172,7 @@ class TestParsing(unittest.TestCase):
         ci_sheet = (
             'type,sheet_name,data_sheet,data_row_id,template_arguments,new_name,data_model,status\n'
             'template_definition,my_template,,,arg1;arg2,,,\n'
-            'create_flow,my_template,nesteddata,,ARG1;ARG2,,,\n'
+            'create_flow,my_template,nesteddata,,ARG1;ARG2,my_renamed_template,,\n'
             'data_sheet,nesteddata,,,,,NestedRowModel,\n'
         )
         nesteddata = (
@@ -194,14 +194,14 @@ class TestParsing(unittest.TestCase):
         ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.nestedmodel')
         container = ci_parser.parse_all_flows()
         render_output = container.render()
-        self.compare_messages(render_output, 'my_template - row1', ['Value1 ARG1 ARG2', 'Happy1 and Sad1'])
-        self.compare_messages(render_output, 'my_template - row2', ['Value2 ARG1 ARG2', 'Happy2 and Sad2'])
+        self.compare_messages(render_output, 'my_renamed_template - row1', ['Value1 ARG1 ARG2', 'Happy1 and Sad1'])
+        self.compare_messages(render_output, 'my_renamed_template - row2', ['Value2 ARG1 ARG2', 'Happy2 and Sad2'])
 
     def test_insert_as_block(self):
         ci_sheet = (
             'type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n'
             'template_definition,my_template,,,,,\n'
-            'create_flow,my_basic_flow,,,,,\n'
+            'create_flow,my_basic_flow,,,my_renamed_basic_flow,,\n'
             'data_sheet,nesteddata,,,,NestedRowModel,\n'
         )
         nesteddata = (
@@ -248,7 +248,7 @@ class TestParsing(unittest.TestCase):
             'Value1',
             "I'm Sad1",  # we're taking the hard exit now, leaving the flow.
         ]
-        self.compare_messages(render_output, 'my_basic_flow', messages_exp, Context(inputs=['happy', 'else', 'sad']))
+        self.compare_messages(render_output, 'my_renamed_basic_flow', messages_exp, Context(inputs=['happy', 'else', 'sad']))
 
     def test_insert_as_block_with_sheet_arguments(self):
         ci_sheet = (
