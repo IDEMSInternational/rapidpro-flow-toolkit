@@ -109,10 +109,19 @@ class GoalCheckInModel(DataRowModel):
 	response_positive: str = ''
 	response_negative_pre_goal: str = ''
 	response_negative_post_goal: str = ''
+	response_negative_better_post_goal: str = ''
+	response_positive_worse_post_goal: str = ''
 	troubleshooting: TroubleshootingModel = TroubleshootingModel()
 	conclusion: str = ''
 
+class PbSurveyBehaveModel(ParserModel):
+	name: str = ''
+	post_goal_msg: str = ''
 
+class SurveyBehaveModel(DataRowModel):
+	intro: str = ''
+	select_instructions: str = ''
+	pb: List[PbSurveyBehaveModel] = []
 ###########################################################
 # onboarding
 
