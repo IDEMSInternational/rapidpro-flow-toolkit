@@ -3,15 +3,20 @@ import json
 from collections import defaultdict
 
 from rapidpro.models.actions import SendMessageAction, SetContactFieldAction, AddContactGroupAction, \
-    RemoveContactGroupAction, SetRunResultAction, SetContactPropertyAction, Group
+    RemoveContactGroupAction, SetRunResultAction, SetContactPropertyAction, Group, WhatsAppMessageTemplating
 from rapidpro.models.containers import FlowContainer
 from rapidpro.models.nodes import BaseNode, BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
 from rapidpro.models.routers import SwitchRouter, RandomRouter
+from rapidpro.models.exceptions import RapidProActionError
 from parsers.common.cellparser import CellParser
 from parsers.common.sheetparser import SheetParser
 from parsers.common.rowparser import RowParser
 from parsers.creation.flowrowmodel import FlowRowModel
 from .flowrowmodel import Condition
+
+from logger.logger import get_logger, logging_context
+
+LOGGER = get_logger()
 
 
 class NodeGroup:
@@ -41,9 +46,9 @@ class NodeGroup:
 
     def add_exit(self, destination_uuid, condition):
         if condition != Condition():
-            raise ValueError('Cannot attach conditional edges to a block.')
+            LOGGER.critical('Cannot attach conditional edges to a block.')
         if not self.has_loose_exits():
-            raise ValueError('Block has no loose exit to connect to.')
+            LOGGER.critical('Block has no loose exit to connect to.')
         for node_group in self.node_groups:
             if node_group.has_loose_exits():
                 node_group.connect_loose_exits(destination_uuid)
@@ -93,7 +98,7 @@ class NoOpNodeGroup:
                 edge.source_node_group.connect_loose_exits(destination_uuid)
 
     def entry_node(self):
-        raise NotImplementedError("go_to not implemented to link to no_op row.")
+        LOGGER.critical("NotImplementedError: go_to not implemented to link to no_op row.")
 
     def add_parent_edge(self, source_node_group, condition):
         self.parent_edges.append(NoOpNodeGroup.ParentEdge(source_node_group,condition))
@@ -107,7 +112,8 @@ class NoOpNodeGroup:
                     edge.source_node_group.add_exit(destination_uuid, edge.condition)
                 return
             else:
-                assert condition.variable
+                if not condition.variable:
+                    LOGGER.critical('Condition must have a variable.')
                 self.router_node = SwitchRouterNode(condition.variable)
                 self.child_node_ref = None
                 for edge in self.parent_edges:
@@ -187,7 +193,7 @@ class RowNodeGroup:
             elif condition.value.lower() == 'expired':
                 exit_node.update_expired_exit(destination_uuid)
             else:
-                raise ValueError("Condition from start_new_flow must be 'Completed' or 'Expired'.")
+                LOGGER.error("Condition from start_new_flow must be 'Completed' or 'Expired'.")
             return
 
         # No Response edge from wait_for_response
@@ -195,8 +201,7 @@ class RowNodeGroup:
             if exit_node.has_positive_wait():
                 exit_node.update_no_response_exit(destination_uuid)
             else:
-                # TODO: Should this be a warning rather than an error?
-                raise ValueError("No Response exit only exists for wait_for_response rows with non-zero timeout.")
+                LOGGER.warn("No Response exit only exists for wait_for_response rows with non-zero timeout.")
             return
 
         # We have a non-trivial condition. Fill in default values if necessary
@@ -295,6 +300,8 @@ class FlowParser:
 
     def parse_as_block(self):
         self._parse_block()
+        if not len(self.node_group_stack) == 1:
+            LOGGER.critical(f'Unexpected end of flow. Did you forget end_for/end_block?')
         return self.current_node_group()
 
     def parse(self):
@@ -304,7 +311,7 @@ class FlowParser:
         return flow_container
 
     def _parse_block(self, depth=0, block_type='root_block', omit_content=False):
-        row = self.sheet_parser.parse_next_row(omit_templating=omit_content)
+        row, row_idx = self.sheet_parser.parse_next_row(omit_templating=omit_content, return_index=True)
         while not self._is_end_of_block(block_type, row):
             if omit_content or not row.include_if:
                 if row.type == 'begin_for':
@@ -316,7 +323,8 @@ class FlowParser:
                     if len(row.loop_variable) >= 1 and row.loop_variable[0]:
                         iteration_variable = row.loop_variable[0]
                     else:
-                        raise ValueError('begin_for must have a loop_variable')
+                        with logging_context(f'row {row_idx}'):
+                            LOGGER.critical('begin_for must have a loop_variable')
                     index_variable = None
                     if len(row.loop_variable) >= 2 and row.loop_variable[1]:
                         index_variable = row.loop_variable[1]
@@ -348,8 +356,9 @@ class FlowParser:
                     self.node_group_stack.pop()
                     self.append_node_group(new_node_group, row.row_id)
                 else:
-                    self._parse_row(row)
-            row = self.sheet_parser.parse_next_row(omit_templating=omit_content)
+                    with logging_context(f'row {row_idx}'):
+                        self._parse_row(row)
+            row, row_idx = self.sheet_parser.parse_next_row(omit_templating=omit_content, return_index=True)
 
     def _is_end_of_block(self, block_type, row):
         block_end_map = {
@@ -360,17 +369,17 @@ class FlowParser:
             if block_type == 'root_block':
                 return True
             else:
-                raise ValueError('Sheet has unterminated block.')
+                LOGGER.critical('Sheet has unterminated block.')
         elif row.type in block_end_map:
             if block_end_map[row.type] == block_type:
                 return True
             else:
-                raise ValueError(f'Wrong block terminator "{row.type}" found for block of type {block_type}.')
+                LOGGER.critical(f'Wrong block terminator "{row.type}" found for block of type {block_type}.')
         return False
 
     def _parse_insert_as_block_row(self, row):
         if self.content_index_parser is None:
-            raise ValueError('insert_as_block only works if FlowParser has a ContentIndexParser')
+            LOGGER.critical('insert_as_block only works if FlowParser has a ContentIndexParser')
         node_group = self.content_index_parser.get_node_group(row.mainarg_flow_name, row.data_sheet, row.data_row_id, row.template_arguments)
         for edge in row.edges:
             self._add_row_edge(edge, node_group.entry_node().uuid)
@@ -380,7 +389,10 @@ class FlowParser:
 
     def _get_row_action(self, row):
         if row.type == 'send_message':
-            send_message_action = SendMessageAction(text=row.mainarg_message_text)
+            templating = None
+            if row.wa_template.name:
+                templating = WhatsAppMessageTemplating(name=row.wa_template.name, template_uuid=row.wa_template.uuid, variables=row.wa_template.variables)
+            send_message_action = SendMessageAction(text=row.mainarg_message_text, templating=templating)
             for att_type, attachment in zip(["image", "audio", "video"], [row.image, row.audio, row.video]):
                 if attachment:
                     # TODO: Add depending on prefix.
@@ -407,13 +419,14 @@ class FlowParser:
             return set_run_result_action
         elif row.type.startswith('set_contact_'):
             property = row.type.replace('set_contact_', '')
-            assert property in ['channel', 'language', 'name', 'status', 'timezone']
+            if not property in ['channel', 'language', 'name', 'status', 'timezone']:
+                LOGGER.error(f'Unknown operation set_contact_{property}.')
             action = SetContactPropertyAction(property, row.mainarg_value)
             return action
         elif row.type in ['wait_for_response', 'split_by_value', 'split_by_group', 'split_random', 'start_new_flow']:
             return None
         else:
-            print(f'Row type {row.type} not implemented')
+            LOGGER.error(f'Row type {row.type} not implemented')
 
     def _get_or_create_group(self, name, uuid=None):
         # TODO: support lists of groups
@@ -432,8 +445,14 @@ class FlowParser:
         # considering that the reverse naturally is there as well.
         node_uuid = row.node_uuid or None
         if row.ui_position:
-            ui_pos = [int(coord) for coord in row.ui_position]  # List[str] -> List[int]
-            assert len(ui_pos) == 2
+            try:
+                ui_pos = [int(coord) for coord in row.ui_position]  # List[str] -> List[int]
+            except ValueError:
+                LOGGER.warn('UI position coordinates have to be integers')
+                ui_pos = None
+            if not ui_pos or len(ui_pos) != 2:
+                LOGGER.warn('A UI position must consist of exactly two coordiates')
+                ui_pos = None
         else:
             ui_pos = None
         if row.type in ['send_message', 'save_value', 'add_to_group', 'remove_from_group', 'save_flow_result']:
@@ -466,7 +485,7 @@ class FlowParser:
             return None
         elif edge.from_:
             if edge.from_ not in self.row_id_to_nodegroup:
-                raise ValueError(f'Edge from row_id "{edge.from_}" which does not exist.')
+                LOGGER.critical(f'Edge from row_id "{edge.from_}" which does not exist.')
             return self.row_id_to_nodegroup[edge.from_]
         else:
             return self.most_recent_node_group()
@@ -490,7 +509,8 @@ class FlowParser:
         destination_row_ids = row.mainarg_destination_row_ids
         if len(destination_row_ids) == 1:
             destination_row_ids = row.mainarg_destination_row_ids * len(row.edges)
-        assert len(row.edges) == len(destination_row_ids)
+        if not len(row.edges) == len(destination_row_ids):
+            LOGGER.critical('If a go_to has multiple destinations, the number of destinations has to match the number of incoming edges.')
 
         for edge, destination_row_id in zip(row.edges, destination_row_ids):
             destination_node_group = self.row_id_to_nodegroup[destination_row_id]
@@ -526,7 +546,10 @@ class FlowParser:
             self._parse_insert_as_block_row(row)
             return
 
-        row_action = self._get_row_action(row)
+        try:
+            row_action = self._get_row_action(row)
+        except RapidProActionError as e:
+            LOGGER.critical(str(e))
         node_name = self._get_node_name(row)
         existing_node = self.node_name_to_node_map.get(node_name)
 
@@ -546,9 +569,9 @@ class FlowParser:
                         self.row_id_to_nodegroup[row.row_id] = self.row_id_to_nodegroup[row.edges[0].from_]
                     return
                 else:
-                    raise ValueError(f'To merge rows using node name {node_name} into a single node, edge must come from a rode with node name {node_name}.')
+                    LOGGER.critical(f'To merge rows using node name "{node_name}" into a single node, edge must come from a rode with node name "{node_name}".')
             else:
-                raise ValueError(f'To merge rows using node name {node_name} into a single node, there must be exactly one unconditional incoming edge.')
+                LOGGER.critical(f'To merge rows using node name "{node_name}" into a single node, there must be exactly one unconditional incoming edge.')
 
         new_node = self._get_row_node(row)
         if row_action:
@@ -570,6 +593,7 @@ class FlowParser:
 
         # Caveat/TODO: Need to ensure starting node comes first.
         flow_container = FlowContainer(flow_name=self.flow_name, uuid=self.flow_uuid)
-        assert len(self.node_group_stack) == 1
+        if not len(self.node_group_stack) == 1:
+            LOGGER.critical(f'Unexpected end of flow. Did you forget end_for/end_block?')
         self.current_node_group().add_nodes_to_flow(flow_container)
         return flow_container

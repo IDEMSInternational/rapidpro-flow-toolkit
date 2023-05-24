@@ -7,7 +7,9 @@ from parsers.sheets.csv_sheet_reader import CSVSheetReader
 from parsers.sheets.xlsx_sheet_reader import XLSXSheetReader
 from parsers.sheets.google_sheet_reader import GoogleSheetReader
 from rapidpro.models.containers import RapidProContainer
+from logger.logger import initialize_main_logger
 
+LOGGER = initialize_main_logger()
 
 def main():
     description = 'Generate RapidPro JSON from Spreadsheet(s).\n\n'\

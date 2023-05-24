@@ -1,6 +1,10 @@
 from jinja2 import Environment
 from jinja2.nativetypes import NativeEnvironment
 from jinja2 import contextfilter
+from logger.logger import get_logger, logging_context
+
+LOGGER = get_logger()
+
 
 class CellParser:
 
@@ -89,7 +93,8 @@ class CellParser:
             # Special case: Return a python object rather than a string,
             # if possible.
             # Ensure this is a single template, not e.g. '{@ x @} {@ y @}'
-            assert stripped_value[2:].find('{@') == -1
+            if not stripped_value[2:].find('{@') == -1:
+                LOGGER.critical(f'Cell may not contain nested "{{@" templates. Cell content: "{stripped_value}"')
             if is_object is not None:
                 is_object.boolean = True
             env = self.native_env
@@ -98,4 +103,4 @@ class CellParser:
             template = env.from_string(stripped_value)
             return template.render(context)
         except Exception as e:
-            raise ValueError(str(e), stripped_value, context)
+            LOGGER.critical(f'Error while parsing cell "{stripped_value}" with context "{context}": {str(e)}')

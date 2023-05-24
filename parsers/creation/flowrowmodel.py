@@ -12,6 +12,12 @@ class Condition(ParserModel):
     # validators that replace '' with the actual default value.
 
 
+class WhatsAppTemplating(ParserModel):
+    name: str = ''
+    uuid: str = ''
+    variables: List[str] = []
+
+
 class Edge(ParserModel):
     from_: str = ''
     condition: Condition = Condition()
@@ -47,6 +53,7 @@ class FlowRowModel(ParserModel):
     mainarg_flow_name: str = ''
     mainarg_expression: str = ''
     mainarg_iterlist: list = [] # no specified type of elements
+    wa_template: WhatsAppTemplating = WhatsAppTemplating()
     data_sheet: str = ''
     data_row_id: str = ''
     template_arguments: list = []

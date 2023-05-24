@@ -243,13 +243,14 @@ class RowParser:
         # Ideally we would return a pointer to the destination field.
         # The model of field[key] is model, and thus value should also be interpreted
         # as being of type model.
-        if is_basic_list_type(model) or is_list_type(model) or is_parser_model_type(model) and not value_is_parsed:
-            # If the expected type of the value is list/object,
-            # parse the cell content as such.
-            # Otherwise leave it as a string
-            value = self.cell_parser.parse(value, context=template_context)
-        else:
-            value = self.cell_parser.parse_as_string(value, context=template_context)
+        if not value_is_parsed:
+            if is_basic_list_type(model) or is_list_type(model) or is_parser_model_type(model):
+                # If the expected type of the value is list/object,
+                # parse the cell content as such.
+                # Otherwise leave it as a string
+                value = self.cell_parser.parse(value, context=template_context)
+            else:
+                value = self.cell_parser.parse_as_string(value, context=template_context)
         self.assign_value(field, key, value, model)
 
     def parse_row(self, data, template_context={}):
