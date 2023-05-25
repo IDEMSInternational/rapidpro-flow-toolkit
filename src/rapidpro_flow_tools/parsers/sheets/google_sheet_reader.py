@@ -7,34 +7,34 @@ import os
 
 
 class GoogleSheetReader:
-
-    # If modifying these scopes, delete the file token.json.
     SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
-    def __init__(self, spreadsheet_id, credentials_path='credentials.json', token_path='token.json'):
+    def __init__(self, spreadsheet_id, credentials_file=None, token_file=None):
         '''
         Args:
             spreadsheet_id: You can extract it from the spreadsheet URL, like this:
                             https://docs.google.com/spreadsheets/d/[spreadsheet_id]/edit
-            credentials_path: Path to the 'credentials.json' file (default: 'credentials.json')
-            token_path: Path to the 'token.json' file (default: 'token.json')
+            credentials_file: Dictionary representing the contents of the 'credentials.json' file (default: None)
+            token_file: Dictionary representing the contents of the 'token.json' file (default: None)
         '''
         creds = None
 
-        if os.path.exists(token_path):
-            creds = Credentials.from_authorized_user_file(token_path, GoogleSheetReader.SCOPES)
+        if token_file is not None:
+            creds = Credentials.from_authorized_user_info(token_file, GoogleSheetReader.SCOPES)
 
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(credentials_path, GoogleSheetReader.SCOPES)
+                flow = InstalledAppFlow.from_client_config(credentials_file, GoogleSheetReader.SCOPES)
                 creds = flow.run_local_server(port=0)
 
-            with open(token_path, 'w') as token:
-                token.write(creds.to_json())
+            if token_file is not None:
+                with open('token.json', 'w') as token:
+                    token.write(creds.to_json())
 
         service = build('sheets', 'v4', credentials=creds)
+
 
         # Call the Sheets API
         sheet_metadata = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()

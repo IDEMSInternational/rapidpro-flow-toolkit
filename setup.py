@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='rapidpro_flow_tools',
-    version='0.9.2',
+    version='2.0.0',
     license='MIT',
     author='Ed Moss',
     author_email='ed.moss@eemengineering.com',

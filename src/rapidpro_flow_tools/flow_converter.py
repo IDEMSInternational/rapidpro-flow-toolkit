@@ -15,9 +15,19 @@ def convert_flow(command, input_file, output_file, sheet_format, data_models=Non
     elif sheet_format == 'xlsx':
         sheet_reader = XLSXSheetReader(input_file)
     elif sheet_format == 'google_sheets':
-        credentials_path = credentials or 'credentials.json'
-        token_path = token or 'token.json'
-        sheet_reader = GoogleSheetReader(input_file, credentials_path, token_path)
+        if credentials is not None:
+            credentials_data = json.loads(credentials)
+        else:
+            with open('credentials.json', 'r') as creds:
+                credentials_data = json.load(creds)
+        
+        if token is not None:
+            token_data = json.loads(token)
+        else:
+            with open('token.json', 'r') as toks:
+                token_data = json.load(toks)
+        
+        sheet_reader = GoogleSheetReader(input_file, credentials_data, token_data)
     else:
         print(f"Format {sheet_format} currently unsupported.")
         return
