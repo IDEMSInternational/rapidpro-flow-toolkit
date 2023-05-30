@@ -1,4 +1,5 @@
 import json
+import os
 from rapidpro_flow_tools.parsers.creation.contentindexparser import ContentIndexParser
 from rapidpro_flow_tools.parsers.sheets.csv_sheet_reader import CSVSheetReader
 from rapidpro_flow_tools.parsers.sheets.xlsx_sheet_reader import XLSXSheetReader
@@ -18,14 +19,20 @@ def convert_flow(command, input_file, output_file, sheet_format, data_models=Non
         if credentials is not None:
             credentials_data = json.loads(credentials)
         else:
-            with open('credentials.json', 'r') as creds:
-                credentials_data = json.load(creds)
-        
+            try:
+                with open('credentials.json', 'r') as creds:
+                    credentials_data = json.load(creds)
+            except FileNotFoundError:
+                credentials_data = None
+
         if token is not None:
             token_data = json.loads(token)
         else:
-            with open('token.json', 'r') as toks:
-                token_data = json.load(toks)
+            try:
+                with open('token.json', 'r') as toks:
+                    token_data = json.load(toks)
+            except FileNotFoundError:
+                token_data = None
         
         sheet_reader = GoogleSheetReader(input_file, credentials_data, token_data)
     else:

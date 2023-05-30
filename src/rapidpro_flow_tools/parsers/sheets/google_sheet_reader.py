@@ -29,9 +29,8 @@ class GoogleSheetReader:
                 flow = InstalledAppFlow.from_client_config(credentials_file, GoogleSheetReader.SCOPES)
                 creds = flow.run_local_server(port=0)
 
-            if token_file is not None:
-                with open('token.json', 'w') as token:
-                    token.write(creds.to_json())
+            with open('token.json', 'w') as token:
+                token.write(creds.to_json())
 
         service = build('sheets', 'v4', credentials=creds)
 
