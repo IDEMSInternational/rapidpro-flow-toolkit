@@ -97,6 +97,16 @@ class TroubleshootingModel(DataRowModel):
 	question: str = ''
 	problems: List[TroubleModel] = []
 
+class GoalCheckInResponseModel(DataRowModel):
+	pre_goal_positive: str = ''
+	pre_goal_negative: str = ''
+	post_goal_improved_positive: str = ''
+	post_goal_improved_negative: str = ''
+	post_goal_static_positive: str = ''
+	post_goal_static_negative: str = ''
+	post_goal_worsened_positive: str = ''
+	post_goal_worsened_negative: str = ''
+
 class GoalCheckInModel(DataRowModel):
 	intro_pre_goal: str = ''
 	intro_post_goal: str = ''
@@ -106,11 +116,7 @@ class GoalCheckInModel(DataRowModel):
 	negative: List[str] = []
 	positive: List[str] = []
 	improvement: str = ''
-	response_positive: str = ''
-	response_negative_pre_goal: str = ''
-	response_negative_post_goal: str = ''
-	response_negative_better_post_goal: str = ''
-	response_positive_worse_post_goal: str = ''
+	response: GoalCheckInResponseModel = GoalCheckInResponseModel()
 	troubleshooting: TroubleshootingModel = TroubleshootingModel()
 	conclusion: str = ''
 
@@ -257,18 +263,6 @@ class InteractionModel(DataRowModel):
 	wa_template_ID: str = ''
 	wa_template_vars: List[str] = []
 
-class MenuOptionModel(ParserModel):
-	text: str = ''
-	flow: str = ''
-	
-class MessageMenuModel(ParserModel):
-	text: str = ''
-	image: str = ''
-
-class MenuModel(DataRowModel):
-	message: MessageMenuModel = MessageMenuModel()
-	return_option: str = ''
-	options: List[MenuOptionModel] = []
 
 
 class TimedProgrammeModel(DataRowModel):
@@ -290,6 +284,55 @@ class ComicNamesModel(DataRowModel):
 
 class ComicNamesKeyModel(DataRowModel):
 	languages: List[str] = []
+
+
+####################################
+## Menu
+class MenuOptionModel(ParserModel):
+	text: str = ''
+	flow: str = ''
+	
+class MessageMenuModel(ParserModel):
+	text: str = ''
+	image: str = ''
+	
+class ReturnOptionModel(ParserModel):
+	text: str = ''
+	flow: str = ''
+
+class MenuModel(DataRowModel):
+	message: MessageMenuModel = MessageMenuModel()
+	return_option: ReturnOptionModel = ReturnOptionModel()
+	options: List[MenuOptionModel] = []
+
+class MenuBlocksModel(ParserModel):
+	no_opt: str = ''
+	one_opt: str = ''
+	mult_opt: str = ''
+
+class MenuProgressModel(DataRowModel):
+	show_options_id: str = ''
+	menu_blocks: MenuBlocksModel = MenuBlocksModel()
+
+class SelectGoalMenuModel(DataRowModel):
+	type: str = ''
+
+class MissingProfileModel(ParserModel):
+	msg: str = ''
+	value: str = ''	
+
+class VarProfileModel(ParserModel):
+	val: str = ''
+	alias: str = ''
+	
+class SettingsProfileModel(DataRowModel):
+	current_info_msg: str = ''
+	missing: MissingProfileModel = MissingProfileModel()
+	update_inquiry: str = ''
+	update_var_flow: str = ''
+	update_prog_var_flow: str = ''
+	variable: str = ''
+	var: List[VarProfileModel] = []
 '''
 
 class TemplateTypeModel(DataRowModel):
