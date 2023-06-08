@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='rapidpro_flow_tools',
-    version='2.0.4',
+    version='2.0.5',
     license='LICENSE',
     author='IDEMS International',
     author_email='communications@idems.international',
