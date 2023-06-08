@@ -1,7 +1,7 @@
 from jinja2 import Environment
 from jinja2.nativetypes import NativeEnvironment
 from jinja2 import contextfilter
-from logger.logger import get_logger, logging_context
+from rapidpro_flow_tools.logger.logger import get_logger, logging_context
 
 LOGGER = get_logger()
 

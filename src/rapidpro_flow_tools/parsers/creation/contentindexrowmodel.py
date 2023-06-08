@@ -1,4 +1,4 @@
-from parsers.common.rowparser import ParserModel
+from rapidpro_flow_tools.parsers.common.rowparser import ParserModel
 from typing import List
 
 class TemplateArgument(ParserModel):

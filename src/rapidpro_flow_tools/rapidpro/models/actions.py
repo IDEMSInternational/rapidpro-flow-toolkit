@@ -1,6 +1,6 @@
-from rapidpro.utils import generate_new_uuid
-from .exceptions import RapidProActionError
-from rapidpro.models.common import Group, FlowReference, ContactFieldReference
+from rapidpro_flow_tools.rapidpro.utils import generate_new_uuid
+from rapidpro_flow_tools.rapidpro.models.exceptions import RapidProActionError
+from rapidpro_flow_tools.rapidpro.models.common import Group, FlowReference, ContactFieldReference
 
 import copy
 

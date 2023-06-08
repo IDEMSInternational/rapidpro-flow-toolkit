@@ -3,8 +3,8 @@ import json
 from typing import List, Dict, Optional
 from collections import OrderedDict
 
-from parsers.common.rowparser import RowParser, ParserModel
-from .mock_cell_parser import MockCellParser
+from rapidpro_flow_tools.parsers.common.rowparser import RowParser, ParserModel
+from rapidpro_flow_tools.parsers.common.tests.mock_cell_parser import MockCellParser
 
 
 

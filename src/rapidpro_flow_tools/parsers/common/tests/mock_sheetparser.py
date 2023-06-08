@@ -1,5 +1,5 @@
 import copy
-from parsers.common.sheetparser import SheetParser
+from rapidpro_flow_tools.parsers.common.sheetparser import SheetParser
 
 class MockSheetParser(SheetParser):
 

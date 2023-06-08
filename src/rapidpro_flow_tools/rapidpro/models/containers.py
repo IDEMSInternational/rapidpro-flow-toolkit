@@ -1,9 +1,10 @@
-from rapidpro.utils import generate_new_uuid
-from rapidpro.models.nodes import BaseNode
-from rapidpro.models.actions import Group
-from rapidpro.models.campaigns import Campaign
-from parsers.creation.flowrowmodel import FlowRowModel, Edge
 import copy
+
+from rapidpro_flow_tools.rapidpro.utils import generate_new_uuid
+from rapidpro_flow_tools.rapidpro.models.nodes import BaseNode
+from rapidpro_flow_tools.rapidpro.models.actions import Group
+from rapidpro_flow_tools.rapidpro.models.campaigns import Campaign
+from rapidpro_flow_tools.parsers.creation.flowrowmodel import FlowRowModel, Edge
 
 
 class RapidProContainer:

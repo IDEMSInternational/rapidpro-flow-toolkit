@@ -1,4 +1,4 @@
-from parsers.creation.datarowmodel import DataRowModel
+from rapidpro_flow_tools.parsers.creation.datarowmodel import DataRowModel
 
 class SimpleRowModel(DataRowModel):
 	value1: str = ''

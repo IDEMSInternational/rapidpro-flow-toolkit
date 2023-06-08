@@ -1,5 +1,5 @@
-from parsers.creation.datarowmodel import DataRowModel
-from parsers.common.rowparser import ParserModel
+from rapidpro_flow_tools.parsers.creation.datarowmodel import DataRowModel
+from rapidpro_flow_tools.parsers.common.rowparser import ParserModel
 
 class CustomModel(ParserModel):
 	# Because this does not directly define the content of a datasheet,

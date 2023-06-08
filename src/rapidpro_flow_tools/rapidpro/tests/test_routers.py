@@ -1,6 +1,6 @@
 import unittest
 
-from rapidpro.models.routers import SwitchRouter, RandomRouter
+from rapidpro_flow_tools.rapidpro.models.routers import SwitchRouter, RandomRouter
 
 
 class TestRouters(unittest.TestCase):

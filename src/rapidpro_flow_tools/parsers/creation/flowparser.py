@@ -2,19 +2,18 @@ import re
 import json
 from collections import defaultdict
 
-from rapidpro.models.actions import SendMessageAction, SetContactFieldAction, AddContactGroupAction, \
-    RemoveContactGroupAction, SetRunResultAction, SetContactPropertyAction, Group, WhatsAppMessageTemplating
-from rapidpro.models.containers import FlowContainer
-from rapidpro.models.nodes import BaseNode, BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
-from rapidpro.models.routers import SwitchRouter, RandomRouter
-from rapidpro.models.exceptions import RapidProActionError
-from parsers.common.cellparser import CellParser
-from parsers.common.sheetparser import SheetParser
-from parsers.common.rowparser import RowParser
-from parsers.creation.flowrowmodel import FlowRowModel
-from .flowrowmodel import Condition
+from rapidpro_flow_tools.rapidpro.models.actions import SendMessageAction, SetContactFieldAction, AddContactGroupAction, \
+    RemoveContactGroupAction, SetRunResultAction, SetContactPropertyAction, Group
+from rapidpro_flow_tools.rapidpro.models.containers import FlowContainer
+from rapidpro_flow_tools.rapidpro.models.nodes import BaseNode, BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
+from rapidpro_flow_tools.rapidpro.models.routers import SwitchRouter, RandomRouter
+from rapidpro_flow_tools.parsers.common.cellparser import CellParser
+from rapidpro_flow_tools.parsers.common.sheetparser import SheetParser
+from rapidpro_flow_tools.parsers.common.rowparser import RowParser
+from rapidpro_flow_tools.parsers.creation.flowrowmodel import FlowRowModel
+from rapidpro_flow_tools.parsers.creation.flowrowmodel import Condition
 
-from logger.logger import get_logger, logging_context
+from rapidpro_flow_tools.logger.logger import get_logger, logging_context
 
 LOGGER = get_logger()
 

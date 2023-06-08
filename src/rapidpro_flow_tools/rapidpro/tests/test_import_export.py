@@ -2,12 +2,12 @@ import unittest
 import json
 import glob
 
-from rapidpro.models.actions import Action, Group
-from rapidpro.models.common import Exit
-from rapidpro.models.routers import RouterCase, RouterCategory, BaseRouter
-from rapidpro.models.nodes import BaseNode
-from rapidpro.models.containers import FlowContainer, RapidProContainer
-from rapidpro.models.campaigns import Campaign, CampaignEvent
+from rapidpro_flow_tools.rapidpro.models.actions import Action, Group
+from rapidpro_flow_tools.rapidpro.models.common import Exit
+from rapidpro_flow_tools.rapidpro.models.routers import RouterCase, RouterCategory, BaseRouter
+from rapidpro_flow_tools.rapidpro.models.nodes import BaseNode
+from rapidpro_flow_tools.rapidpro.models.containers import FlowContainer, RapidProContainer
+from rapidpro_flow_tools.rapidpro.models.campaigns import Campaign, CampaignEvent
 
 
 class TestImportExport(unittest.TestCase):

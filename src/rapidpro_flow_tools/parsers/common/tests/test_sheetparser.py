@@ -4,10 +4,10 @@ from typing import List, Dict, Optional
 from collections import OrderedDict
 import tablib
 
-from parsers.common.rowparser import RowParser, ParserModel
-from .mock_row_parser import MockRowParser
-from parsers.common.rowdatasheet import RowDataSheet
-from parsers.common.sheetparser import SheetParser
+from rapidpro_flow_tools.parsers.common.rowparser import RowParser, ParserModel
+from rapidpro_flow_tools.parsers.common.tests.mock_row_parser import MockRowParser
+from rapidpro_flow_tools.parsers.common.rowdatasheet import RowDataSheet
+from rapidpro_flow_tools.parsers.common.sheetparser import SheetParser
 
 class MainModel(ParserModel):
     field1: str = ''

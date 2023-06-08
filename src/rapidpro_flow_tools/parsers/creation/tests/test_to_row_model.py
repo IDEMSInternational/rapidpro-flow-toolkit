@@ -1,15 +1,14 @@
 import unittest
 import json
 
-from parsers.common.rowdatasheet import RowDataSheet
-from parsers.common.rowparser import RowParser
-from tests.utils import get_dict_from_csv, find_destination_uuid, Context, find_node_by_uuid
-from rapidpro.models.containers import RapidProContainer, FlowContainer
-from rapidpro.models.actions import Group, SendMessageAction, AddContactGroupAction, SetRunResultAction, SetContactFieldAction
-from rapidpro.models.nodes import BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
-from parsers.creation.flowrowmodel import FlowRowModel, Edge, Condition
-
-from .row_data import get_start_row, get_unconditional_node_from_1
+from rapidpro_flow_tools.parsers.common.rowdatasheet import RowDataSheet
+from rapidpro_flow_tools.parsers.common.rowparser import RowParser
+from rapidpro_flow_tools.parsers.creation.tests.utils import get_dict_from_csv, find_destination_uuid, Context, find_node_by_uuid
+from rapidpro_flow_tools.rapidpro.models.containers import RapidProContainer, FlowContainer
+from rapidpro_flow_tools.rapidpro.models.actions import Group, SendMessageAction, AddContactGroupAction, SetRunResultAction, SetContactFieldAction
+from rapidpro_flow_tools.rapidpro.models.nodes import BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
+from rapidpro_flow_tools.parsers.creation.flowrowmodel import FlowRowModel, Edge, Condition
+from rapidpro_flow_tools.parsers.creation.tests.row_data import get_start_row, get_unconditional_node_from_1
 
 
 class TestToRowModels(unittest.TestCase):

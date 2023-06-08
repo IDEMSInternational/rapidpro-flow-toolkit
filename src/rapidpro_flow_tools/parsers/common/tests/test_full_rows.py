@@ -1,9 +1,9 @@
 import unittest
 import json
 
-from parsers.common.rowparser import RowParser
-from parsers.creation.flowrowmodel import FlowRowModel
-from .mock_cell_parser import MockCellParser
+from rapidpro_flow_tools.parsers.common.rowparser import RowParser
+from rapidpro_flow_tools.parsers.creation.flowrowmodel import FlowRowModel
+from rapidpro_flow_tools.parsers.common.tests.mock_cell_parser import MockCellParser
 
 
 input1 = {
