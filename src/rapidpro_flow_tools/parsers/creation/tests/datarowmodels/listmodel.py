@@ -1,4 +1,4 @@
-from parsers.creation.datarowmodel import DataRowModel
+from rapidpro_flow_tools.parsers.creation.datarowmodel import DataRowModel
 from typing import List
 
 class ListRowModel(DataRowModel):

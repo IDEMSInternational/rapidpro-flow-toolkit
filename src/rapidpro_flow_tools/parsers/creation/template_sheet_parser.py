@@ -1,6 +1,6 @@
-from parsers.creation.flowparser import FlowParser
-from rapidpro.models.containers import RapidProContainer
-from parsers.common.sheetparser import SheetParser
+from rapidpro_flow_tools.parsers.creation.flowparser import FlowParser
+from rapidpro_flow_tools.rapidpro.models.containers import RapidProContainer
+from rapidpro_flow_tools.parsers.common.sheetparser import SheetParser
 
 
 class TemplateSheetParser:

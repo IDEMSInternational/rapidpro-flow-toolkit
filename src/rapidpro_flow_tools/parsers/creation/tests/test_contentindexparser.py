@@ -1,9 +1,9 @@
 import unittest
 import json
 
-from .mock_sheetreader import MockSheetReader
-from parsers.creation.contentindexparser import ContentIndexParser
-from tests.utils import traverse_flow, Context
+from rapidpro_flow_tools.parsers.creation.tests.mock_sheetreader import MockSheetReader
+from rapidpro_flow_tools.parsers.creation.contentindexparser import ContentIndexParser
+from rapidpro_flow_tools.parsers.creation.tests.utils import traverse_flow, Context
 
 class TestParsing(unittest.TestCase):
 

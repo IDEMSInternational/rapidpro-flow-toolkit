@@ -1,8 +1,8 @@
 import unittest
 from typing import List
 
-from parsers.common.cellparser import CellParser
-from parsers.common.rowparser import ParserModel
+from rapidpro_flow_tools.parsers.common.cellparser import CellParser
+from rapidpro_flow_tools.parsers.common.rowparser import ParserModel
 
 
 class InnerModel(ParserModel):

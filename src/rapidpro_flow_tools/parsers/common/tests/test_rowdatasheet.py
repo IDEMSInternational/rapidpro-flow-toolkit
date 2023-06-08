@@ -3,8 +3,8 @@ import json
 from typing import List, Dict, Optional
 from collections import OrderedDict
 
-from .mock_row_parser import MockRowParser
-from parsers.common.rowdatasheet import RowDataSheet
+from rapidpro_flow_tools.parsers.common.tests.mock_row_parser import MockRowParser
+from rapidpro_flow_tools.parsers.common.rowdatasheet import RowDataSheet
 
 
 rowA = OrderedDict([

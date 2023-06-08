@@ -1,6 +1,6 @@
 import unittest
 
-from rapidpro.models.actions import EnterFlowAction
+from rapidpro_flow_tools.rapidpro.models.actions import EnterFlowAction
 
 
 class TestActions(unittest.TestCase):

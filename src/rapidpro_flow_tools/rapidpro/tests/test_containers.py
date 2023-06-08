@@ -1,10 +1,10 @@
 import unittest
 import json
 
-from rapidpro.models.containers import RapidProContainer, FlowContainer, UUIDDict
-from rapidpro.models.actions import Group, SendMessageAction, AddContactGroupAction, RemoveContactGroupAction
-from rapidpro.models.nodes import BasicNode, SwitchRouterNode, EnterFlowNode
-from rapidpro.models.routers import SwitchRouter
+from rapidpro_flow_tools.rapidpro.models.containers import RapidProContainer, FlowContainer, UUIDDict
+from rapidpro_flow_tools.rapidpro.models.actions import Group, SendMessageAction, AddContactGroupAction, RemoveContactGroupAction
+from rapidpro_flow_tools.rapidpro.models.nodes import BasicNode, SwitchRouterNode, EnterFlowNode
+from rapidpro_flow_tools.rapidpro.models.routers import SwitchRouter
 
 
 def get_flow_with_group_and_flow_node():

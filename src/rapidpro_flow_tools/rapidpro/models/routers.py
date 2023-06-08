@@ -1,9 +1,9 @@
 import logging
 import string
 
-from rapidpro.models.common import Exit
-from rapidpro.utils import generate_new_uuid
-from parsers.creation.flowrowmodel import Condition, Edge
+from rapidpro_flow_tools.rapidpro.models.common import Exit
+from rapidpro_flow_tools.rapidpro.utils import generate_new_uuid
+from rapidpro_flow_tools.parsers.creation.flowrowmodel import Condition, Edge
 
 logger = logging.getLogger(__name__)
 

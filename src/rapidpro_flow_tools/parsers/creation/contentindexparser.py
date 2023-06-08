@@ -1,12 +1,12 @@
 import importlib
 from collections import OrderedDict
-from .contentindexrowmodel import ContentIndexRowModel
-from parsers.common.cellparser import CellParser
-from parsers.common.sheetparser import SheetParser
-from parsers.common.rowparser import RowParser
-from rapidpro.models.containers import RapidProContainer
-from parsers.creation.flowparser import FlowParser
-from logger.logger import get_logger, logging_context
+from rapidpro_flow_tools.parsers.creation.contentindexrowmodel import ContentIndexRowModel
+from rapidpro_flow_tools.parsers.common.cellparser import CellParser
+from rapidpro_flow_tools.parsers.common.sheetparser import SheetParser
+from rapidpro_flow_tools.parsers.common.rowparser import RowParser
+from rapidpro_flow_tools.rapidpro.models.containers import RapidProContainer
+from rapidpro_flow_tools.parsers.creation.flowparser import FlowParser
+from rapidpro_flow_tools.logger.logger import get_logger, logging_context
 
 LOGGER = get_logger()
 

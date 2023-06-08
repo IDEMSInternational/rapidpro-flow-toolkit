@@ -1,11 +1,11 @@
 import re
 from abc import ABC, abstractmethod
 
-from parsers.creation.flowrowmodel import FlowRowModel, Edge
-from rapidpro.models.actions import Action, EnterFlowAction
-from rapidpro.models.common import Exit
-from rapidpro.models.routers import SwitchRouter, RandomRouter
-from rapidpro.utils import generate_new_uuid
+from rapidpro_flow_tools.parsers.creation.flowrowmodel import FlowRowModel, Edge
+from rapidpro_flow_tools.rapidpro.models.actions import Action, EnterFlowAction
+from rapidpro_flow_tools.rapidpro.models.common import Exit
+from rapidpro_flow_tools.rapidpro.models.routers import SwitchRouter, RandomRouter
+from rapidpro_flow_tools.rapidpro.utils import generate_new_uuid
 
 # TODO: EnterFlowNode and WebhookNode are currently children of BaseNode.
 # Ideal class tree of nodes:

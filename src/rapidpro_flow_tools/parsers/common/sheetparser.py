@@ -1,6 +1,6 @@
 import copy
-from .rowdatasheet import RowDataSheet
-from logger.logger import get_logger, logging_context
+from rapidpro_flow_tools.parsers.common.rowdatasheet import RowDataSheet
+from rapidpro_flow_tools.logger.logger import get_logger, logging_context
 
 LOGGER = get_logger()
 

@@ -1,7 +1,7 @@
 import unittest
 
-from rapidpro.models.actions import SendMessageAction
-from rapidpro.models.nodes import BasicNode
+from rapidpro_flow_tools.rapidpro.models.actions import SendMessageAction
+from rapidpro_flow_tools.rapidpro.models.nodes import BasicNode
 
 
 class TestNodes(unittest.TestCase):

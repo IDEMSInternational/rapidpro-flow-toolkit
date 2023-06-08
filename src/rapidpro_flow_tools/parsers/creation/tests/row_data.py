@@ -1,4 +1,4 @@
-from parsers.creation.flowrowmodel import FlowRowModel
+from rapidpro_flow_tools.parsers.creation.flowrowmodel import FlowRowModel
 
 def get_start_row():
     return FlowRowModel(**{
