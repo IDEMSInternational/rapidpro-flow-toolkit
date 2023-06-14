@@ -186,6 +186,30 @@ class WhatsappTemplateModel(DataRowModel):
 	text: str = ''
 
 #########################
+## dev assessment tools
+class WgUnicefModel(DataRowModel):
+	intro: str = ''
+	end_message_concerning: List[str] = []
+	end_message_not_concerning: List[str] = []
+	questions_ids: List[str] = []
+
+class WgUnicefQuestionModel(DataRowModel):
+	qst: str = ''
+	options: List[str] = []
+	concerning_options: List[str] = []
+	concerning_feedback: str = ''
+
+class SwycModel(DataRowModel):
+	intro: List[str] = []
+	options: List[str] = []
+	scores: List[int] = []
+	threshold_age: List[int] = []
+	threshold_score: List[int] = []
+	end_message_concerning: List[str] = []
+	end_message_not_concerning: List[str] = []
+	questions: List[str] = []
+
+#########################
 ## delivery
 from parsers.creation.datarowmodel import DataRowModel
 from parsers.common.rowparser import ParserModel
@@ -230,6 +254,7 @@ class OptionsWrapperOneOptionModel(ParserModel):
 class OptionsWrapperModel(DataRowModel):
 	list_var: str = ''
 	dict_var: str = ''
+	dict_ID: str = ''
 	n_max_opt: int = 9
 	msg_no_options: str = ''
 	msg_one_option: OptionsWrapperOneOptionModel = OptionsWrapperOneOptionModel()
@@ -285,6 +310,10 @@ class ComicNamesModel(DataRowModel):
 class ComicNamesKeyModel(DataRowModel):
 	languages: List[str] = []
 
+class DictionaryModel(DataRowModel):
+	dict_name: str = ''
+	N: str = ''
+	key: str = ''
 
 ####################################
 ## Menu
