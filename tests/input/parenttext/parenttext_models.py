@@ -222,9 +222,10 @@ class GoalModel(DataRowModel):
 	age_group: str = ''
 	relationship: str = ''
 	modules: List[str] = []
+
+class GoalDescriptionModel(DataRowModel):
 	goal_description_new: str = ''
 	goal_description_started: str = ''
-
 
 class SplitModel(DataRowModel):
 	split_variable: str = ''
@@ -307,10 +308,10 @@ class ActivityTypeModel(DataRowModel):
 class ComicNamesModel(DataRowModel):
 	names: List[str] = []
 
-class ComicNamesKeyModel(DataRowModel):
+class DictionaryModel(DataRowModel):
 	languages: List[str] = []
 
-class DictionaryModel(DataRowModel):
+class UseDictionaryModel(DataRowModel):
 	dict_name: str = ''
 	N: str = ''
 	key: str = ''
