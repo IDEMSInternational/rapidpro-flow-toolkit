@@ -4,6 +4,7 @@ from .contentindexrowmodel import ContentIndexRowModel
 from parsers.common.cellparser import CellParser
 from parsers.common.sheetparser import SheetParser
 from parsers.common.rowparser import RowParser
+from parsers.creation.tagmatcher import TagMatcher
 from rapidpro.models.containers import RapidProContainer
 from parsers.creation.flowparser import FlowParser
 from logger.logger import get_logger, logging_context
@@ -19,8 +20,9 @@ class TemplateSheet:
 
 class ContentIndexParser:
 
-	def  __init__(self, sheet_reader, user_data_model_module_name=None):
+	def  __init__(self, sheet_reader, user_data_model_module_name=None, tag_matcher=TagMatcher()):
 		self.sheet_reader = sheet_reader
+		self.tag_matcher = tag_matcher
 		self.template_sheets = {}  # values: tablib tables
 		self.data_sheets = {}  # values: OrderedDicts of RowModels
 		self.flow_definition_rows = []  # list of ContentIndexRowModel
@@ -38,6 +40,8 @@ class ContentIndexParser:
 			logging_prefix = f"{content_index_name} | row {row_idx+2}"
 			with logging_context(logging_prefix):
 				if row.status == 'draft':
+					continue
+				if not self.tag_matcher.matches(row.tags):
 					continue
 				if row.type == 'content_index':
 					if not len(row.sheet_name) == 1:
