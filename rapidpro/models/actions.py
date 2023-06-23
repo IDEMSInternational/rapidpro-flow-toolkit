@@ -147,6 +147,8 @@ class SetContactFieldAction(Action):
         self.field_key = self._get_field_key(field_name)
         self.field_name = field_name
         self.value = value
+        if len(value) > 640:
+            raise RapidProActionError(f'Contact fields are limited to 640 characters, but value has length {len(value)}')
 
     def _assign_fields_from_dict(self, data):
         assert "field" in data
@@ -331,6 +333,8 @@ class SetRunResultAction(Action):
         self.name = name
         self.value = value
         self.category = category
+        if len(value) > 640:
+            raise RapidProActionError(f'Flow results are limited to 640 characters, but value has length {len(value)}')
 
     def render(self):
         render_dict = {
