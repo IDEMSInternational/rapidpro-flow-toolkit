@@ -2,6 +2,7 @@ import json
 import argparse
 
 from parsers.creation.contentindexparser import ContentIndexParser
+from parsers.creation.tagmatcher import TagMatcher
 from parsers.sheets.csv_sheet_reader import CSVSheetReader
 from parsers.sheets.xlsx_sheet_reader import XLSXSheetReader
 from parsers.sheets.google_sheet_reader import GoogleSheetReader
@@ -27,6 +28,7 @@ def main():
     parser.add_argument('output', help='Filename')
     parser.add_argument('--format', required=True, choices=["csv", "xlsx", "google_sheets"], help='Sheet format for reading/writing.')
     parser.add_argument('--datamodels', help='Module defining models for data sheets. E.g. if the definitions reside in ./myfolder/mysubfolder/mymodelsfile.py, then this argument should be myfolder.mysubfolder.mymodelsfile')
+    parser.add_argument('--tags', nargs='*', help='Tags to filter the content index sheet. A sequence of lists, with each list starting with an integer (tag position) followed by tags to include for this position. Example: 1 foo bar 2 baz means: only include rows if tags:1 is empty, foo or bar, and tags:2 is empty or baz.')
     args = parser.parse_args()
 
     if args.command != 'create_flows':
@@ -43,7 +45,8 @@ def main():
         print(f"Format {args.format} currently unsupported.")
         return
 
-    ci_parser = ContentIndexParser(sheet_reader, args.datamodels)
+    tag_matcher = TagMatcher(args.tags)
+    ci_parser = ContentIndexParser(sheet_reader, args.datamodels, tag_matcher=tag_matcher)
     output = ci_parser.parse_all_flows()
     json.dump(output.render(), open(args.output, 'w'), indent=4)
     

@@ -3,6 +3,7 @@ import json
 
 from .mock_sheetreader import MockSheetReader
 from parsers.creation.contentindexparser import ContentIndexParser
+from parsers.creation.tagmatcher import TagMatcher
 from tests.utils import traverse_flow, Context
 
 class TestParsing(unittest.TestCase):
@@ -17,6 +18,9 @@ class TestParsing(unittest.TestCase):
                 self.assertEqual(actions, actions_exp)
         if not flow_found:
             self.assertTrue(False, msg=f'Flow with name "{flow_name}" does not exist in output.')
+
+    def get_flow_names(self, render_output):
+        return {flow["name"] for flow in render_output["flows"]}
 
     def test_basic_template_definition(self):
         ci_sheet = (
@@ -393,3 +397,64 @@ class TestParsing(unittest.TestCase):
             'hello',
         ]
         self.compare_messages(render_output, 'flow - id2', messages_exp)
+
+
+    def test_tags(self):
+        ci_sheet = (
+            'type,sheet_name,new_name,template_arguments,tags.1,tags.2\n'
+            'template_definition,flow,,arg,,\n'
+            'create_flow,flow,flow-world,World,,\n'
+            'create_flow,flow,flow-t1,Tag1Only,tag1,\n'
+            'create_flow,flow,flow-b1,Bag1Only,bag1,\n'
+            'create_flow,flow,flow-t2,Tag2Only,,tag2\n'
+            'create_flow,flow,flow-b2,Bag2Only,,bag2\n'
+            'create_flow,flow,flow-t1t2,Tag1Tag2,tag1,tag2\n'
+            'create_flow,flow,flow-t1b2,Tag1Bag2,tag1,bag2\n'
+            'create_flow,flow,flow-b1t2,Bag1Tag2,bag1,tag2\n'
+        )
+        flow = (
+            '"row_id","type","from","loop_variable","include_if","message_text"\n'
+            ',"send_message",,,,"Hello {{arg}}"\n'
+        )
+        sheet_dict = {
+            'flow' : flow,
+        }
+
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.evalmodels')
+        container = ci_parser.parse_all_flows()
+        render_output = container.render()
+        self.assertEqual(self.get_flow_names(render_output), {"flow-world", "flow-t1", "flow-b1", "flow-t2", "flow-b2", "flow-t1t2", "flow-t1b2", "flow-b1t2"})
+        self.compare_messages(render_output, 'flow-world', ['Hello World'])
+        self.compare_messages(render_output, 'flow-t1', ['Hello Tag1Only'])
+        self.compare_messages(render_output, 'flow-b1', ['Hello Bag1Only'])
+        self.compare_messages(render_output, 'flow-t2', ['Hello Tag2Only'])
+        self.compare_messages(render_output, 'flow-b2', ['Hello Bag2Only'])
+        self.compare_messages(render_output, 'flow-t1t2', ['Hello Tag1Tag2'])
+        self.compare_messages(render_output, 'flow-t1b2', ['Hello Tag1Bag2'])
+        self.compare_messages(render_output, 'flow-b1t2', ['Hello Bag1Tag2'])
+
+        tag_matcher = TagMatcher(["1", "tag1"])
+        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
+        container = ci_parser.parse_all_flows()
+        render_output = container.render()
+        self.assertEqual(self.get_flow_names(render_output), {"flow-world", "flow-t1", "flow-t2", "flow-b2", "flow-t1t2", "flow-t1b2"})
+
+        tag_matcher = TagMatcher(["1", "tag1", "bag1"])
+        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
+        container = ci_parser.parse_all_flows()
+        render_output = container.render()
+        self.assertEqual(self.get_flow_names(render_output), {"flow-world", "flow-t1", "flow-b1", "flow-t2", "flow-b2", "flow-t1t2", "flow-t1b2", "flow-b1t2"})
+
+        tag_matcher = TagMatcher(["1", "tag1", "2", "tag2"])
+        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
+        container = ci_parser.parse_all_flows()
+        render_output = container.render()
+        self.assertEqual(self.get_flow_names(render_output), {"flow-world", "flow-t1","flow-t2","flow-t1t2"})
+
+        tag_matcher = TagMatcher(["5", "tag1", "bag1"])
+        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
+        container = ci_parser.parse_all_flows()
+        render_output = container.render()
+        self.assertEqual(self.get_flow_names(render_output), {"flow-world", "flow-t1", "flow-b1", "flow-t2", "flow-b2", "flow-t1t2", "flow-t1b2", "flow-b1t2"})
+
