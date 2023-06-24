@@ -84,6 +84,7 @@ class CellParser:
         # is not to be processed any further.
         if value is None:
             return ''
+        value = str(value)
         if context is None or (not context and '{' not in value):
             # This is a hacky optimization.
             return value

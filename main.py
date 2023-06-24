@@ -47,7 +47,7 @@ def main():
 
     tag_matcher = TagMatcher(args.tags)
     ci_parser = ContentIndexParser(sheet_reader, args.datamodels, tag_matcher=tag_matcher)
-    output = ci_parser.parse_all_flows()
+    output = ci_parser.parse_all()
     json.dump(output.render(), open(args.output, 'w'), indent=4)
     
 

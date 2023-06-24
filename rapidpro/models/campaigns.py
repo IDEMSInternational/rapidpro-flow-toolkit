@@ -59,9 +59,9 @@ class CampaignEvent:
 
 
 class Campaign:
-    def __init__(self, name, group, uuid=None, events=None):
+    def __init__(self, name, group=None, group_name=None, group_uuid=None, events=None, uuid=None):
         self.name = name
-        self.group = group  # TODO
+        self.group = group or Group(group_name, group_uuid)
         self.uuid = uuid if uuid else generate_new_uuid()
         self.events = events or []
 

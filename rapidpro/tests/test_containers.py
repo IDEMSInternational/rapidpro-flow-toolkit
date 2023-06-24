@@ -35,7 +35,7 @@ def get_has_group_flow():
     flow.add_node(EnterFlowNode('Second Flow'))
     return flow
 
-class TestActions(unittest.TestCase):
+class TestRapidProContainer(unittest.TestCase):
     def setUp(self) -> None:
         pass
 
