@@ -10,11 +10,19 @@ class XLSXSheetReader:
         self.sheets = {}
         for sheet in data.sheets():
             if sheet.title == 'content_index':
-                self.main_sheet = sheet
+                self.main_sheet = self._sanitize(sheet)
             else:
-                self.sheets[sheet.title] = sheet
+                self.sheets[sheet.title] = self._sanitize(sheet)
         if self.main_sheet is None:
             raise ValueError(f'{filename} must have a sheet "content_index"')
+
+    def _sanitize(self, sheet):
+        data = tablib.Dataset()
+        data.headers = sheet.headers
+        for row in sheet:
+            new_row = tuple(str(e) if e is not None else '' for e in row)
+            data.append(new_row)
+        return data
 
     def get_main_sheet(self):
         return self.main_sheet
