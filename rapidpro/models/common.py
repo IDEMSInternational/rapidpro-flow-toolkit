@@ -35,7 +35,7 @@ class FlowReference:
     def from_dict(data):
         return FlowReference(**data)
 
-    def __init__(self, name=None, uuid=None):
+    def __init__(self, name, uuid=None):
         self.name = name
         self.uuid = uuid
 

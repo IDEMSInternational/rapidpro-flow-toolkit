@@ -14,19 +14,19 @@ class CampaignEvent:
         self.unit = unit
         self.event_type = event_type
         self.delivery_hour = delivery_hour
-        self.message = message
+        self.message = message  # This is a dict whose keys are language IDs and values are message text
         self.relative_to = relative_to or ContactFieldReference(relative_to_label, relative_to_key)
         self.start_mode = start_mode
         self.flow = flow or FlowReference(flow_name, flow_uuid)
         self.base_language = base_language
         if event_type == 'M' and (message is None or base_language is None):
             raise ValueError("CampaignEvent must have a message and base_language if the event_type is M")
-        if event_type == 'F' and flow is None:
+        if event_type == 'F' and self.flow is None:
             raise ValueError("CampaignEvent must have a flow if the event_type is F")
 
     def from_dict(data):
         data_copy = copy.deepcopy(data)
-        # normally it's called name, but here it's called label for some reason.
+        # What is called 'label' here is normally it's called 'name' for contact fields.
         data_copy["relative_to"] = ContactFieldReference(data_copy["relative_to"]["label"], data_copy["relative_to"]["key"])
         if "flow" in data_copy:
             data_copy["flow"] = FlowReference(**data_copy["flow"])
@@ -47,7 +47,7 @@ class CampaignEvent:
             "unit" : self.unit,
             "event_type" : self.event_type,
             "delivery_hour" : self.delivery_hour,
-            "message" : self.message,   #             "eng": "SPAM"
+            "message" : self.message,
             "relative_to" : self.relative_to.render_with_label(),
             "start_mode" : self.start_mode,
         }
