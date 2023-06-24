@@ -3,6 +3,8 @@ import collections
 class TagMatcher:
 	def __init__(self, params=[]):		
 		self.tag_patterns = collections.defaultdict(list)
+		if not params:
+			return
 		current_index = None
 		for param in params:
 			try:
