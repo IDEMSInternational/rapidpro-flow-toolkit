@@ -223,9 +223,7 @@ class GoalModel(DataRowModel):
 	relationship: str = ''
 	modules: List[str] = []
 
-class GoalDescriptionModel(DataRowModel):
-	goal_description_new: str = ''
-	goal_description_started: str = ''
+
 
 class SplitModel(DataRowModel):
 	split_variable: str = ''
@@ -275,7 +273,8 @@ class ProceedModel(ParserModel):
 
 class SelectGoalModel(DataRowModel):
 	update_prog_var_flow: str = ''
-	split_by_goal_update_flow: str = ''	
+	split_by_goal_update_flow: str = ''
+	goal_description: str = ''	
 	proceed: ProceedModel = ProceedModel()
 
 class InteractionOptionModel(ParserModel):
