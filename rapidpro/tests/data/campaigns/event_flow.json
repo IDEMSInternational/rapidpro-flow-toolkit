@@ -1,0 +1,17 @@
+{
+  "uuid": "8881b776-a9fe-42b2-9184-9f8ab28651ff",
+  "offset": 5730,
+  "unit": "M",
+  "event_type": "F",
+  "delivery_hour": -1,
+  "message": null,
+  "relative_to": {
+    "label": "Last Seen On",
+    "key": "last_seen_on"
+  },
+  "start_mode": "I",
+  "flow": {
+    "uuid": "55c9b0f7-9a21-4b45-8a80-5f2812578e55",
+    "name": "my_flow"
+  }
+}

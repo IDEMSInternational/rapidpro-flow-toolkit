@@ -79,6 +79,12 @@ class ContactFieldReference:
             render_dict["type"] = type
         return render_dict
 
+    def render_with_label(self):
+        return {
+            'label': self.name,
+            'key': self.key
+        }
+
 
 class Group:
     def from_dict(data):

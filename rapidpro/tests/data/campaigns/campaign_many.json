@@ -1,0 +1,60 @@
+{
+  "uuid": "74c171a0-93dc-4b63-b2e1-797f9973adbf",
+  "name": "Inactivity reminders",
+  "group": {
+    "uuid": "3615f40e-6c3a-4b57-ab85-91527cfb2be4",
+    "name": "Survey Audience"
+  },
+  "events": [
+    {
+      "uuid": "8881b776-a9fe-42b2-9184-9f8ab28651ff",
+      "offset": 5730,
+      "unit": "M",
+      "event_type": "F",
+      "delivery_hour": -1,
+      "message": null,
+      "relative_to": {
+        "label": "Last Seen On",
+        "key": "last_seen_on"
+      },
+      "start_mode": "I",
+      "flow": {
+        "uuid": "55c9b0f7-9a21-4b45-8a80-5f2812578e55",
+        "name": "my_flow"
+      }
+    },
+    {
+      "uuid": "151e30dd-7a39-4f3a-86e0-b3db0ca115e9",
+      "offset": 15,
+      "unit": "H",
+      "event_type": "F",
+      "delivery_hour": -1,
+      "message": null,
+      "relative_to": {
+        "label": "Created On",
+        "key": "created_on"
+      },
+      "start_mode": "S",
+      "flow": {
+        "uuid": "30c9b0f7-9a21-4b45-8a80-5f2812578eed",
+        "name": "setlang"
+      }
+    },
+    {
+      "uuid": "6809385b-c328-4282-bf4d-08832fba4650",
+      "offset": 15,
+      "unit": "D",
+      "event_type": "M",
+      "delivery_hour": 18,
+      "message": {
+        "eng": "SPAM"
+      },
+      "relative_to": {
+        "label": "Created On",
+        "key": "created_on"
+      },
+      "start_mode": "P",
+      "base_language": "eng"
+    }
+  ]
+}

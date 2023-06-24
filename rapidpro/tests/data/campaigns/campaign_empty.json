@@ -1,0 +1,9 @@
+{
+  "uuid": "74c171a0-93dc-4b63-b2e1-797f9973adbf",
+  "name": "Inactivity reminders",
+  "group": {
+    "uuid": "3615f40e-6c3a-4b57-ab85-91527cfb2be4",
+    "name": "Survey Audience"
+  },
+  "events": []
+}
