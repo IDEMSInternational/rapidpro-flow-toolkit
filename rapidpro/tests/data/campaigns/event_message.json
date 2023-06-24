@@ -1,0 +1,17 @@
+{
+  "uuid": "6809385b-c328-4282-bf4d-08832fba4650",
+  "offset": 15,
+  "unit": "D",
+  "event_type": "M",
+  "delivery_hour": 18,
+  "message": {
+    "eng": "SPAM",
+    "fra": "SPAMME"
+  },
+  "relative_to": {
+    "label": "Created On",
+    "key": "created_on"
+  },
+  "start_mode": "P",
+  "base_language": "eng"
+}

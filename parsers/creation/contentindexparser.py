@@ -7,6 +7,8 @@ from parsers.common.rowparser import RowParser
 from parsers.creation.tagmatcher import TagMatcher
 from rapidpro.models.containers import RapidProContainer
 from parsers.creation.flowparser import FlowParser
+from parsers.creation.campaignparser import CampaignParser
+from parsers.creation.campaigneventrowmodel import CampaignEventRowModel
 from logger.logger import get_logger, logging_context
 
 LOGGER = get_logger()
@@ -26,6 +28,7 @@ class ContentIndexParser:
 		self.template_sheets = {}  # values: tablib tables
 		self.data_sheets = {}  # values: OrderedDicts of RowModels
 		self.flow_definition_rows = []  # list of ContentIndexRowModel
+		self.campaign_definition_rows = []  # list of ContentIndexRowModel
 		if user_data_model_module_name:
 			self.user_models_module = importlib.import_module(user_data_model_module_name)
 		main_sheet = self.sheet_reader.get_main_sheet()
@@ -63,6 +66,10 @@ class ContentIndexParser:
 						self.template_sheets[sheet_name] = TemplateSheet(sheet, row.template_argument_definitions)
 					if row.type == 'create_flow':
 						self.flow_definition_rows.append((logging_prefix, row))
+				elif row.type == 'create_campaign':
+					if not len(row.sheet_name) == 1:
+						LOGGER.critical('For create_campaign rows, exactly one sheet_name has to be specified')
+					self.campaign_definition_rows.append((logging_prefix, row))
 				else:
 					LOGGER.error(f'invalid type: "{row.type}"')
 
@@ -104,7 +111,6 @@ class ContentIndexParser:
 		return self.template_sheets[name]
 
 	def get_node_group(self, template_name, data_sheet, data_row_id, template_arguments):
-		# TODO: Factor out logic duplication between this function and parse_all_flows.
 		if (data_sheet and data_row_id) or (not data_sheet and not data_row_id):
 			flow_name = template_name
 			with logging_context(f'{template_name}'):
@@ -112,8 +118,25 @@ class ContentIndexParser:
 		else:
 			LOGGER.critical(f'For insert_as_block, either both data_sheet and data_row_id or neither have to be provided.')
 
-	def parse_all_flows(self):
+	def parse_all(self):
 		rapidpro_container = RapidProContainer()
+		self.parse_all_flows(rapidpro_container)
+		self.parse_all_campaigns(rapidpro_container)
+		return rapidpro_container
+
+	def parse_all_campaigns(self, rapidpro_container):
+		for logging_prefix, row in self.campaign_definition_rows:
+			sheet_name = row.sheet_name[0]
+			with logging_context(f'{logging_prefix} | {sheet_name}'):
+				sheet = self.sheet_reader.get_sheet(sheet_name)
+				row_parser = RowParser(CampaignEventRowModel, CellParser())
+				sheet_parser = SheetParser(row_parser, sheet)
+				rows = sheet_parser.parse_all()
+				campaign_parser = CampaignParser(row.new_name or sheet_name, row.group, rows)
+				campaign = campaign_parser.parse()
+				rapidpro_container.add_campaign(campaign)
+
+	def parse_all_flows(self, rapidpro_container):
 		for logging_prefix, row in self.flow_definition_rows:
 			with logging_context(f'{logging_prefix} | {row.sheet_name[0]}'):
 				if row.data_sheet and not row.data_row_id:
@@ -124,8 +147,7 @@ class ContentIndexParser:
 				elif not row.data_sheet and row.data_row_id:
 					LOGGER.critical(f'For create_flow, if data_row_id is provided, data_sheet must also be provided.')
 				else:
-					self.parse_flow(row.sheet_name[0], row.data_sheet, row.data_row_id, row.template_arguments, rapidpro_container, row.new_name)
-		return rapidpro_container	
+					self.parse_flow(row.sheet_name[0], row.data_sheet, row.data_row_id, row.template_arguments, rapidpro_container, row.new_name)	
 
 	def parse_flow(self, sheet_name, data_sheet, data_row_id, template_arguments, rapidpro_container, new_name='', parse_as_block=False):
 		base_name = new_name or sheet_name

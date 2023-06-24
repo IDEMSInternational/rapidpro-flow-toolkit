@@ -19,23 +19,28 @@ class TestParsing(unittest.TestCase):
         if not flow_found:
             self.assertTrue(False, msg=f'Flow with name "{flow_name}" does not exist in output.')
 
+    def compare_to_expected(self, render_output):
+        self.compare_messages(render_output, 'my_basic_flow', ['Some text'])
+        self.compare_messages(render_output, 'my_template - row1', ['Value1', 'Happy1 and Sad1'])
+        self.compare_messages(render_output, 'my_template - row2', ['Value2', 'Happy2 and Sad2'])
+        self.assertEqual(render_output["campaigns"][0]["name"], "my_campaign")
+        self.assertEqual(render_output["campaigns"][0]["group"]["name"], "My Group")
+        self.assertEqual(render_output["campaigns"][0]["events"][0]["flow"]["name"], 'my_basic_flow')
+        self.assertEqual(render_output["campaigns"][0]["events"][0]["flow"]["uuid"], render_output["flows"][2]["uuid"])        
+
     def test_example1_csv(self):
         # Same test as test_generate_flows in parsers/creation/tests/test_contentindexparser
         # but with csvs
         sheet_reader = CSVSheetReader('tests/input/example1/content_index.csv')
         ci_parser = ContentIndexParser(sheet_reader, 'tests.input.example1.nestedmodel')
-        container = ci_parser.parse_all_flows()
+        container = ci_parser.parse_all()
         render_output = container.render()
-        self.compare_messages(render_output, 'my_basic_flow', ['Some text'])
-        self.compare_messages(render_output, 'my_template - row1', ['Value1', 'Happy1 and Sad1'])
-        self.compare_messages(render_output, 'my_template - row2', ['Value2', 'Happy2 and Sad2'])
+        self.compare_to_expected(render_output)
 
     def test_example1_xlsx(self):
         # Same test as above
         sheet_reader = XLSXSheetReader('tests/input/example1/content_index.xlsx')
         ci_parser = ContentIndexParser(sheet_reader, 'tests.input.example1.nestedmodel')
-        container = ci_parser.parse_all_flows()
+        container = ci_parser.parse_all()
         render_output = container.render()
-        self.compare_messages(render_output, 'my_basic_flow', ['Some text'])
-        self.compare_messages(render_output, 'my_template - row1', ['Value1', 'Happy1 and Sad1'])
-        self.compare_messages(render_output, 'my_template - row2', ['Value2', 'Happy2 and Sad2'])
+        self.compare_to_expected(render_output)
