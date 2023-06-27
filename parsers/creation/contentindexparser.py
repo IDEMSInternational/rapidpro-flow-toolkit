@@ -23,18 +23,21 @@ class TemplateSheet:
 class ContentIndexParser:
 
 	def  __init__(self, sheet_reader, user_data_model_module_name=None, tag_matcher=TagMatcher()):
-		self.sheet_reader = sheet_reader
 		self.tag_matcher = tag_matcher
 		self.template_sheets = {}  # values: tablib tables
 		self.data_sheets = {}  # values: OrderedDicts of RowModels
 		self.flow_definition_rows = []  # list of ContentIndexRowModel
-		self.campaign_definition_rows = []  # list of ContentIndexRowModel
+		self.campaign_parsers = []  # list of CampaignParser
 		if user_data_model_module_name:
 			self.user_models_module = importlib.import_module(user_data_model_module_name)
-		main_sheet = self.sheet_reader.get_main_sheet()
-		self.process_content_index_table(main_sheet, "content_index")
+		main_sheet = sheet_reader.get_main_sheet()
+		self.process_content_index_table(sheet_reader, main_sheet, "content_index")
 
-	def process_content_index_table(self, content_index_table, content_index_name):
+	def add_content_index(self, sheet_reader):
+		main_sheet = sheet_reader.get_main_sheet()
+		self.process_content_index_table(sheet_reader, main_sheet, "content_index")
+
+	def process_content_index_table(self, sheet_reader, content_index_table, content_index_name):
 		# content_index_table is in tablib table format
 		row_parser = RowParser(ContentIndexRowModel, CellParser())
 		sheet_parser = SheetParser(row_parser, content_index_table)
@@ -50,30 +53,31 @@ class ContentIndexParser:
 					if not len(row.sheet_name) == 1:
 						LOGGER.critical('For content_index rows, exactly one sheet_name has to be specified')
 					sheet_name = row.sheet_name[0]
-					sheet = self.sheet_reader.get_sheet(sheet_name)
+					sheet = sheet_reader.get_sheet(sheet_name)
 					with logging_context(f"{sheet_name}"):
-						self.process_content_index_table(sheet, sheet_name)
+						self.process_content_index_table(sheet_reader, sheet, sheet_name)
 				elif row.type == 'data_sheet':
 					if not len(row.sheet_name) >= 1:
 						LOGGER.critical('For data_sheet rows, at least one sheet_name has to be specified')
-					self.process_data_sheet(row.sheet_name, row.new_name, row.data_model)
+					self.process_data_sheet(sheet_reader, row.sheet_name, row.new_name, row.data_model)
 				elif row.type in ['template_definition', 'create_flow']:
 					if not len(row.sheet_name) == 1:
 						LOGGER.critical('For template_definition/create_flow rows, exactly one sheet_name has to be specified')
 					sheet_name = row.sheet_name[0]
 					if sheet_name not in self.template_sheets:
-						sheet = self.sheet_reader.get_sheet(sheet_name)
+						sheet = sheet_reader.get_sheet(sheet_name)
 						self.template_sheets[sheet_name] = TemplateSheet(sheet, row.template_argument_definitions)
 					if row.type == 'create_flow':
 						self.flow_definition_rows.append((logging_prefix, row))
 				elif row.type == 'create_campaign':
 					if not len(row.sheet_name) == 1:
 						LOGGER.critical('For create_campaign rows, exactly one sheet_name has to be specified')
-					self.campaign_definition_rows.append((logging_prefix, row))
+					campaign_parser = self.create_campaign_parser(sheet_reader, row)
+					self.campaign_parsers.append((logging_prefix, campaign_parser))
 				else:
 					LOGGER.error(f'invalid type: "{row.type}"')
 
-	def process_data_sheet(self, sheet_names, new_name, data_model_name):
+	def process_data_sheet(self, sheet_reader, sheet_names, new_name, data_model_name):
 		if not hasattr(self, 'user_models_module'):
 			LOGGER.critical(f'If there are data sheets, a user_data_model_module_name has to be provided (as commandline argument)')
 			return
@@ -88,7 +92,7 @@ class ContentIndexParser:
 		content = OrderedDict()
 		for sheet_name in sheet_names:
 			with logging_context(sheet_name):
-				data_table = self.sheet_reader.get_sheet(sheet_name)
+				data_table = sheet_reader.get_sheet(sheet_name)
 				try:
 					user_model = getattr(self.user_models_module, data_model_name)
 				except AttributeError:
@@ -124,15 +128,18 @@ class ContentIndexParser:
 		self.parse_all_campaigns(rapidpro_container)
 		return rapidpro_container
 
+	def create_campaign_parser(self, sheet_reader, row):
+		sheet_name = row.sheet_name[0]
+		sheet = sheet_reader.get_sheet(sheet_name)
+		row_parser = RowParser(CampaignEventRowModel, CellParser())
+		sheet_parser = SheetParser(row_parser, sheet)
+		rows = sheet_parser.parse_all()
+		return CampaignParser(row.new_name or sheet_name, row.group, rows)
+
 	def parse_all_campaigns(self, rapidpro_container):
-		for logging_prefix, row in self.campaign_definition_rows:
-			sheet_name = row.sheet_name[0]
+		for logging_prefix, campaign_parser in self.campaign_parsers:
+			sheet_name = campaign_parser.campaign.name
 			with logging_context(f'{logging_prefix} | {sheet_name}'):
-				sheet = self.sheet_reader.get_sheet(sheet_name)
-				row_parser = RowParser(CampaignEventRowModel, CellParser())
-				sheet_parser = SheetParser(row_parser, sheet)
-				rows = sheet_parser.parse_all()
-				campaign_parser = CampaignParser(row.new_name or sheet_name, row.group, rows)
 				campaign = campaign_parser.parse()
 				rapidpro_container.add_campaign(campaign)
 
