@@ -1,6 +1,7 @@
-from rapidpro.utils import generate_new_uuid
-from rapidpro.models.common import Group, FlowReference, ContactFieldReference, generate_field_key
 import copy
+
+from rapidpro_flow_tools.rapidpro.utils import generate_new_uuid
+from rapidpro_flow_tools.rapidpro.models.common import Group, FlowReference, ContactFieldReference
 
 
 class CampaignEvent:

@@ -1,12 +1,16 @@
 import unittest
-import json
+from pathlib import Path
 
-from parsers.sheets.csv_sheet_reader import CSVSheetReader
-from parsers.sheets.xlsx_sheet_reader import XLSXSheetReader
-from parsers.creation.contentindexparser import ContentIndexParser
-from tests.utils import traverse_flow, Context
+from rapidpro_flow_tools.parsers.sheets.csv_sheet_reader import CSVSheetReader
+from rapidpro_flow_tools.parsers.sheets.xlsx_sheet_reader import XLSXSheetReader
+from rapidpro_flow_tools.parsers.creation.contentindexparser import ContentIndexParser
+from rapidpro_flow_tools.tests.utils import traverse_flow, Context
+
 
 class TestParsing(unittest.TestCase):
+
+    def setUp(self):
+        self.input_dir = Path(__file__).parent / "input/example1"
 
     def compare_messages(self, render_output, flow_name, messages_exp, context=None):
         flow_found = False
@@ -26,7 +30,7 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(render_output["campaigns"][0]["name"], "my_campaign")
         self.assertEqual(render_output["campaigns"][0]["group"]["name"], "My Group")
         self.assertEqual(render_output["campaigns"][0]["events"][0]["flow"]["name"], 'my_basic_flow')
-        self.assertEqual(render_output["campaigns"][0]["events"][0]["flow"]["uuid"], render_output["flows"][2]["uuid"])        
+        self.assertEqual(render_output["campaigns"][0]["events"][0]["flow"]["uuid"], render_output["flows"][2]["uuid"])
 
     def check_example1(self, ci_parser):
         container = ci_parser.parse_all()
@@ -36,21 +40,30 @@ class TestParsing(unittest.TestCase):
     def test_example1_csv(self):
         # Same test as test_generate_flows in parsers/creation/tests/test_contentindexparser
         # but with csvs
-        sheet_reader = CSVSheetReader('tests/input/example1/content_index.csv')
-        ci_parser = ContentIndexParser(sheet_reader, 'tests.input.example1.nestedmodel')
+        sheet_reader = CSVSheetReader(self.input_dir / "content_index.csv")
+        ci_parser = ContentIndexParser(
+            sheet_reader,
+            'rapidpro_flow_tools.tests.input.example1.nestedmodel'
+        )
         self.check_example1(ci_parser)
 
     def test_example1_split_csv(self):
         # Same test as test_generate_flows in parsers/creation/tests/test_contentindexparser
         # but with csvs
-        sheet_reader = CSVSheetReader('tests/input/example1/content_index1.csv')
-        ci_parser = ContentIndexParser(sheet_reader, 'tests.input.example1.nestedmodel')
-        sheet_reader = CSVSheetReader('tests/input/example1/content_index2.csv')
+        sheet_reader = CSVSheetReader(self.input_dir / "content_index1.csv")
+        ci_parser = ContentIndexParser(
+            sheet_reader,
+            'rapidpro_flow_tools.tests.input.example1.nestedmodel'
+        )
+        sheet_reader = CSVSheetReader(self.input_dir / "content_index2.csv")
         ci_parser.add_content_index(sheet_reader)
         self.check_example1(ci_parser)
 
     def test_example1_xlsx(self):
         # Same test as above
-        sheet_reader = XLSXSheetReader('tests/input/example1/content_index.xlsx')
-        ci_parser = ContentIndexParser(sheet_reader, 'tests.input.example1.nestedmodel')
+        sheet_reader = XLSXSheetReader(self.input_dir / "content_index.xlsx")
+        ci_parser = ContentIndexParser(
+            sheet_reader,
+            'rapidpro_flow_tools.tests.input.example1.nestedmodel'
+        )
         self.check_example1(ci_parser)

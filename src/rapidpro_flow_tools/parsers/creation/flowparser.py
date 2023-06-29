@@ -1,12 +1,13 @@
-import re
-import json
 from collections import defaultdict
 
-from rapidpro_flow_tools.rapidpro.models.actions import SendMessageAction, SetContactFieldAction, AddContactGroupAction, \
-    RemoveContactGroupAction, SetRunResultAction, SetContactPropertyAction, Group
+from rapidpro_flow_tools.rapidpro.models.actions import (
+    SendMessageAction, SetContactFieldAction, AddContactGroupAction,
+    RemoveContactGroupAction, SetRunResultAction, SetContactPropertyAction,
+    Group, WhatsAppMessageTemplating)
 from rapidpro_flow_tools.rapidpro.models.containers import FlowContainer
-from rapidpro_flow_tools.rapidpro.models.nodes import BaseNode, BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
-from rapidpro_flow_tools.rapidpro.models.routers import SwitchRouter, RandomRouter
+from rapidpro_flow_tools.rapidpro.models.exceptions import RapidProActionError
+from rapidpro_flow_tools.rapidpro.models.nodes import BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
+from rapidpro_flow_tools.rapidpro.models.routers import SwitchRouter
 from rapidpro_flow_tools.parsers.common.cellparser import CellParser
 from rapidpro_flow_tools.parsers.common.sheetparser import SheetParser
 from rapidpro_flow_tools.parsers.common.rowparser import RowParser
@@ -300,7 +301,7 @@ class FlowParser:
     def parse_as_block(self):
         self._parse_block()
         if not len(self.node_group_stack) == 1:
-            LOGGER.critical(f'Unexpected end of flow. Did you forget end_for/end_block?')
+            LOGGER.critical('Unexpected end of flow. Did you forget end_for/end_block?')
         return self.current_node_group()
 
     def parse(self):
@@ -593,6 +594,6 @@ class FlowParser:
         # Caveat/TODO: Need to ensure starting node comes first.
         flow_container = FlowContainer(flow_name=self.flow_name, uuid=self.flow_uuid)
         if not len(self.node_group_stack) == 1:
-            LOGGER.critical(f'Unexpected end of flow. Did you forget end_for/end_block?')
+            LOGGER.critical('Unexpected end of flow. Did you forget end_for/end_block?')
         self.current_node_group().add_nodes_to_flow(flow_container)
         return flow_container

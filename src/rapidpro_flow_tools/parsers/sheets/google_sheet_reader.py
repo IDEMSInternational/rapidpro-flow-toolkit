@@ -65,7 +65,7 @@ class GoogleSheetReader:
                 self.sheets[name] = self._table_from_content(content)
 
         if self.main_sheet is None:
-            raise ValueError(f'{filename} must have a sheet "content_index"')
+            raise ValueError(f'{spreadsheet_id} must have a sheet "content_index"')
 
     def _table_from_content(self, content):
         table = tablib.Dataset()

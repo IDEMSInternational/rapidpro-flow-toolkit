@@ -1,11 +1,8 @@
 import csv
-import copy
-import json
-import re
-import uuid
-from collections import defaultdict
 from pathlib import Path
+import re
 import tablib
+
 
 def get_dict_from_csv(csv_file_path):
     with open(f'{Path(__file__).parents[0].absolute()}/{csv_file_path}') as csv_file:

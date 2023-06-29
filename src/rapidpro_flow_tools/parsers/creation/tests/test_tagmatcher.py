@@ -1,5 +1,6 @@
 import unittest
-from parsers.creation.tagmatcher import TagMatcher
+from rapidpro_flow_tools.parsers.creation.tagmatcher import TagMatcher
+
 
 class TestTagMatcher(unittest.TestCase):
 

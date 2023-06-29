@@ -1,11 +1,13 @@
-import unittest
-import json
 import copy
+import json
+import unittest
+from pathlib import Path
 
-from .utils import traverse_flow, Context, get_dict_from_csv, get_table_from_file
-from parsers.creation.flowparser import FlowParser
-from rapidpro.models.containers import RapidProContainer, FlowContainer
-from parsers.common.tests.mock_sheetparser import MockSheetParser
+from rapidpro_flow_tools.tests.utils import traverse_flow, Context, get_table_from_file
+from rapidpro_flow_tools.parsers.creation.flowparser import FlowParser
+from rapidpro_flow_tools.rapidpro.models.containers import RapidProContainer, FlowContainer
+from rapidpro_flow_tools.parsers.common.tests.mock_sheetparser import MockSheetParser
+
 
 class TestFlowParser(unittest.TestCase):
     def setUp(self) -> None:
@@ -20,7 +22,7 @@ class TestFlowParser(unittest.TestCase):
         # print(json.dumps(output_flow, indent=2))
 
         # Load the expected output flow
-        with open("tests/output/all_test_flows.json", 'r') as file:
+        with open(Path(__file__).parent / "output/all_test_flows.json", 'r') as file:
             output_exp = json.load(file)
         for flow in output_exp["flows"]:
             if flow["name"] == flow_name:
@@ -48,7 +50,7 @@ class TestFlowParser(unittest.TestCase):
     def test_no_switch_nodes(self):
         self.run_example('input/no_switch_nodes.csv', 'no_switch_nodes', Context())
 
-    def test_no_switch_nodes(self):
+    def test_no_switch_nodes_without_row_ids(self):
         self.run_example('input/no_switch_nodes_without_row_ids.csv', 'no_switch_nodes', Context())
 
     def test_switch_nodes(self):

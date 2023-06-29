@@ -1,9 +1,5 @@
-import importlib
-from collections import OrderedDict
-from .campaigneventrowmodel import CampaignEventRowModel
-from rapidpro.models.campaigns import Campaign, CampaignEvent
-
-from logger.logger import get_logger, logging_context
+from rapidpro_flow_tools.rapidpro.models.campaigns import Campaign, CampaignEvent
+from rapidpro_flow_tools.logger.logger import get_logger, logging_context
 
 LOGGER = get_logger()
 

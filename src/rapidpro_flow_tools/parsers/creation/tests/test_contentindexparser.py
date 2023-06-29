@@ -84,7 +84,7 @@ class TestParsing(unittest.TestCase):
         )
 
         sheet_reader = MockSheetReader(ci_sheet, {'simpledata' : simpledata})
-        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.simplemodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'rapidpro_flow_tools.parsers.creation.tests.datarowmodels.simplemodel')
         datamodelA = ci_parser.get_data_model_instance('simpledata', 'rowA')
         datamodelB = ci_parser.get_data_model_instance('simpledata', 'rowB')
         self.assertEqual(datamodelA.value1, '1A')
@@ -111,7 +111,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.simplemodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'rapidpro_flow_tools.parsers.creation.tests.datarowmodels.simplemodel')
         datamodelA = ci_parser.get_data_model_instance('simpledata', 'rowA')
         datamodelB = ci_parser.get_data_model_instance('simpledata', 'rowB')
         self.assertEqual(datamodelA.value1, '1A')
@@ -156,7 +156,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.nestedmodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'rapidpro_flow_tools.parsers.creation.tests.datarowmodels.nestedmodel')
         container = ci_parser.parse_all()
         render_output = container.render()
         self.compare_messages(render_output, 'my_basic_flow', ['Some text'])
@@ -164,7 +164,7 @@ class TestParsing(unittest.TestCase):
         self.compare_messages(render_output, 'my_template - row2', ['Value2', 'Happy2 and Sad2'])
 
         sheet_reader = MockSheetReader(ci_sheet_alt, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.nestedmodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'rapidpro_flow_tools.parsers.creation.tests.datarowmodels.nestedmodel')
         container = ci_parser.parse_all()
         render_output = container.render()
         self.compare_messages(render_output, 'my_basic_flow', ['Some text'])
@@ -195,7 +195,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.nestedmodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'rapidpro_flow_tools.parsers.creation.tests.datarowmodels.nestedmodel')
         container = ci_parser.parse_all()
         render_output = container.render()
         self.compare_messages(render_output, 'my_renamed_template - row1', ['Value1 ARG1 ARG2', 'Happy1 and Sad1'])
@@ -238,7 +238,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.nestedmodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'rapidpro_flow_tools.parsers.creation.tests.datarowmodels.nestedmodel')
         container = ci_parser.parse_all()
         render_output = container.render()
         messages_exp = [
@@ -297,7 +297,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.listmodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'rapidpro_flow_tools.parsers.creation.tests.datarowmodels.listmodel')
         container = ci_parser.parse_all()
         render_output = container.render()
         messages_exp = [
@@ -344,7 +344,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.listmodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'rapidpro_flow_tools.parsers.creation.tests.datarowmodels.listmodel')
         container = ci_parser.parse_all()
         render_output = container.render()
         messages_exp = [
@@ -386,7 +386,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.evalmodels')
+        ci_parser = ContentIndexParser(sheet_reader, 'rapidpro_flow_tools.parsers.creation.tests.datarowmodels.evalmodels')
         container = ci_parser.parse_all()
         render_output = container.render()
         messages_exp = [
@@ -421,7 +421,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.evalmodels')
+        ci_parser = ContentIndexParser(sheet_reader, 'rapidpro_flow_tools.parsers.creation.tests.datarowmodels.evalmodels')
         container = ci_parser.parse_all()
         render_output = container.render()
         self.assertEqual(self.get_flow_names(render_output), {"flow-world", "flow-t1", "flow-b1", "flow-t2", "flow-b2", "flow-t1t2", "flow-t1b2", "flow-b1t2"})
@@ -435,25 +435,25 @@ class TestParsing(unittest.TestCase):
         self.compare_messages(render_output, 'flow-b1t2', ['Hello Bag1Tag2'])
 
         tag_matcher = TagMatcher(["1", "tag1"])
-        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
+        ci_parser = ContentIndexParser(sheet_reader, 'rapidpro_flow_tools.parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
         container = ci_parser.parse_all()
         render_output = container.render()
         self.assertEqual(self.get_flow_names(render_output), {"flow-world", "flow-t1", "flow-t2", "flow-b2", "flow-t1t2", "flow-t1b2"})
 
         tag_matcher = TagMatcher(["1", "tag1", "bag1"])
-        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
+        ci_parser = ContentIndexParser(sheet_reader, 'rapidpro_flow_tools.parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
         container = ci_parser.parse_all()
         render_output = container.render()
         self.assertEqual(self.get_flow_names(render_output), {"flow-world", "flow-t1", "flow-b1", "flow-t2", "flow-b2", "flow-t1t2", "flow-t1b2", "flow-b1t2"})
 
         tag_matcher = TagMatcher(["1", "tag1", "2", "tag2"])
-        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
+        ci_parser = ContentIndexParser(sheet_reader, 'rapidpro_flow_tools.parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
         container = ci_parser.parse_all()
         render_output = container.render()
         self.assertEqual(self.get_flow_names(render_output), {"flow-world", "flow-t1","flow-t2","flow-t1t2"})
 
         tag_matcher = TagMatcher(["5", "tag1", "bag1"])
-        ci_parser = ContentIndexParser(sheet_reader, 'parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
+        ci_parser = ContentIndexParser(sheet_reader, 'rapidpro_flow_tools.parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
         container = ci_parser.parse_all()
         render_output = container.render()
         self.assertEqual(self.get_flow_names(render_output), {"flow-world", "flow-t1", "flow-b1", "flow-t2", "flow-b2", "flow-t1t2", "flow-t1b2", "flow-b1t2"})

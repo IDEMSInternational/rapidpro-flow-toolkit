@@ -1,11 +1,15 @@
 import importlib
 from collections import OrderedDict
+
 from rapidpro_flow_tools.parsers.creation.contentindexrowmodel import ContentIndexRowModel
 from rapidpro_flow_tools.parsers.common.cellparser import CellParser
 from rapidpro_flow_tools.parsers.common.sheetparser import SheetParser
 from rapidpro_flow_tools.parsers.common.rowparser import RowParser
 from rapidpro_flow_tools.rapidpro.models.containers import RapidProContainer
 from rapidpro_flow_tools.parsers.creation.flowparser import FlowParser
+from rapidpro_flow_tools.parsers.creation.campaignparser import CampaignParser
+from rapidpro_flow_tools.parsers.creation.campaigneventrowmodel import CampaignEventRowModel
+from rapidpro_flow_tools.parsers.creation.tagmatcher import TagMatcher
 from rapidpro_flow_tools.logger.logger import get_logger, logging_context
 
 LOGGER = get_logger()
@@ -76,13 +80,13 @@ class ContentIndexParser:
 
 	def process_data_sheet(self, sheet_reader, sheet_names, new_name, data_model_name):
 		if not hasattr(self, 'user_models_module'):
-			LOGGER.critical(f'If there are data sheets, a user_data_model_module_name has to be provided (as commandline argument)')
+			LOGGER.critical('If there are data sheets, a user_data_model_module_name has to be provided (as commandline argument)')
 			return
 		if not data_model_name:
-			LOGGER.critical(f'No data_model_name provided for data sheet.')
+			LOGGER.critical('No data_model_name provided for data sheet.')
 			return
 		if len(sheet_names) > 1 and not new_name:
-			LOGGER.critical(f'If multiple sheets are concatenated, a new_name has to be provided')
+			LOGGER.critical('If multiple sheets are concatenated, a new_name has to be provided')
 			return
 		if not new_name:
 			new_name = sheet_names[0]
@@ -117,7 +121,7 @@ class ContentIndexParser:
 			with logging_context(f'{template_name}'):
 				return self.parse_flow(template_name, data_sheet, data_row_id, template_arguments, RapidProContainer(), parse_as_block=True)
 		else:
-			LOGGER.critical(f'For insert_as_block, either both data_sheet and data_row_id or neither have to be provided.')
+			LOGGER.critical('For insert_as_block, either both data_sheet and data_row_id or neither have to be provided.')
 
 	def parse_all(self):
 		rapidpro_container = RapidProContainer()
@@ -149,7 +153,7 @@ class ContentIndexParser:
 						with logging_context(f'with data_row_id "{data_row_id}"'):
 							self.parse_flow(row.sheet_name[0], row.data_sheet, data_row_id, row.template_arguments, rapidpro_container, row.new_name)
 				elif not row.data_sheet and row.data_row_id:
-					LOGGER.critical(f'For create_flow, if data_row_id is provided, data_sheet must also be provided.')
+					LOGGER.critical('For create_flow, if data_row_id is provided, data_sheet must also be provided.')
 				else:
 					self.parse_flow(row.sheet_name[0], row.data_sheet, row.data_row_id, row.template_arguments, rapidpro_container, row.new_name)	
 
@@ -160,7 +164,7 @@ class ContentIndexParser:
 			context = self.get_data_model_instance(data_sheet, data_row_id)
 		else:
 			if data_sheet or data_row_id:
-				LOGGER.warn(f'For create_flow, if no data_sheet is provided, data_row_id should be blank as well.')
+				LOGGER.warn('For create_flow, if no data_sheet is provided, data_row_id should be blank as well.')
 			flow_name = base_name
 			context = {}
 		template_sheet = self.get_template_sheet(sheet_name)

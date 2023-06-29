@@ -1,6 +1,6 @@
 import unittest
 import json
-import glob
+from pathlib import Path
 
 from rapidpro_flow_tools.rapidpro.models.actions import Action, Group
 from rapidpro_flow_tools.rapidpro.models.common import Exit
@@ -12,43 +12,43 @@ from rapidpro_flow_tools.rapidpro.models.campaigns import Campaign, CampaignEven
 
 class TestImportExport(unittest.TestCase):
     def setUp(self) -> None:
-        pass
+        self.data_dir = Path(__file__).parent / "data"
 
     def test_all_action_types(self):
-        actionFilenamesList = glob.glob('rapidpro/tests/data/actions/*.json')
+        actionFilenamesList = self.data_dir.glob('actions/*.json')
         for filename in actionFilenamesList:
             with open(filename, 'r') as f:
-               action_data = json.load(f)
+                action_data = json.load(f)
             action = Action.from_dict(action_data)
             render_output = action.render()
             self.assertEqual(render_output, action_data, msg=filename)
 
     def test_exits(self):
-        with open('rapidpro/tests/data/exits/exit.json', 'r') as f:
-           data = json.load(f)
+        with open(self.data_dir / 'exits/exit.json', 'r') as f:
+            data = json.load(f)
         exit = Exit.from_dict(data)
         render_output = exit.render()
         self.assertEqual(render_output, data)
 
     def test_groups(self):
-        with open('rapidpro/tests/data/groups/group.json', 'r') as f:
-           data = json.load(f)
+        with open(self.data_dir / 'groups/group.json', 'r') as f:
+            data = json.load(f)
         group = Group.from_dict(data)
         render_output = group.render()
         self.assertEqual(render_output, data)
 
     def test_cases(self):
-        with open('rapidpro/tests/data/routers/case.json', 'r') as f:
-           data = json.load(f)
+        with open(self.data_dir / 'routers/case.json', 'r') as f:
+            data = json.load(f)
         case = RouterCase.from_dict(data)
         render_output = case.render()
         self.assertEqual(render_output, data)
 
     def test_categories(self):
-        with open('rapidpro/tests/data/routers/category.json', 'r') as f:
-           data = json.load(f)
-        with open('rapidpro/tests/data/routers/exits.json', 'r') as f:
-           exit_data = json.load(f)
+        with open(self.data_dir / 'routers/category.json', 'r') as f:
+            data = json.load(f)
+        with open(self.data_dir / 'routers/exits.json', 'r') as f:
+            exit_data = json.load(f)
         exits = [Exit.from_dict(exit) for exit in exit_data]
         category = RouterCategory.from_dict(data, exits)
         render_output = category.render()
@@ -59,12 +59,12 @@ class TestImportExport(unittest.TestCase):
         # within switch routers is always the last one.
         # This might change once we support "Expired" categories
         self.maxDiff = None
-        routerFilenamesList = glob.glob('rapidpro/tests/data/routers/router_*.json')
+        routerFilenamesList = self.data_dir.glob('routers/router_*.json')
         for filename in routerFilenamesList:
             with open(filename, 'r') as f:
-               router_data = json.load(f)
-            with open('rapidpro/tests/data/routers/exits.json', 'r') as f:
-               exit_data = json.load(f)
+                router_data = json.load(f)
+            with open(self.data_dir / 'routers/exits.json', 'r') as f:
+                exit_data = json.load(f)
             exits = [Exit.from_dict(exit) for exit in exit_data]
             router = BaseRouter.from_dict(router_data, exits)
             render_output = router.render()
@@ -72,10 +72,10 @@ class TestImportExport(unittest.TestCase):
 
     def test_all_node_types(self):
         self.maxDiff = None
-        nodeFilenamesList = glob.glob('rapidpro/tests/data/nodes/node_*.json')
+        nodeFilenamesList = self.data_dir.glob('nodes/node_*.json')
         for filename in nodeFilenamesList:
             with open(filename, 'r') as f:
-               node_data = json.load(f)
+                node_data = json.load(f)
             node = BaseNode.from_dict(node_data)
             render_output = node.render()
             self.assertEqual(render_output, node_data, msg=filename)
@@ -83,10 +83,10 @@ class TestImportExport(unittest.TestCase):
     def test_flow_containers(self):
         self.maxDiff = None
         # TODO: Add test with localization (of different objects) to ensure it is maintained
-        containerFilenamesList = glob.glob('rapidpro/tests/data/containers/flow_container_*.json')
+        containerFilenamesList = self.data_dir.glob('containers/flow_container_*.json')
         for filename in containerFilenamesList:
             with open(filename, 'r') as f:
-               container_data = json.load(f)
+                container_data = json.load(f)
             container = FlowContainer.from_dict(container_data)
             render_output = container.render()
             # TODO: compare nodes/UI element-wise, for smaller error output?
@@ -94,30 +94,30 @@ class TestImportExport(unittest.TestCase):
 
     def test_rapidpro_containers(self):
         self.maxDiff = None
-        containerFilenamesList = glob.glob('rapidpro/tests/data/containers/rapidpro_container_*.json')
+        containerFilenamesList = self.data_dir.glob('containers/rapidpro_container_*.json')
         for filename in containerFilenamesList:
             with open(filename, 'r') as f:
-               container_data = json.load(f)
+                container_data = json.load(f)
             container = RapidProContainer.from_dict(container_data)
             render_output = container.render()
             self.assertEqual(render_output, container_data, msg=filename)
 
     def test_campaign_events(self):
         self.maxDiff = None
-        filenamesList = glob.glob('rapidpro/tests/data/campaigns/event_*.json')
+        filenamesList = self.data_dir.glob('campaigns/event_*.json')
         for filename in filenamesList:
             with open(filename, 'r') as f:
-               data = json.load(f)
+                data = json.load(f)
             event = CampaignEvent.from_dict(data)
             render_output = event.render()
             self.assertEqual(render_output, data, msg=filename)
 
     def test_campaigns(self):
         self.maxDiff = None
-        filenamesList = glob.glob('rapidpro/tests/data/campaigns/campaign_*.json')
+        filenamesList = self.data_dir.glob('campaigns/campaign_*.json')
         for filename in filenamesList:
             with open(filename, 'r') as f:
-               data = json.load(f)
+                data = json.load(f)
             campaign = Campaign.from_dict(data)
             render_output = campaign.render()
             self.assertEqual(render_output, data, msg=filename)

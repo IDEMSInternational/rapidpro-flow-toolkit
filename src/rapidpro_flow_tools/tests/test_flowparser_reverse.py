@@ -1,10 +1,9 @@
 import unittest
-import json
-import copy
 
-from .utils import traverse_flow, Context, get_dict_from_csv, get_table_from_file
-from parsers.creation.flowparser import FlowParser
-from rapidpro.models.containers import RapidProContainer
+from rapidpro_flow_tools.tests.utils import get_table_from_file
+from rapidpro_flow_tools.parsers.creation.flowparser import FlowParser
+from rapidpro_flow_tools.rapidpro.models.containers import RapidProContainer
+
 
 class TestFlowParserReverse(unittest.TestCase):
     def setUp(self) -> None:

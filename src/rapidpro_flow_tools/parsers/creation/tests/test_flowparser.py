@@ -1,9 +1,8 @@
-import json
 import unittest
 import tablib
 
 from rapidpro_flow_tools.parsers.creation.flowparser import FlowParser
-from rapidpro_flow_tools.parsers.creation.tests.utils import get_dict_from_csv, get_table_from_file, find_destination_uuid, Context, find_node_by_uuid, traverse_flow
+from rapidpro_flow_tools.tests.utils import get_dict_from_csv, find_destination_uuid, Context, find_node_by_uuid, traverse_flow
 from rapidpro_flow_tools.rapidpro.models.containers import RapidProContainer, FlowContainer
 from rapidpro_flow_tools.rapidpro.models.actions import Group, AddContactGroupAction
 from rapidpro_flow_tools.rapidpro.models.nodes import BasicNode

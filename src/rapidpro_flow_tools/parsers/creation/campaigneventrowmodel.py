@@ -1,6 +1,6 @@
-from parsers.common.rowparser import ParserModel
+from rapidpro_flow_tools.parsers.common.rowparser import ParserModel
 from pydantic import validator
-from typing import List
+
 
 class CampaignEventRowModel(ParserModel):
     uuid: str = ''
