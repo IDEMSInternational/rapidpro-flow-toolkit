@@ -23,7 +23,7 @@ class TemplateSheet:
 
 class ContentIndexParser:
 
-	def  __init__(self, sheet_reader, user_data_model_module_name=None, tag_matcher=TagMatcher()):
+	def  __init__(self, sheet_reader=None, user_data_model_module_name=None, tag_matcher=TagMatcher()):
 		self.tag_matcher = tag_matcher
 		self.template_sheets = {}  # values: tablib tables
 		self.data_sheets = {}  # values: OrderedDicts of RowModels
@@ -31,8 +31,8 @@ class ContentIndexParser:
 		self.campaign_parsers = []  # list of CampaignParser
 		if user_data_model_module_name:
 			self.user_models_module = importlib.import_module(user_data_model_module_name)
-		main_sheet = sheet_reader.get_main_sheet()
-		self.process_content_index_table(sheet_reader, main_sheet, "content_index")
+		if sheet_reader:
+			self.add_content_index(sheet_reader)
 
 	def add_content_index(self, sheet_reader):
 		main_sheet = sheet_reader.get_main_sheet()

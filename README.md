@@ -1,36 +1,61 @@
 # RapidPro Flow Toolkit
-Toolkit for using spreadsheets to create and modify RapidPro flows 
 
-This is a clean up of https://github.com/IDEMSInternational/conversation-parser
-
-In the future this should also include a rewrite of https://github.com/geoo89/rapidpro_abtesting
+Toolkit for using spreadsheets to create and modify RapidPro flows.
 
 ## Setup
-1. Install python `>=3.6`
-2. Run `pip install -r requirements.txt`
+
+1. Install Python >= 3.6
+1. Create a virtual environment: `python -m venv .venv`
+1. Activate venv: `source .venv/bin/activate`
+1. Upgrade pip: `pip install --upgrade pip`
+1. Install the project in dev mode: `pip install --editable .`
 
 ## Console tool
-```
-main.py {create_flows,flow_to_sheet} input1 input2 ... -o output --format {csv,xlsx,google_sheets} [--datamodels DATAMODELS]
-```
 
-Example:
+The command line interface (CLI) allows spreadsheets in various formats to be converted to RapidPro flows in JSON format. Full details of the available options can be found via the help feature:
+
 ```
-main.py create_flows tests/input/example1/content_index.csv -o out.json --format=csv --datamodels=tests.input.example1.nestedmodel
+python -m rapidpro_flow_tools.cli --help
 ```
 
-`main.py -h` for more details.
+As a quick example, try running the following command. The line breaks are merely for improving readability; the command would also be valid on a single line.
 
-## Processing Google sheets
+```
+python -m rapidpro_flow_tools.cli create_flows \
+  --output flows.json \
+  --datamodels=tests.input.example1.nestedmodel \
+  --format=csv \
+  src/rapidpro_flow_tools/tests/input/example1/content_index.csv
+```
 
-Follow the steps _Enable the API_ and _Authorize credentials for a desktop application_ from 
+## Processing Google Sheets
+
+Follow the steps _Enable the API_ and _Authorize credentials for a desktop application_ from
 https://developers.google.com/sheets/api/quickstart/python
 
 Note: Google sheets need to be in native Google sheets format,
 not `XLSX`, `XLS`, `ODS`, etc
 
-## Running Tests
-1. Run `python -m unittest`
+## Using the toolkit in other Python projects
+
+1. Add the package `rapidpro_flow_tools` as a dependency of your project e.g. in requirements.txt
+1. Import the `create_flows` function
+1. Call `create_flows` to convert spreadsheets to flows
+
+```
+from rapidpro_flow_tools.converters import create_flows
+
+sheets = ["sheet1.csv", "sheet2.csv"]
+create_flows(
+    sheets, "flows.json", "csv", data_models="your_project.models"
+)
+```
+
+## Running tests
+
+```
+python -m unittest discover -s src
+```
 
 # Components
 
@@ -73,14 +98,14 @@ See `./parsers/creation/flowparser.py`. Parser to turn sheets in
 the standard format (Documentation TBD) into RapidPro flows.
 See `./tests/input` and `./tests/output` for some examples.
 
-Examples: 
+Examples:
 - `./tests/test_flowparser.py`
 - `./parsers/creation/tests/test_flowparser.py`
 
 ### Parsing collections of flows (with templating)
 
 See `./parsers/creation/contentindexparser.py`, `parse_all_flows`.
-Examples: 
+Examples:
 - `./tests/test_contentindexparser.py`
 - `./parsers/creation/tests/test_contentindexparser.py`
 
