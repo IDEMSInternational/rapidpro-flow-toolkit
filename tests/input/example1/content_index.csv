@@ -1,5 +1,6 @@
-type,sheet_name,data_sheet,data_row_id,new_name,data_model,status
-create_flow,my_template,nesteddata,row1,,,
-create_flow,my_template,nesteddata,row2,,,
-create_flow,my_basic_flow,,,,,
-data_sheet,nesteddata,,,,NestedRowModel,
+"type","sheet_name","data_sheet","data_row_id","new_name","data_model","status","group","tags.1","tags.2"
+"create_flow","my_template","nesteddata","row1",,,,,"advanced","type1"
+"create_flow","my_template","nesteddata","row2",,,,,"advanced","type2"
+"create_flow","my_basic_flow",,,,,,,"basic",
+"data_sheet","nesteddata",,,,"NestedRowModel",,,,
+"create_campaign","my_campaign",,,,,,"My Group","basic",

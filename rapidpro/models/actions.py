@@ -1,8 +1,8 @@
 from rapidpro.utils import generate_new_uuid
 from .exceptions import RapidProActionError
+from rapidpro.models.common import Group, FlowReference, ContactFieldReference
 
 import copy
-import re
 
 # TODO: Check enter flow
 # Node classification:
@@ -12,6 +12,7 @@ import re
 # - Enter flow (Router with Completed/Expired)
 # - Call webhook (Router with Success/Failure)
 # - No action, split by random
+
 
 class Action:
     def from_dict(data):
@@ -144,42 +145,30 @@ class SendMessageAction(Action):
 class SetContactFieldAction(Action):
     def __init__(self, field_name, value):
         super().__init__('set_contact_field')
-        self.field_key = self._get_field_key(field_name)
-        self.field_name = field_name
+        self.field = ContactFieldReference(field_name)
         self.value = value
+        if len(value) > 640:
+            raise RapidProActionError(f'Contact fields are limited to 640 characters, but value has length {len(value)}')
 
     def _assign_fields_from_dict(self, data):
         assert "field" in data
         data_copy = copy.deepcopy(data)
-        field = data_copy.pop("field")
+        data_copy["field"] = ContactFieldReference(**data_copy["field"])
         super()._assign_fields_from_dict(data_copy)
-        self.field_key = field["key"]
-        self.field_name = field["name"]
-
-    def _get_field_key(self, field_name):
-        field_key = field_name.strip().lower().replace(' ', '_')
-        if not len(field_key) <= 36:
-            raise RapidProActionError('Field keys for set_contact_field should be no longer than 36 characters.')
-        if not re.search('[A-Za-z]', field_key):
-            raise RapidProActionError('Field keys for set_contact_field should contain at least one letter.')
-        return field_key
 
     def render(self):
         return {
             "uuid": self.uuid,
             "type": self.type,
-            "field": {
-                "key": self.field_key,
-                "name": self.field_name
-            },
-            "value": self.value
+            "field": self.field.render(),
+            "value": self.value,
         }
 
     def get_row_model_fields(self):
         return {
             'type' : 'save_value',
             'mainarg_value' : self.value,
-            'save_name' : self.field_name,
+            'save_name' : self.field.name,
         }
 
 
@@ -221,31 +210,6 @@ class SetContactPropertyAction(Action):
             'type' : self.type,
             'mainarg_value' : self.value,
         }
-
-
-class Group:
-    def from_dict(data):
-        return Group(**data)
-
-    def __init__(self, name, uuid=None, query=None):
-        self.name = name
-        self.uuid = uuid
-        self.query = query
-
-    def record_uuid(self, uuid_dict):
-        uuid_dict.record_group_uuid(self.name, self.uuid)
-
-    def assign_uuid(self, uuid_dict):
-        self.uuid = uuid_dict.get_group_uuid(self.name)
-
-    def render(self):
-        render_dict = {
-            'name': self.name,
-            'uuid': self.uuid
-        }
-        if self.query:
-            render_dict["query"] = query
-        return render_dict
 
 
 class GenericGroupAction(Action):
@@ -331,6 +295,8 @@ class SetRunResultAction(Action):
         self.name = name
         self.value = value
         self.category = category
+        if len(value) > 640:
+            raise RapidProActionError(f'Flow results are limited to 640 characters, but value has length {len(value)}')
 
     def render(self):
         render_dict = {
@@ -357,29 +323,32 @@ class SetRunResultAction(Action):
 class EnterFlowAction(Action):
     def __init__(self, flow_name, flow_uuid=None):
         super().__init__('enter_flow')
-        self.flow = {
-            'name': flow_name,
-            'uuid': flow_uuid
-        }
+        self.flow = FlowReference(flow_name, flow_uuid)
+
+    def _assign_fields_from_dict(self, data):
+        assert "flow" in data
+        data = copy.deepcopy(data)  # don't mutate the input
+        data["flow"] = FlowReference.from_dict(data["flow"])
+        super()._assign_fields_from_dict(data)
 
     def record_global_uuids(self, uuid_dict):
-        uuid_dict.record_flow_uuid(self.flow["name"], self.flow["uuid"])
+        self.flow.record_uuid(uuid_dict)
 
     def assign_global_uuids(self, uuid_dict):
-        self.flow["uuid"] = uuid_dict.get_flow_uuid(self.flow["name"])
+        self.flow.assign_uuid(uuid_dict)
 
     def render(self):
         return {
             "type": self.type,
             "uuid": self.uuid,
-            "flow": self.flow
+            "flow": self.flow.render()
         }
 
     def get_row_model_fields(self):
         return {
             'type' : 'start_new_flow',
-            'mainarg_flow_name' : self.flow['name'],
-            'obj_id' : self.flow['uuid'] or '',
+            'mainarg_flow_name' : self.flow.name,
+            'obj_id' : self.flow.uuid or '',
         }
 
 

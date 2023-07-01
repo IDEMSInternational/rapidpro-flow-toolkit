@@ -1,6 +1,7 @@
 from rapidpro.utils import generate_new_uuid
 from rapidpro.models.nodes import BaseNode
 from rapidpro.models.actions import Group
+from rapidpro.models.campaigns import Campaign
 from parsers.creation.flowrowmodel import FlowRowModel, Edge
 import copy
 
@@ -22,14 +23,20 @@ class RapidProContainer:
         flows = [FlowContainer.from_dict(flow) for flow in flows]
         groups = data_copy.pop("groups")
         groups = [Group.from_dict(group) for group in groups]
+        campaigns = data_copy.pop("campaigns")
+        campaigns = [Campaign.from_dict(campaign) for campaign in campaigns]
         container = RapidProContainer(**data_copy)
         container.flows = flows
         container.groups = groups
+        container.campaigns = campaigns
         return container
 
     def add_flow(self, flow):
         self.flows.append(flow)
         self.record_flow_uuid(flow.name, flow.uuid)
+
+    def add_campaign(self, campaign):
+        self.campaigns.append(campaign)
 
     def record_group_uuid(self, name, uuid):
         self.uuid_dict.record_group_uuid(name, uuid)
@@ -47,9 +54,13 @@ class RapidProContainer:
         # Update group/flow UUIDs referenced within the flows
         for flow in self.flows:
             flow.record_global_uuids(self.uuid_dict)
+        for campaign in self.campaigns:
+            campaign.record_global_uuids(self.uuid_dict)
         self.uuid_dict.generate_missing_uuids()
         for flow in self.flows:
             flow.assign_global_uuids(self.uuid_dict)
+        for campaign in self.campaigns:
+            campaign.assign_global_uuids(self.uuid_dict)
 
     def merge(self, container):
         '''Merge another RapidPro container into this one.
@@ -67,7 +78,7 @@ class RapidProContainer:
     def render(self):
         self.validate()
         return {
-            "campaigns": self.campaigns,
+            "campaigns": [campaign.render() for campaign in self.campaigns],
             "fields": self.fields,
             "flows": [flow.render() for flow in self.flows],
             "groups": [group.render() for group in self.groups],

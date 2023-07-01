@@ -1,0 +1,3 @@
+"offset","unit","event_type","delivery_hour","message","relative_to","start_mode","flow"
+15,"H","F",,,"Last Seen On","I","my_basic_flow"
+120,"D","M",12,"Hello!","Created On","S",

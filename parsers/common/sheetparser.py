@@ -1,6 +1,7 @@
 import copy
 from .rowdatasheet import RowDataSheet
 from logger.logger import get_logger, logging_context
+import pydantic
 
 LOGGER = get_logger()
 

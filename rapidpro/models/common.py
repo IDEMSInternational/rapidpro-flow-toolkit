@@ -1,4 +1,6 @@
 from rapidpro.utils import generate_new_uuid
+from .exceptions import RapidProActionError
+import re
 
 
 class Exit:
@@ -27,3 +29,83 @@ class Exit:
             'destination_uuid': destination_uuid,
             'uuid': self.uuid,
         }
+
+
+class FlowReference:
+    def from_dict(data):
+        return FlowReference(**data)
+
+    def __init__(self, name, uuid=None):
+        self.name = name
+        self.uuid = uuid
+
+    def record_uuid(self, uuid_dict):
+        uuid_dict.record_flow_uuid(self.name, self.uuid)
+
+    def assign_uuid(self, uuid_dict):
+        self.uuid = uuid_dict.get_flow_uuid(self.name)
+
+    def render(self):
+        return {
+            'name': self.name,
+            'uuid': self.uuid
+        }
+
+
+def generate_field_key(field_name):
+    field_key = field_name.strip().lower().replace(' ', '_')
+    if not len(field_key) <= 36:
+        raise RapidProActionError('Contact field keys should be no longer than 36 characters.')
+    if not re.search('[A-Za-z]', field_key):
+        raise RapidProActionError('Contact field keys should contain at least one letter.')
+    return field_key
+
+
+class ContactFieldReference:
+    def from_dict(data):
+        return ContactFieldReference(**data)
+
+    def __init__(self, name, key=None, type=None):
+        self.name = name
+        self.key = key or generate_field_key(name)
+        self.type = type
+
+    def render(self):
+        render_dict = {
+            'name': self.name,
+            'key': self.key
+        }
+        if self.type:
+            render_dict["type"] = type
+        return render_dict
+
+    def render_with_label(self):
+        return {
+            'label': self.name,
+            'key': self.key
+        }
+
+
+class Group:
+    def from_dict(data):
+        return Group(**data)
+
+    def __init__(self, name, uuid=None, query=None):
+        self.name = name
+        self.uuid = uuid
+        self.query = query
+
+    def record_uuid(self, uuid_dict):
+        uuid_dict.record_group_uuid(self.name, self.uuid)
+
+    def assign_uuid(self, uuid_dict):
+        self.uuid = uuid_dict.get_group_uuid(self.name)
+
+    def render(self):
+        render_dict = {
+            'name': self.name,
+            'uuid': self.uuid
+        }
+        if self.query:
+            render_dict["query"] = query
+        return render_dict

@@ -7,9 +7,10 @@ from rapidpro.models.common import Exit
 from rapidpro.models.routers import RouterCase, RouterCategory, BaseRouter
 from rapidpro.models.nodes import BaseNode
 from rapidpro.models.containers import FlowContainer, RapidProContainer
+from rapidpro.models.campaigns import Campaign, CampaignEvent
 
 
-class TestActions(unittest.TestCase):
+class TestImportExport(unittest.TestCase):
     def setUp(self) -> None:
         pass
 
@@ -100,3 +101,23 @@ class TestActions(unittest.TestCase):
             container = RapidProContainer.from_dict(container_data)
             render_output = container.render()
             self.assertEqual(render_output, container_data, msg=filename)
+
+    def test_campaign_events(self):
+        self.maxDiff = None
+        filenamesList = glob.glob('rapidpro/tests/data/campaigns/event_*.json')
+        for filename in filenamesList:
+            with open(filename, 'r') as f:
+               data = json.load(f)
+            event = CampaignEvent.from_dict(data)
+            render_output = event.render()
+            self.assertEqual(render_output, data, msg=filename)
+
+    def test_campaigns(self):
+        self.maxDiff = None
+        filenamesList = glob.glob('rapidpro/tests/data/campaigns/campaign_*.json')
+        for filename in filenamesList:
+            with open(filename, 'r') as f:
+               data = json.load(f)
+            campaign = Campaign.from_dict(data)
+            render_output = campaign.render()
+            self.assertEqual(render_output, data, msg=filename)

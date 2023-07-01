@@ -15,7 +15,9 @@ class ContentIndexRowModel(ParserModel):
     template_argument_definitions: List[TemplateArgument] = []  # internal name
     template_arguments: list = []
     data_model: str = ''
+    group: str = ''
     status: str = ''
+    tags: List[str] = []
 
     def field_name_to_header_name(field):
         if "template_argument_definitions":
