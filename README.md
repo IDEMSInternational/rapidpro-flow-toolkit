@@ -5,8 +5,8 @@ Toolkit for using spreadsheets to create and modify RapidPro flows.
 # Quickstart
 
 ```sh
-pip install rapidpro-flow-tools
-python -m rpft.cli --help
+pip install rpft
+rpft --help
 ```
 
 # Command Line Interface (CLI)
@@ -14,13 +14,13 @@ python -m rpft.cli --help
 The CLI allows spreadsheets in various formats to be converted to RapidPro flows in JSON format. Full details of the available options can be found via the help feature:
 
 ```sh
-python -m rpft.cli --help
+rpft --help
 ```
 
 Below is a concrete example of a valid execution of the command line tool. The line breaks are merely for improving readability; the command would also be valid on a single line.
 
 ```sh
-python -m rpft.cli create_flows \
+rpft create_flows \
   --output flows.json \
   --datamodels=tests.input.example1.nestedmodel \
   --format=csv \
@@ -69,7 +69,7 @@ Follow the steps in the [creating a service account section][2] to obtain a serv
 
 ```sh
 export CREDENTIALS=$(cat service-account-key.json)
-python -m rpft.cli ...
+rpft ...
 ```
 
 # Development

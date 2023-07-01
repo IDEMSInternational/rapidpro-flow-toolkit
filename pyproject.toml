@@ -43,3 +43,6 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/IDEMSInternational/rapidpro-flow-toolkit"
 Repository = "https://github.com/IDEMSInternational/rapidpro-flow-toolkit"
+
+[project.scripts]
+rpft = "rpft.cli:main"

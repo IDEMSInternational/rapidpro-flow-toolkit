@@ -26,7 +26,7 @@ To verify that the build produced a valid and working Python package, install th
 python -m venv build_verification
 source build_verification/bin/activate
 pip install dist/rpft-x.y.z-py3-none-any.whl
-python -m rpft.cli --help
+rpft --help
 deactivate
 rm -rf venv_verification
 ```
