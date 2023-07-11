@@ -250,13 +250,16 @@ class OptionsWrapperOneOptionModel(ParserModel):
 	negative: str = ''
 	no_message: str = ''
 
+class OptionsWrapperNoOptionModel(ParserModel):
+	message: str = ''
+	image: str = ''
 
 class OptionsWrapperModel(DataRowModel):
 	list_var: str = ''
 	dict_var: str = ''
 	dict_ID: str = ''
 	n_max_opt: int = 9
-	msg_no_options: str = ''
+	msg_no_options: OptionsWrapperNoOptionModel = OptionsWrapperNoOptionModel()
 	msg_one_option: OptionsWrapperOneOptionModel = OptionsWrapperOneOptionModel()
 	msg_multiple_options: str = ''
 	extra_option: str = ''
@@ -367,10 +370,17 @@ class SettingsProfileModel(DataRowModel):
 ####################################
 ## Safeguarding
 
-
 class ReferralsModel(DataRowModel):
 	referrals: str = ''
 
-class SafeguardingReferralsModel(DataRowModel):
+
+class SafeguardingRedirectModel(DataRowModel):
+	flow: str = ''
+	expiration_msg: str = ''
+	kw_type: str = ''
+	proceed: str = ''
+
+class SafeguardingEntryModel(DataRowModel):
+	question: str = ''
 	intro: str = ''
-	prompt: str = ''
+	no_message: str = ''
