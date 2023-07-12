@@ -42,6 +42,8 @@ create_flows(
 )
 ```
 
+_It should be noted that this project is still considered beta software that may change significantly at any time._
+
 # RapidPro flow spreadsheet format
 
 The expected contents of the input spreadsheets is [documented separately][3].
