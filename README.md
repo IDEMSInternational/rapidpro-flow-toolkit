@@ -1,87 +1,84 @@
 # RapidPro Flow Toolkit
-Toolkit for using spreadsheets to create and modify RapidPro flows 
 
-This is a clean up of https://github.com/IDEMSInternational/conversation-parser
+Toolkit for using spreadsheets to create and modify RapidPro flows.
 
-In the future this should also include a rewrite of https://github.com/geoo89/rapidpro_abtesting
+# Quickstart
 
-## Setup
-1. Install python `>=3.6`
-2. Run `pip install -r requirements.txt`
-
-## Console tool
-```
-main.py {create_flows,flow_to_sheet} input1 input2 ... -o output --format {csv,xlsx,google_sheets} [--datamodels DATAMODELS]
+```sh
+pip install rpft
+rpft --help
 ```
 
-Example:
+# Command Line Interface (CLI)
+
+The CLI allows spreadsheets in various formats to be converted to RapidPro flows in JSON format. Full details of the available options can be found via the help feature:
+
+```sh
+rpft --help
 ```
-main.py create_flows tests/input/example1/content_index.csv -o out.json --format=csv --datamodels=tests.input.example1.nestedmodel
+
+Below is a concrete example of a valid execution of the command line tool. The line breaks are merely for improving readability; the command would also be valid on a single line.
+
+```sh
+rpft create_flows \
+  --output flows.json \
+  --datamodels=tests.input.example1.nestedmodel \
+  --format=csv \
+  src/rpft/tests/input/example1/content_index.csv
 ```
 
-`main.py -h` for more details.
+# Using the toolkit in other Python projects
 
-## Processing Google sheets
+1. Add the package `rpft` as a dependency of your project e.g. in requirements.txt or pyproject.toml
+1. Import the `create_flows` function
+1. Call `create_flows` to convert spreadsheets to flows
 
-Follow the steps _Enable the API_ and _Authorize credentials for a desktop application_ from 
-https://developers.google.com/sheets/api/quickstart/python
+```python
+from rpft.converters import create_flows
 
-Note: Google sheets need to be in native Google sheets format,
-not `XLSX`, `XLS`, `ODS`, etc
+sheets = ["sheet1.csv", "sheet2.csv"]
+create_flows(
+    sheets, "flows.json", "csv", data_models="your_project.models"
+)
+```
 
-## Running Tests
-1. Run `python -m unittest`
+_It should be noted that this project is still considered beta software that may change significantly at any time._
 
-# Components
+# RapidPro flow spreadsheet format
 
-## Generic parsers from spreadsheets to data models
+The expected contents of the input spreadsheets is [documented separately][3].
 
-### Cell parser
+# Processing Google Sheets
 
-See `./parsers/common/cellparser.py`. Parser to convert a spreadsheet cell
-into a nested list. (Currently no nesting as only `;` is supported as an
-element separator.)
+It is possible to read in spreadsheets via the Google Sheets API by specifying `--format=google_sheets` on the command line. Spreadsheets must be in the Google Sheets format rather than XLSX, CSV, etc.
 
-### Row parser
+Instead of specifying paths to individual spreadsheets on your local filesystem, you must supply the IDs of the Sheets you want to process. The ID can be extracted from the URL of the Sheet i.e. docs.google.com/spreadsheets/d/**ID**/edit.
 
-See `./parsers/common/rowparser.py`. Parser to turn rows of a sheet
-into a specified data model. Column headers determine which field of the
-model the column contains data for, and different ways to address fields
-in the data models are supported. See `./parsers/common/tests/test_full_rows.py`
-and `./parsers/common/tests/test_differentways.py` for examples.
+The toolkit will need to authenticate with the Google Sheets API and be authorized to access your spreadsheets. Two methods for doing this are supported.
 
-The reverse operation is also supported, but only to a limited extent:
-All models are spread out into a flat dict of fields, each becoming the
-header of a column.
+- **OAuth 2.0 for installed applications**: for cases where human interaction is possible e.g. when using the CLI
+- **Service accounts**: for cases where interaction is not possible or desired e.g. in automated pipelines
 
-### Sheet parser
+## Installed applications
 
-See `./parsers/common/sheetparser.py`.
+Follow the steps in the [setup your environment section][1] of the Google Sheets quickstart for Python.
 
-## RapidPro tools
+Once you have a `credentials.json` file in your current working directory, the toolkit will automatically use it to authenticate whenever you use the toolkit. The refresh token (`token.json`) will be saved automatically in the current working directory so that it is not necessary to go through the full authentication process every time.
 
-### RapidPro models
+## Service accounts
 
-See `./rapidpro/models`. Models for flows, nodes, etc, with convenience
-functions to assemble RapidPro flows. Each model has a `render` method
-to render the model into a dictionary, that can be exported to a json
-file whose fields are consistent with the format used by RapidPro.
+Follow the steps in the [creating a service account section][2] to obtain a service account key. The toolkit will accept the key as an environment variable called `CREDENTIALS`.
 
-### Standard format flow parser
+```sh
+export CREDENTIALS=$(cat service-account-key.json)
+rpft ...
+```
 
-See `./parsers/creation/flowparser.py`. Parser to turn sheets in
-the standard format (Documentation TBD) into RapidPro flows.
-See `./tests/input` and `./tests/output` for some examples.
+# Development
 
-Examples: 
-- `./tests/test_flowparser.py`
-- `./parsers/creation/tests/test_flowparser.py`
+For instructions on how to set up your development environment for developing the toolkit, see the [development][4] page.
 
-### Parsing collections of flows (with templating)
-
-See `./parsers/creation/contentindexparser.py`, `parse_all_flows`.
-Examples: 
-- `./tests/test_contentindexparser.py`
-- `./parsers/creation/tests/test_contentindexparser.py`
-
-Documentation (request access): https://docs.google.com/document/d/1Onx2RhNoWKW9BQvFrgTc5R5hcwDy1OMsLKnNB7YxQH0/edit?pli=1#
+[1]: https://developers.google.com/sheets/api/quickstart/python#set_up_your_environment
+[2]: https://developers.google.com/identity/protocols/oauth2/service-account#creatinganaccount
+[3]: https://docs.google.com/document/d/1Onx2RhNoWKW9BQvFrgTc5R5hcwDy1OMsLKnNB7YxQH0/edit?pli=1#
+[4]: https://github.com/IDEMSInternational/rapidpro-flow-toolkit/docs/development.md
