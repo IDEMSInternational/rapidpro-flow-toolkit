@@ -11,7 +11,7 @@ from rpft.parsers.creation.flowparser import FlowParser
 from rpft.rapidpro.models.actions import Group, AddContactGroupAction
 from rpft.rapidpro.models.containers import RapidProContainer, FlowContainer
 from rpft.rapidpro.models.nodes import BasicNode
-from tests.mock_sheetparser import MockSheetParser
+from tests.mocks import MockSheetParser
 from tests.row_data import (
     get_conditional_node_from_1,
     get_message_with_templating,

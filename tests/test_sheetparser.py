@@ -5,9 +5,10 @@ from collections import OrderedDict
 import tablib
 
 from rpft.parsers.common.rowparser import RowParser, ParserModel
-from tests.mock_row_parser import MockRowParser
 from rpft.parsers.common.rowdatasheet import RowDataSheet
 from rpft.parsers.common.sheetparser import SheetParser
+from tests.mocks import MockRowParser
+
 
 class MainModel(ParserModel):
     field1: str = ''

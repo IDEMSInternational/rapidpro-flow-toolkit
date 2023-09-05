@@ -5,7 +5,7 @@ from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets.csv_sheet_reader import CSVSheetReader
 from rpft.parsers.sheets.xlsx_sheet_reader import XLSXSheetReader
-from tests.mock_sheetreader import MockSheetReader
+from tests.mocks import MockSheetReader
 from tests.utils import traverse_flow, Context
 
 
