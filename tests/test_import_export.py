@@ -1,6 +1,5 @@
 import unittest
 import json
-from pathlib import Path
 
 from rpft.rapidpro.models.actions import Action, Group
 from rpft.rapidpro.models.common import Exit
@@ -8,11 +7,12 @@ from rpft.rapidpro.models.routers import RouterCase, RouterCategory, BaseRouter
 from rpft.rapidpro.models.nodes import BaseNode
 from rpft.rapidpro.models.containers import FlowContainer, RapidProContainer
 from rpft.rapidpro.models.campaigns import Campaign, CampaignEvent
+from tests import TESTS_ROOT
 
 
 class TestImportExport(unittest.TestCase):
     def setUp(self) -> None:
-        self.data_dir = Path(__file__).parent / "data"
+        self.data_dir = TESTS_ROOT / "data"
 
     def test_all_action_types(self):
         actionFilenamesList = self.data_dir.glob('actions/*.json')
