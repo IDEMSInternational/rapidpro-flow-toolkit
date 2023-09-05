@@ -1,7 +1,9 @@
 import unittest
 import json
-from typing import List, Dict, Optional
 from collections import OrderedDict
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import List, Dict, Optional
 
 from rpft.parsers.common.tests.mock_row_parser import MockRowParser
 from rpft.parsers.common.rowdatasheet import RowDataSheet
@@ -97,14 +99,20 @@ class TestRowDataSheet(unittest.TestCase):
     def test_export_csv(self):
         # Not our job to test the contents (tablib's responsibility),
         # but we want to make sure here the export function works.
-        sheet = RowDataSheet(self.rowparser, [rowA, rowC])
-        output = sheet.export('/dev/null')
+        with TemporaryDirectory() as outdir:
+            outfile = Path(outdir) / "export.csv"
+            RowDataSheet(
+                self.rowparser, [rowA, rowC]
+            ).export(outfile)
 
     def test_export_xlsx(self):
         # Not our job to test the contents (tablib's responsibility),
         # but we want to make sure here the export function works.
-        sheet = RowDataSheet(self.rowparser, [rowA, rowC])
-        output = sheet.export('/dev/null', file_format='xlsx')
+        with TemporaryDirectory() as outdir:
+            outfile = Path(outdir) / "export.xlsx"
+            RowDataSheet(
+                self.rowparser, [rowA, rowC]
+            ).export(outfile, file_format='xlsx')
 
 
 if __name__ == '__main__':
