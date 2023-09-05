@@ -6,7 +6,7 @@ from rpft.rapidpro.models.containers import FlowContainer
 from rpft.rapidpro.models.actions import Group, SendMessageAction, AddContactGroupAction, SetRunResultAction, SetContactFieldAction
 from rpft.rapidpro.models.nodes import BasicNode, SwitchRouterNode, RandomRouterNode, EnterFlowNode
 from rpft.parsers.creation.flowrowmodel import FlowRowModel, Edge
-from rpft.parsers.creation.tests.row_data import get_start_row, get_unconditional_node_from_1
+from tests.row_data import get_start_row, get_unconditional_node_from_1
 
 
 class TestToRowModels(unittest.TestCase):

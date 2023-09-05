@@ -1,9 +1,12 @@
 import unittest
+from pathlib import Path
 
-from rpft.parsers.creation.tests.mock_sheetreader import MockSheetReader
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
-from rpft.tests.utils import traverse_flow, Context
+from rpft.parsers.sheets.csv_sheet_reader import CSVSheetReader
+from rpft.parsers.sheets.xlsx_sheet_reader import XLSXSheetReader
+from tests.mock_sheetreader import MockSheetReader
+from tests.utils import traverse_flow, Context
 
 
 class TestParsing(unittest.TestCase):
@@ -84,7 +87,7 @@ class TestParsing(unittest.TestCase):
         )
 
         sheet_reader = MockSheetReader(ci_sheet, {'simpledata' : simpledata})
-        ci_parser = ContentIndexParser(sheet_reader, 'rpft.parsers.creation.tests.datarowmodels.simplemodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.datarowmodels.simplemodel')
         datamodelA = ci_parser.get_data_model_instance('simpledata', 'rowA')
         datamodelB = ci_parser.get_data_model_instance('simpledata', 'rowB')
         self.assertEqual(datamodelA.value1, '1A')
@@ -111,7 +114,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'rpft.parsers.creation.tests.datarowmodels.simplemodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.datarowmodels.simplemodel')
         datamodelA = ci_parser.get_data_model_instance('simpledata', 'rowA')
         datamodelB = ci_parser.get_data_model_instance('simpledata', 'rowB')
         self.assertEqual(datamodelA.value1, '1A')
@@ -156,7 +159,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'rpft.parsers.creation.tests.datarowmodels.nestedmodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.datarowmodels.nestedmodel')
         container = ci_parser.parse_all()
         render_output = container.render()
         self.compare_messages(render_output, 'my_basic_flow', ['Some text'])
@@ -164,7 +167,7 @@ class TestParsing(unittest.TestCase):
         self.compare_messages(render_output, 'my_template - row2', ['Value2', 'Happy2 and Sad2'])
 
         sheet_reader = MockSheetReader(ci_sheet_alt, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'rpft.parsers.creation.tests.datarowmodels.nestedmodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.datarowmodels.nestedmodel')
         container = ci_parser.parse_all()
         render_output = container.render()
         self.compare_messages(render_output, 'my_basic_flow', ['Some text'])
@@ -195,7 +198,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'rpft.parsers.creation.tests.datarowmodels.nestedmodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.datarowmodels.nestedmodel')
         container = ci_parser.parse_all()
         render_output = container.render()
         self.compare_messages(render_output, 'my_renamed_template - row1', ['Value1 ARG1 ARG2', 'Happy1 and Sad1'])
@@ -238,7 +241,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'rpft.parsers.creation.tests.datarowmodels.nestedmodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.datarowmodels.nestedmodel')
         container = ci_parser.parse_all()
         render_output = container.render()
         messages_exp = [
@@ -297,7 +300,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'rpft.parsers.creation.tests.datarowmodels.listmodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.datarowmodels.listmodel')
         container = ci_parser.parse_all()
         render_output = container.render()
         messages_exp = [
@@ -344,7 +347,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'rpft.parsers.creation.tests.datarowmodels.listmodel')
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.datarowmodels.listmodel')
         container = ci_parser.parse_all()
         render_output = container.render()
         messages_exp = [
@@ -386,7 +389,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'rpft.parsers.creation.tests.datarowmodels.evalmodels')
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.datarowmodels.evalmodels')
         container = ci_parser.parse_all()
         render_output = container.render()
         messages_exp = [
@@ -421,7 +424,7 @@ class TestParsing(unittest.TestCase):
         }
 
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, 'rpft.parsers.creation.tests.datarowmodels.evalmodels')
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.datarowmodels.evalmodels')
         container = ci_parser.parse_all()
         render_output = container.render()
         self.assertEqual(self.get_flow_names(render_output), {"flow-world", "flow-t1", "flow-b1", "flow-t2", "flow-b2", "flow-t1t2", "flow-t1b2", "flow-b1t2"})
@@ -435,25 +438,25 @@ class TestParsing(unittest.TestCase):
         self.compare_messages(render_output, 'flow-b1t2', ['Hello Bag1Tag2'])
 
         tag_matcher = TagMatcher(["1", "tag1"])
-        ci_parser = ContentIndexParser(sheet_reader, 'rpft.parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.datarowmodels.evalmodels', tag_matcher)
         container = ci_parser.parse_all()
         render_output = container.render()
         self.assertEqual(self.get_flow_names(render_output), {"flow-world", "flow-t1", "flow-t2", "flow-b2", "flow-t1t2", "flow-t1b2"})
 
         tag_matcher = TagMatcher(["1", "tag1", "bag1"])
-        ci_parser = ContentIndexParser(sheet_reader, 'rpft.parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.datarowmodels.evalmodels', tag_matcher)
         container = ci_parser.parse_all()
         render_output = container.render()
         self.assertEqual(self.get_flow_names(render_output), {"flow-world", "flow-t1", "flow-b1", "flow-t2", "flow-b2", "flow-t1t2", "flow-t1b2", "flow-b1t2"})
 
         tag_matcher = TagMatcher(["1", "tag1", "2", "tag2"])
-        ci_parser = ContentIndexParser(sheet_reader, 'rpft.parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.datarowmodels.evalmodels', tag_matcher)
         container = ci_parser.parse_all()
         render_output = container.render()
         self.assertEqual(self.get_flow_names(render_output), {"flow-world", "flow-t1","flow-t2","flow-t1t2"})
 
         tag_matcher = TagMatcher(["5", "tag1", "bag1"])
-        ci_parser = ContentIndexParser(sheet_reader, 'rpft.parsers.creation.tests.datarowmodels.evalmodels', tag_matcher)
+        ci_parser = ContentIndexParser(sheet_reader, 'tests.datarowmodels.evalmodels', tag_matcher)
         container = ci_parser.parse_all()
         render_output = container.render()
         self.assertEqual(self.get_flow_names(render_output), {"flow-world", "flow-t1", "flow-b1", "flow-t2", "flow-b2", "flow-t1t2", "flow-t1b2", "flow-b1t2"})
@@ -514,3 +517,63 @@ class TestParseCampaigns(unittest.TestCase):
         self.assertEqual(event["delivery_hour"], 12)
         self.assertEqual(event["message"], {'eng': 'Messagetext'})
         self.assertEqual(event["base_language"], 'eng')
+
+
+class TestParseFromFile(unittest.TestCase):
+
+    def setUp(self):
+        self.input_dir = Path(__file__).parent / "input/example1"
+
+    def compare_messages(self, render_output, flow_name, messages_exp, context=None):
+        flow_found = False
+        for flow in render_output["flows"]:
+            if flow["name"] == flow_name:
+                flow_found = True
+                actions = traverse_flow(flow, context or Context())
+                actions_exp = list(zip(['send_msg']*len(messages_exp), messages_exp))
+                self.assertEqual(actions, actions_exp)
+        if not flow_found:
+            self.assertTrue(False, msg=f'Flow with name "{flow_name}" does not exist in output.')
+
+    def compare_to_expected(self, render_output):
+        self.compare_messages(render_output, 'my_basic_flow', ['Some text'])
+        self.compare_messages(render_output, 'my_template - row1', ['Value1', 'Happy1 and Sad1'])
+        self.compare_messages(render_output, 'my_template - row2', ['Value2', 'Happy2 and Sad2'])
+        self.assertEqual(render_output["campaigns"][0]["name"], "my_campaign")
+        self.assertEqual(render_output["campaigns"][0]["group"]["name"], "My Group")
+        self.assertEqual(render_output["campaigns"][0]["events"][0]["flow"]["name"], 'my_basic_flow')
+        self.assertEqual(render_output["campaigns"][0]["events"][0]["flow"]["uuid"], render_output["flows"][2]["uuid"])
+
+    def check_example1(self, ci_parser):
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        self.compare_to_expected(render_output)
+
+    def test_example1_csv(self):
+        # Same test as test_generate_flows but with csvs
+        sheet_reader = CSVSheetReader(self.input_dir / "content_index.csv")
+        ci_parser = ContentIndexParser(
+            sheet_reader,
+            'tests.input.example1.nestedmodel'
+        )
+        self.check_example1(ci_parser)
+
+    def test_example1_split_csv(self):
+        # Same test as test_generate_flows but with csvs
+        sheet_reader = CSVSheetReader(self.input_dir / "content_index1.csv")
+        ci_parser = ContentIndexParser(
+            sheet_reader,
+            'tests.input.example1.nestedmodel'
+        )
+        sheet_reader = CSVSheetReader(self.input_dir / "content_index2.csv")
+        ci_parser.add_content_index(sheet_reader)
+        self.check_example1(ci_parser)
+
+    def test_example1_xlsx(self):
+        # Same test as above
+        sheet_reader = XLSXSheetReader(self.input_dir / "content_index.xlsx")
+        ci_parser = ContentIndexParser(
+            sheet_reader,
+            'tests.input.example1.nestedmodel'
+        )
+        self.check_example1(ci_parser)

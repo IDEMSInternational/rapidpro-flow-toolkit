@@ -4,7 +4,7 @@ from typing import List, Dict, Optional
 from collections import OrderedDict
 
 from rpft.parsers.common.rowparser import RowParser, ParserModel
-from rpft.parsers.common.tests.mock_cell_parser import MockCellParser
+from tests.mock_cell_parser import MockCellParser
 
 
 
