@@ -4,14 +4,14 @@ from typing import List, Dict, Optional
 from collections import OrderedDict
 
 from rpft.parsers.common.rowparser import RowParser, ParserModel
-from tests.mock_cell_parser import MockCellParser
-
+from tests.mocks import MockCellParser
 
 
 class ModelWithStuff(ParserModel):
     list_str: List[str] = []
     int_field: int = 0
     str_field: str = ''
+
 
 class MainModel(ParserModel):
     str_field: str = ''

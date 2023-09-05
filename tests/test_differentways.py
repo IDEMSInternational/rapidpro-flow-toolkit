@@ -2,7 +2,7 @@ import unittest
 import json
 
 from rpft.parsers.common.rowparser import RowParser
-from tests.mock_cell_parser import MockCellParser
+from tests.mocks import MockCellParser
 from tests.models import FromWrong
 
 
