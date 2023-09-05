@@ -3,7 +3,7 @@ import json
 
 from rpft.parsers.common.rowparser import RowParser
 from rpft.parsers.creation.flowrowmodel import FlowRowModel
-from rpft.parsers.common.tests.mock_cell_parser import MockCellParser
+from tests.mock_cell_parser import MockCellParser
 
 
 input1 = {

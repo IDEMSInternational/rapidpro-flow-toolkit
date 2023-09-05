@@ -4,7 +4,7 @@ import copy
 from rpft.parsers.common.rowparser import RowParser, ParserModel
 from rpft.parsers.common.cellparser import CellParser
 from rpft.parsers.creation.template_sheet_parser import TemplateSheetParser
-from rpft.tests.utils import traverse_flow, Context, get_table_from_file
+from tests.utils import traverse_flow, Context, get_table_from_file
 
 
 class ResponseMessages(ParserModel):

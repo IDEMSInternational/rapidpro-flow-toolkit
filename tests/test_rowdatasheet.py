@@ -5,7 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import List, Dict, Optional
 
-from rpft.parsers.common.tests.mock_row_parser import MockRowParser
+from tests.mock_row_parser import MockRowParser
 from rpft.parsers.common.rowdatasheet import RowDataSheet
 
 

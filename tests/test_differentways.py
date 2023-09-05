@@ -2,8 +2,8 @@ import unittest
 import json
 
 from rpft.parsers.common.rowparser import RowParser
-from rpft.parsers.common.tests.mock_cell_parser import MockCellParser
-from rpft.parsers.common.tests.models import FromWrong
+from tests.mock_cell_parser import MockCellParser
+from tests.models import FromWrong
 
 
 output_instance = {
