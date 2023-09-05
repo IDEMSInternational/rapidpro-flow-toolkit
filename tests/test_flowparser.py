@@ -2,7 +2,6 @@ import copy
 import json
 import tablib
 import unittest
-from pathlib import Path
 
 from rpft.parsers.common.cellparser import CellParser
 from rpft.parsers.common.rowparser import RowParser
@@ -11,6 +10,7 @@ from rpft.parsers.creation.flowparser import FlowParser
 from rpft.rapidpro.models.actions import Group, AddContactGroupAction
 from rpft.rapidpro.models.containers import RapidProContainer, FlowContainer
 from rpft.rapidpro.models.nodes import BasicNode
+from tests import TESTS_ROOT
 from tests.mocks import MockSheetParser
 from tests.row_data import (
     get_conditional_node_from_1,
@@ -887,7 +887,7 @@ class TestFlowParser(unittest.TestCase):
         # print(json.dumps(output_flow, indent=2))
 
         # Load the expected output flow
-        with open(Path(__file__).parent / "output/all_test_flows.json", 'r') as file:
+        with open(TESTS_ROOT / "output/all_test_flows.json", 'r') as file:
             output_exp = json.load(file)
         for flow in output_exp["flows"]:
             if flow["name"] == flow_name:

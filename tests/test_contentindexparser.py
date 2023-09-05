@@ -1,10 +1,10 @@
 import unittest
-from pathlib import Path
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets.csv_sheet_reader import CSVSheetReader
 from rpft.parsers.sheets.xlsx_sheet_reader import XLSXSheetReader
+from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
 from tests.utils import traverse_flow, Context
 
@@ -522,7 +522,7 @@ class TestParseCampaigns(unittest.TestCase):
 class TestParseFromFile(unittest.TestCase):
 
     def setUp(self):
-        self.input_dir = Path(__file__).parent / "input/example1"
+        self.input_dir = TESTS_ROOT / "input/example1"
 
     def compare_messages(self, render_output, flow_name, messages_exp, context=None):
         flow_found = False
