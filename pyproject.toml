@@ -10,7 +10,7 @@ authors = [
     {name = "IDEMS International", email = "communications@idems.international"},
 ]
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 keywords = ["rapidpro", "flow", "tools", "toolkit"]
 license = {text = "LGPL-2.1-or-later"}
 classifiers = [
@@ -22,7 +22,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
