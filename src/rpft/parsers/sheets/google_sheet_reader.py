@@ -10,36 +10,41 @@ from google.oauth2.service_account import Credentials as ServiceAccountCredentia
 
 
 class GoogleSheetReader:
-
     # If modifying these scopes, delete the file token.json.
-    SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
+    SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
     def __init__(self, spreadsheet_id, credentials=None):
-        '''
+        """
         Args:
             spreadsheet_id: You can extract it from the spreadsheed URL, like this
             https://docs.google.com/spreadsheets/d/[spreadsheet_id]/edit
-        '''
+        """
 
-        service = build('sheets', 'v4', credentials=get_credentials())
-        sheet_metadata = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
-        sheets = sheet_metadata.get('sheets', '')
+        service = build("sheets", "v4", credentials=get_credentials())
+        sheet_metadata = (
+            service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+        )
+        sheets = sheet_metadata.get("sheets", "")
         titles = []
         for sheet in sheets:
             title = sheet.get("properties", {}).get("title", "Sheet1")
             titles.append(title)
 
-        result = service.spreadsheets().values().batchGet(
-                spreadsheetId=spreadsheet_id, ranges=titles).execute()
+        result = (
+            service.spreadsheets()
+            .values()
+            .batchGet(spreadsheetId=spreadsheet_id, ranges=titles)
+            .execute()
+        )
 
         self.main_sheet = None
         self.sheets = {}
-        for sheet in result.get('valueRanges', []):
-            name = sheet.get('range', '').split('!')[0]
+        for sheet in result.get("valueRanges", []):
+            name = sheet.get("range", "").split("!")[0]
             if name.startswith("'") and name.endswith("'"):
                 name = name[1:-1]
-            content = sheet.get('values', [])
-            if name == 'content_index':
+            content = sheet.get("values", [])
+            if name == "content_index":
                 self.main_sheet = self._table_from_content(content)
             elif name in self.sheets:
                 raise ValueError(f"Warning: Duplicate sheet name: {name}")
@@ -55,7 +60,7 @@ class GoogleSheetReader:
         n_headers = len(table.headers)
         for row in content[1:]:
             # Pad row to proper length
-            table.append(row + ([''] * (n_headers - len(row))))
+            table.append(row + ([""] * (n_headers - len(row))))
         return table
 
     def get_main_sheet(self):
@@ -69,8 +74,7 @@ def get_credentials():
     sa_creds = os.getenv("CREDENTIALS")
     if sa_creds:
         return ServiceAccountCredentials.from_service_account_info(
-            json.loads(sa_creds),
-            scopes=GoogleSheetReader.SCOPES
+            json.loads(sa_creds), scopes=GoogleSheetReader.SCOPES
         )
 
     creds = None
@@ -78,8 +82,7 @@ def get_credentials():
 
     if os.path.exists(token_file_name):
         creds = Credentials.from_authorized_user_file(
-            token_file_name,
-            scopes=GoogleSheetReader.SCOPES
+            token_file_name, scopes=GoogleSheetReader.SCOPES
         )
 
     # If there are no (valid) credentials available, let the user log in.
@@ -88,13 +91,12 @@ def get_credentials():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json',
-                GoogleSheetReader.SCOPES
+                "credentials.json", GoogleSheetReader.SCOPES
             )
             creds = flow.run_local_server(port=0)
 
         # Save the credentials for the next run
-        with open(token_file_name, 'w') as token:
+        with open(token_file_name, "w") as token:
             token.write(creds.to_json())
 
     return creds

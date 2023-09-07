@@ -3,10 +3,10 @@ from rpft.parsers.common.rowparser import ParserModel
 
 
 class Condition(ParserModel):
-    value: str = ''
-    var: str = ''
-    type: str = ''
-    name: str = ''
+    value: str = ""
+    var: str = ""
+    type: str = ""
+    name: str = ""
     # TODO: We could specify proper default values here, and write custom
     # validators that replace '' with the actual default value.
 
@@ -17,4 +17,3 @@ class FromWrong(ParserModel):
     # It's still useful for the testcases we have though.
     row_id: str
     conditions: List[Condition]
-

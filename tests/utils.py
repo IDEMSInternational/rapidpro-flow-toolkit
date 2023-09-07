@@ -11,7 +11,7 @@ def get_dict_from_csv(csv_file_path):
         return [row for row in csv_reader]
 
 
-def get_table_from_file(file_path, file_format='csv'):
+def get_table_from_file(file_path, file_format="csv"):
     # format: Import file format.
     #     Supported file formats as supported by tablib,
     #     see https://tablib.readthedocs.io/en/stable/formats.html
@@ -24,8 +24,11 @@ def get_table_from_file(file_path, file_format='csv'):
 # TODO: Implement some kind of check that uuids are unique whereever
 # they are supposed to be unique?
 
+
 class Context(object):
-    def __init__(self, group_names=None, inputs=None, random_choices=None, variables=None):
+    def __init__(
+        self, group_names=None, inputs=None, random_choices=None, variables=None
+    ):
         if group_names is not None:
             self.group_names = group_names
         else:
@@ -48,7 +51,7 @@ class Context(object):
 
 
 def find_node_by_uuid(flow, node_uuid):
-    '''Given a node uuid, finds the corresponding node.
+    """Given a node uuid, finds the corresponding node.
 
     Args:
         flow: flow to search in
@@ -57,7 +60,7 @@ def find_node_by_uuid(flow, node_uuid):
     Returns:
         node with uuid matchign node_uuid
         None if no node was found.
-    '''
+    """
 
     for node in flow["nodes"]:
         if node["uuid"] == node_uuid:
@@ -66,19 +69,19 @@ def find_node_by_uuid(flow, node_uuid):
 
 
 def find_destination_uuid(current_node, context):
-    '''
+    """
     For a given node, find the next node that is visited and return its uuid.
 
     The groups the user is in may affect the outcome.
 
     Args:
-        current_node: 
+        current_node:
         group_names (`list` of `str`): groups the user is in
 
     Returns:
         uuid of the node visited after this node.
         Maybe be None if it is the last node.
-    '''
+    """
 
     # By default, choose the first exit.
     destination_uuid = current_node["exits"][0].get("destination_uuid", None)
@@ -97,11 +100,16 @@ def find_destination_uuid(current_node, context):
 
             # Find the case that applies here and get its category_uuid
             # The arguments are not parse (e.g. no variable substitution)
-            category_uuid = router["default_category_uuid"]  # The "Other" option (default)
+            category_uuid = router[
+                "default_category_uuid"
+            ]  # The "Other" option (default)
             if operand is None:
                 # Input "None" indicates No Response if the router has a wait.
                 if "wait" in router:
-                    if "timeout" in router["wait"] and router["wait"]["timeout"]["seconds"] > 0:
+                    if (
+                        "timeout" in router["wait"]
+                        and router["wait"]["timeout"]["seconds"] > 0
+                    ):
                         category_uuid = router["wait"]["timeout"]["category_uuid"]
                     else:
                         return None  # We're stuck here forever --> exit here.
@@ -132,14 +140,18 @@ def find_destination_uuid(current_node, context):
                             break
                     elif case["type"] == "has_text":
                         if case["arguments"] != []:
-                            raise ValueError("has_text case type must not have arguments")
+                            raise ValueError(
+                                "has_text case type must not have arguments"
+                            )
                         if operand.strip() != "":
                             category_uuid = case["category_uuid"]
                             break
                     elif case["type"] == "has_email":
                         if case["arguments"] != []:
-                            raise ValueError("has_email case type must not have arguments")
-                        if len(re.findall(r'[\w]+@[\w]+\.[\w]+', operand)) > 0:
+                            raise ValueError(
+                                "has_email case type must not have arguments"
+                            )
+                        if len(re.findall(r"[\w]+@[\w]+\.[\w]+", operand)) > 0:
                             # This might differ from the RapidPro implementation.
                             category_uuid = case["category_uuid"]
                             break
@@ -151,7 +163,9 @@ def find_destination_uuid(current_node, context):
                             number = float(operand)
                         except ValueError:
                             number = None
-                        if number is not None and float(case["arguments"][0]) <= number <= float(case["arguments"][1]):
+                        if number is not None and float(
+                            case["arguments"][0]
+                        ) <= number <= float(case["arguments"][1]):
                             category_uuid = case["category_uuid"]
                             break
 
@@ -161,53 +175,61 @@ def find_destination_uuid(current_node, context):
                 if category["uuid"] == category_uuid:
                     exit_uuid = category["exit_uuid"]
             if exit_uuid is None:
-                raise ValueError("No valid exit_uuid in router of node with uuid " + current_node["uuid"])
+                raise ValueError(
+                    "No valid exit_uuid in router of node with uuid "
+                    + current_node["uuid"]
+                )
         else:  # router["type"] == "random"
             # Get the exit_uuid from a random category
             random_choice = context.random_choices.pop(0)
             exit_uuid = router["categories"][random_choice]["exit_uuid"]
 
         # Find the exit we take here and get its destination_uuid
-        destination_uuid = -1  # -1 because None is a valid value indicating the end of a flow
+        destination_uuid = (
+            -1
+        )  # -1 because None is a valid value indicating the end of a flow
         for exit in current_node["exits"]:
             if exit["uuid"] == exit_uuid:
                 destination_uuid = exit.get("destination_uuid", None)
                 break
         if destination_uuid == -1:
-            raise ValueError("No valid destination_uuid in router of node with uuid " + current_node["uuid"])
+            raise ValueError(
+                "No valid destination_uuid in router of node with uuid "
+                + current_node["uuid"]
+            )
     return destination_uuid
 
 
 # List of actions: https://app.rapidpro.io/mr/docs/flows.html#actions
 action_value_fields = {
-    "add_contact_groups" : (lambda x: x["groups"][0]["name"]),
-    "add_contact_urn" : (lambda x: x["path"]),
-    "add_input_labels" : (lambda x: x["labels"][0]["name"]),
-    "call_classifier" : (lambda x: x["classified"]["name"]),
-    "call_resthook" : (lambda x: x["resthook"]),
-    "call_webhook" : (lambda x: x["url"]),
-    "enter_flow" : (lambda x: x["flow"]["name"]),
-    "open_ticket" : (lambda x: x["subject"]),
-    "play_audio" : (lambda x: x["audio_url"]),
-    "remove_contact_groups" : (lambda x: x["groups"][0]["name"]),
-    "say_msg" : (lambda x: x["text"]),
-    "send_broadcast" : (lambda x: x["text"]),
-    "send_email" : (lambda x: x["subject"]),
-    "send_msg" : (lambda x: x["text"]),
-    "set_contact_channel" : (lambda x: x["channel"]["name"]),
-    "set_contact_field" : (lambda x: x["field"]["name"]),
-    "set_contact_language" : (lambda x: x["language"]),
-    "set_contact_name" : (lambda x: x["name"]),
-    "set_contact_status" : (lambda x: x["status"]),
-    "set_contact_timezone" : (lambda x: x["timezone"]),
-    "set_run_result" : (lambda x: x["name"]),
-    "start_session" : (lambda x: x["flow"]["name"]),
-    "transfer_airtime" : (lambda x: "Amount"),
+    "add_contact_groups": (lambda x: x["groups"][0]["name"]),
+    "add_contact_urn": (lambda x: x["path"]),
+    "add_input_labels": (lambda x: x["labels"][0]["name"]),
+    "call_classifier": (lambda x: x["classified"]["name"]),
+    "call_resthook": (lambda x: x["resthook"]),
+    "call_webhook": (lambda x: x["url"]),
+    "enter_flow": (lambda x: x["flow"]["name"]),
+    "open_ticket": (lambda x: x["subject"]),
+    "play_audio": (lambda x: x["audio_url"]),
+    "remove_contact_groups": (lambda x: x["groups"][0]["name"]),
+    "say_msg": (lambda x: x["text"]),
+    "send_broadcast": (lambda x: x["text"]),
+    "send_email": (lambda x: x["subject"]),
+    "send_msg": (lambda x: x["text"]),
+    "set_contact_channel": (lambda x: x["channel"]["name"]),
+    "set_contact_field": (lambda x: x["field"]["name"]),
+    "set_contact_language": (lambda x: x["language"]),
+    "set_contact_name": (lambda x: x["name"]),
+    "set_contact_status": (lambda x: x["status"]),
+    "set_contact_timezone": (lambda x: x["timezone"]),
+    "set_run_result": (lambda x: x["name"]),
+    "start_session": (lambda x: x["flow"]["name"]),
+    "transfer_airtime": (lambda x: "Amount"),
 }
 
 
 def process_actions(node, context):
-    '''May modify the context.'''
+    """May modify the context."""
 
     outputs = []
     for action in node["actions"]:
@@ -231,7 +253,7 @@ def process_actions(node, context):
 
 
 def traverse_flow(flow, context):
-    '''
+    """
     Traverse a given flow, assuming the user's group memberships
     as specified in group_names, which determine which path through
     the flow is taken.
@@ -247,7 +269,7 @@ def traverse_flow(flow, context):
 
     Only supports send_msg actions and group switches
     TODO: Abort after too many steps (there may be cycles).
-    '''
+    """
 
     outputs = []
     current_node = flow["nodes"][0]
@@ -264,17 +286,16 @@ def traverse_flow(flow, context):
 
 
 def find_final_destination(flow, node, context):
-    '''Starting at node in flow, traverse the flow until we reach a
+    """Starting at node in flow, traverse the flow until we reach a
     destination that is not contained inside the flow.
     TODO: Abort after too many steps (there may be cycles).
 
     Returns:
         uuid of the destination outside the flow
-    '''
+    """
 
     while node is not None:
         process_actions(node, context)
         destination_uuid = find_destination_uuid(node, context)
         node = find_node_by_uuid(flow, destination_uuid)
     return destination_uuid
-

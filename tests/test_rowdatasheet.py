@@ -9,62 +9,70 @@ from rpft.parsers.common.rowdatasheet import RowDataSheet
 from tests.mocks import MockRowParser
 
 
-rowA = OrderedDict([
-    ('str_field', 'main string A'),
-    ('list_str:0', 'a'),
-    ('list_str:1', 'b'),
-    ('model_default:int_field', 5),
-])
+rowA = OrderedDict(
+    [
+        ("str_field", "main string A"),
+        ("list_str:0", "a"),
+        ("list_str:1", "b"),
+        ("model_default:int_field", 5),
+    ]
+)
 
-rowB = OrderedDict([
-    ('str_field', 'main string B'),
-    ('2nd_field', '2nd field'),
-    ('list_str:0', 'A'),
-])
+rowB = OrderedDict(
+    [
+        ("str_field", "main string B"),
+        ("2nd_field", "2nd field"),
+        ("list_str:0", "A"),
+    ]
+)
 
-rowC = OrderedDict([
-    ('model_default:int_field', 15),
-    ('x:y:z', 'x y z'),
-])
+rowC = OrderedDict(
+    [
+        ("model_default:int_field", 15),
+        ("x:y:z", "x y z"),
+    ]
+)
 
 rowD = OrderedDict()
 
-rowCycle = OrderedDict([
-    ('list_str:0', '1'),
-    ('str_field', 'main string Cycle'),
-])
+rowCycle = OrderedDict(
+    [
+        ("list_str:0", "1"),
+        ("str_field", "main string Cycle"),
+    ]
+)
 
 headersABCD_exp = [
-    'str_field',
-    '2nd_field',
-    'list_str:0',
-    'list_str:1',
-    'model_default:int_field',
-    'x:y:z',
+    "str_field",
+    "2nd_field",
+    "list_str:0",
+    "list_str:1",
+    "model_default:int_field",
+    "x:y:z",
 ]
 
 contentABCD_exp = [
-    ('main string A', '', 'a', 'b', 5, ''),
-    ('main string B', '2nd field', 'A', '', '', ''),
-    ('', '', '', '', 15, 'x y z'),
-    ('', '', '', '', '', ''),
+    ("main string A", "", "a", "b", 5, ""),
+    ("main string B", "2nd field", "A", "", "", ""),
+    ("", "", "", "", 15, "x y z"),
+    ("", "", "", "", "", ""),
 ]
 
 headersAC_exp = [
-    'str_field',
-    'list_str:0',
-    'list_str:1',
-    'model_default:int_field',
-    'x:y:z',
+    "str_field",
+    "list_str:0",
+    "list_str:1",
+    "model_default:int_field",
+    "x:y:z",
 ]
 
 contentAC_exp = [
-    ('main string A', 'a', 'b', 5, ''),
-    ('', '', '', 15, 'x y z'),
+    ("main string A", "a", "b", 5, ""),
+    ("", "", "", 15, "x y z"),
 ]
 
-class TestRowDataSheet(unittest.TestCase):
 
+class TestRowDataSheet(unittest.TestCase):
     def setUp(self):
         self.rowparser = MockRowParser()
 
@@ -101,19 +109,17 @@ class TestRowDataSheet(unittest.TestCase):
         # but we want to make sure here the export function works.
         with TemporaryDirectory() as outdir:
             outfile = Path(outdir) / "export.csv"
-            RowDataSheet(
-                self.rowparser, [rowA, rowC]
-            ).export(outfile)
+            RowDataSheet(self.rowparser, [rowA, rowC]).export(outfile)
 
     def test_export_xlsx(self):
         # Not our job to test the contents (tablib's responsibility),
         # but we want to make sure here the export function works.
         with TemporaryDirectory() as outdir:
             outfile = Path(outdir) / "export.xlsx"
-            RowDataSheet(
-                self.rowparser, [rowA, rowC]
-            ).export(outfile, file_format='xlsx')
+            RowDataSheet(self.rowparser, [rowA, rowC]).export(
+                outfile, file_format="xlsx"
+            )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -3,8 +3,8 @@ from typing import List
 from pydantic import BaseModel
 from collections.abc import Iterable
 
-class ParserModel(BaseModel):
 
+class ParserModel(BaseModel):
     def header_name_to_field_name(header):
         # Given a human-friendly column header name, map it to the
         # string defining which field(s) in the model the cell
@@ -32,13 +32,16 @@ def is_list_type(model):
     # issubclass only works for Python <=3.6
     # model.__dict__.get('__origin__') returns different things in different Python version.
     # This function tries to accommodate both 3.6 and 3.8 (at least)
-    return model == List or model.__dict__.get('__origin__') in [list, List]
+    return model == List or model.__dict__.get("__origin__") in [list, List]
+
 
 def is_basic_list_type(model):
     return model == list
 
+
 def is_list_instance(value):
     return isinstance(value, list)
+
 
 def is_iterable_instance(value):
     return isinstance(value, Iterable) and not type(value) == str
@@ -52,12 +55,14 @@ def is_parser_model_type(model):
         # This occurs in Python >= 3.7 if one argument is a nested type, e.g. List[str]
         return False
 
+
 def is_parser_model_instance(value):
     return isinstance(value, ParserModel)
 
 
 def is_basic_type(model):
     return model in (str, int, float, bool)
+
 
 def is_basic_instance(value):
     return isinstance(value, (str, int, float, bool))
@@ -68,7 +73,7 @@ class RowParser:
     # and the values are the cell content converted into nested lists.
     # Turns this into an instance of the provided model.
 
-    HEADER_FIELD_SEPARATOR = '.'
+    HEADER_FIELD_SEPARATOR = "."
 
     def __init__(self, model, cell_parser):
         self.model = model
@@ -81,7 +86,12 @@ class RowParser:
         if type(value) == list and len(value) == 2 and type(value[0]) == str:
             first_entry_as_key = model.header_name_to_field_name(value[0])
             if first_entry_as_key in model.__fields__:
-                self.assign_value(field[key], first_entry_as_key, value[1], model.__fields__[first_entry_as_key].outer_type_)
+                self.assign_value(
+                    field[key],
+                    first_entry_as_key,
+                    value[1],
+                    model.__fields__[first_entry_as_key].outer_type_,
+                )
                 return True
         return False
 
@@ -126,7 +136,12 @@ class RowParser:
                     # KWArgs should come after positional arguments --> assert
                     assert not kwarg_found
                     entry_key = model_fields[i]
-                    self.assign_value(field[key], entry_key, entry, model.__fields__[entry_key].outer_type_)
+                    self.assign_value(
+                        field[key],
+                        entry_key,
+                        entry,
+                        model.__fields__[entry_key].outer_type_,
+                    )
 
         elif is_list_type(model):
             # Get the type that's inside the list
@@ -138,7 +153,7 @@ class RowParser:
             # but the cell value is a 1-dimensional list. 1;2 → [[1],[2]] rather than [[1,2]]
             if type(value) != list:
                 # It could be that a list is specified via a single element.
-                if value == '':
+                if value == "":
                     # Interpret an empty cell as [] rather than ['']
                     value = []
                 else:
@@ -162,7 +177,7 @@ class RowParser:
                     if value.strip():
                         # Special case: empty string is not assigned at all;
                         # in this case, the default value takes effect.
-                        if value.strip().lower() == 'false':
+                        if value.strip().lower() == "false":
                             field[key] = False
                         else:
                             # This is consistent with python: Anything that's
@@ -230,7 +245,9 @@ class RowParser:
             # recurse
             return self.find_entry(child_model, output_field[key], field_path[1:])
 
-    def parse_entry(self, column_name, value, value_is_parsed=False, template_context={}):
+    def parse_entry(
+        self, column_name, value, value_is_parsed=False, template_context={}
+    ):
         # This creates/populates a field in self.output
         # The field is determined by column_name, its value by value
         field_path = column_name.split(RowParser.HEADER_FIELD_SEPARATOR)
@@ -244,13 +261,19 @@ class RowParser:
         # The model of field[key] is model, and thus value should also be interpreted
         # as being of type model.
         if not value_is_parsed:
-            if is_basic_list_type(model) or is_list_type(model) or is_parser_model_type(model):
+            if (
+                is_basic_list_type(model)
+                or is_list_type(model)
+                or is_parser_model_type(model)
+            ):
                 # If the expected type of the value is list/object,
                 # parse the cell content as such.
                 # Otherwise leave it as a string
                 value = self.cell_parser.parse(value, context=template_context)
             else:
-                value = self.cell_parser.parse_as_string(value, context=template_context)
+                value = self.cell_parser.parse_as_string(
+                    value, context=template_context
+                )
         self.assign_value(field, key, value, model)
 
     def parse_row(self, data, template_context={}):
@@ -276,40 +299,47 @@ class RowParser:
         # over the lengths of all fields that this list refers to.
         # Note: So far, no nested asterisks are supported.
         asterisk_list_lengths = defaultdict(lambda: 1)
-        for k,v in data.items():
-            if '*' in k:
-                prefix = k.split('*')[0]
+        for k, v in data.items():
+            if "*" in k:
+                prefix = k.split("*")[0]
                 parsed_v = self.cell_parser.parse(v, context=template_context)
                 if isinstance(parsed_v, list):
-                    asterisk_list_lengths[prefix] = max(asterisk_list_lengths[prefix], len(parsed_v))
+                    asterisk_list_lengths[prefix] = max(
+                        asterisk_list_lengths[prefix], len(parsed_v)
+                    )
                     # No else case needed because then the implied list length is 1, i.e. the default value
         # Process each entry
-        for k,v in data.items():
-            if '*' in k:
+        for k, v in data.items():
+            if "*" in k:
                 # Process each prefix:*:suffix column entry by assigning the individual
                 # list values to prefix:1:suffix, prefix:2:suffix, etc
-                prefix = k.split('*')[0]
+                prefix = k.split("*")[0]
                 parsed_v = self.cell_parser.parse(v, context=template_context)
                 if not isinstance(parsed_v, list):
                     # If there was only one entry, we assume it is used for the entire list
-                    parsed_v = [parsed_v]*asterisk_list_lengths[prefix]
+                    parsed_v = [parsed_v] * asterisk_list_lengths[prefix]
                 for i, elem in enumerate(parsed_v):
-                    self.parse_entry(k.replace('*', str(i+1)), elem, value_is_parsed=True, template_context=template_context)
+                    self.parse_entry(
+                        k.replace("*", str(i + 1)),
+                        elem,
+                        value_is_parsed=True,
+                        template_context=template_context,
+                    )
             else:
                 # Normal, non-* column entry.
-                self.parse_entry(k,v, template_context=template_context)
+                self.parse_entry(k, v, template_context=template_context)
         # Returning an instance of the model rather than the output directly
         # helps us fill in default values where no entries exist.
         # Filtering out None values here is a bit of a hack;
         # the cause of these is the line output_field[key] = None in find_key.
         # Ideally, we should fix the cause rather than clean up here.
-        self.output = {k:v for k,v in self.output.items() if v is not None}
+        self.output = {k: v for k, v in self.output.items() if v is not None}
         return self.model(**self.output)
 
     def unparse_row(self, model_instance):
         # No nesting/mapping settings here yet. It simply creates a flat dict.
         self.output_dict = OrderedDict()
-        self.unparse_row_recurse(model_instance, '')
+        self.unparse_row_recurse(model_instance, "")
         return self.output_dict
 
     def unparse_row_recurse(self, value, prefix):
@@ -320,10 +350,14 @@ class RowParser:
             self.output_dict[prefix[1:]] = value
         elif is_list_instance(value):
             for i, entry in enumerate(value):
-                self.unparse_row_recurse(entry, f'{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{i+1}')
+                self.unparse_row_recurse(
+                    entry, f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{i+1}"
+                )
         elif is_parser_model_instance(value):
             for field, entry in value:
                 mapped_field = type(value).field_name_to_header_name(field)
-                self.unparse_row_recurse(entry, f'{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{mapped_field}')
+                self.unparse_row_recurse(
+                    entry, f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{mapped_field}"
+                )
         else:
             raise ValueError(f"Unsupported field type {type(value)} of {value}.")

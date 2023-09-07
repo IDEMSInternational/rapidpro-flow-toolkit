@@ -19,7 +19,12 @@ class TemplateSheetParser:
         rapidpro_container = RapidProContainer()
 
         for row in template_rows:
-            parser = FlowParser(rapidpro_container, table=flow_definition_table, flow_name=row.ID, context=dict(row))
+            parser = FlowParser(
+                rapidpro_container,
+                table=flow_definition_table,
+                flow_name=row.ID,
+                context=dict(row),
+            )
             parser.parse()
 
         return rapidpro_container
