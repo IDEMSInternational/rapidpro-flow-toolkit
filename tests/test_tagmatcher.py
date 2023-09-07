@@ -3,7 +3,6 @@ from rpft.parsers.creation.tagmatcher import TagMatcher
 
 
 class TestTagMatcher(unittest.TestCase):
-
     def test_empty_matcher(self):
         tm = TagMatcher()
         self.assertTrue(tm.matches([]))

@@ -5,7 +5,6 @@ from rpft.parsers.common.sheetparser import SheetParser
 
 
 class MockCellParser:
-
     def parse(self, value, context={}):
         return value
 
@@ -27,14 +26,13 @@ class MockRowParser:
 
 
 class MockSheetParser(SheetParser):
-
     def __init__(self, row_parser, rows, context={}):
-        '''
+        """
         Args:
             row_parser: parser to convert flat dicts to RowModel instances.
             rows: List of instances of the RowModel
             context: context used for template parsing
-        '''
+        """
 
         self.row_parser = row_parser
         self.bookmarks = {}
@@ -51,12 +49,11 @@ class MockSheetParser(SheetParser):
 
 
 class MockSheetReader:
-
     def __init__(self, main_sheet_data, sheet_data_dict):
-        self.main_sheet = tablib.import_set(main_sheet_data, format='csv')
+        self.main_sheet = tablib.import_set(main_sheet_data, format="csv")
         self.sheet_dict = {}
         for name, content in sheet_data_dict.items():
-            self.sheet_dict[name] = tablib.import_set(content, format='csv')
+            self.sheet_dict[name] = tablib.import_set(content, format="csv")
 
     def get_main_sheet(self):
         return self.main_sheet

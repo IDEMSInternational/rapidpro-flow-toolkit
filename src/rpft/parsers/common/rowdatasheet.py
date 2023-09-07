@@ -1,15 +1,16 @@
 import networkx as nx
 import tablib
+
 # from .sheetparser import SheetParser
 
-class RowDataSheet:
 
+class RowDataSheet:
     def __init__(self, row_parser, rows):
-        '''
+        """
         Args:
           rows: a list of RowModel instances
           row_parser: parser to use for converting rows to flat dicts.
-        '''
+        """
         self.row_parser = row_parser
         self.rows = rows
 
@@ -17,8 +18,8 @@ class RowDataSheet:
     #     sheet_parser = SheetParser(row_parser, context, filename, file_format)
     #     return sheet_parser.get_row_data_sheet()
 
-    def export(self, filename, file_format='csv'):
-        '''
+    def export(self, filename, file_format="csv"):
+        """
         Export a list of RowModel instances to file.
 
         Args:
@@ -26,30 +27,30 @@ class RowDataSheet:
             format: Export file format.
                 Supported file formats as supported by tablib,
                 see https://tablib.readthedocs.io/en/stable/formats.html
-        '''
+        """
         data = self.convert_to_tablib()
         exported_data = data.export(file_format)
-        write_type = 'w' if type(exported_data) == str else 'wb'
+        write_type = "w" if type(exported_data) == str else "wb"
         with open(filename, write_type) as f:
             f.write(exported_data)
 
     def convert_to_tablib(self):
-        '''
+        """
         Convert a list of RowModel instances to tablib.Dataset.
 
         Return:
           A tablib.Dataset representation of the data.
-        '''
+        """
 
         data = tablib.Dataset()
         data.headers = self._get_headers()
         for row in self.rows:
             row_dict = self.row_parser.unparse_row(row)
-            data.append([row_dict.get(header, '') for header in data.headers])
+            data.append([row_dict.get(header, "") for header in data.headers])
         return data
 
     def _get_headers(self):
-        '''
+        """
         Get an ordered list of column headers.
         Each row contains a subset of the final set of column headers.
         These subsets need to be merged while respecting the relative order
@@ -59,7 +60,7 @@ class RowDataSheet:
         to uniquely infer the order of the headers.
         Return:
             A list of strings representing the column headers of the sheet.
-        '''
+        """
 
         # Create a graph (representing a poset) whose nodes are the column headers,
         # and whose edges A -> B represent that column header A should come before

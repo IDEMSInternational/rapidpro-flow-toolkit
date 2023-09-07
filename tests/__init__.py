@@ -1,4 +1,4 @@
 from pathlib import Path
 
 
-TESTS_ROOT=Path(__file__).parent
+TESTS_ROOT = Path(__file__).parent

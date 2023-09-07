@@ -8,12 +8,21 @@ from rpft.parsers.creation.flowrowmodel import FlowRowModel, Edge
 
 
 class RapidProContainer:
-    def __init__(self, campaigns=None, fields=None, flows=None, groups=None, site=None, triggers=None, version='13'):
+    def __init__(
+        self,
+        campaigns=None,
+        fields=None,
+        flows=None,
+        groups=None,
+        site=None,
+        triggers=None,
+        version="13",
+    ):
         self.campaigns = campaigns or []
         self.fields = fields or []
         self.flows = flows or []
         self.groups = groups or []
-        self.site = site or 'https://rapidpro.idems.international'
+        self.site = site or "https://rapidpro.idems.international"
         self.triggers = triggers or []
         self.version = version
         self.uuid_dict = UUIDDict()
@@ -64,11 +73,11 @@ class RapidProContainer:
             campaign.assign_global_uuids(self.uuid_dict)
 
     def merge(self, container):
-        '''Merge another RapidPro container into this one.
+        """Merge another RapidPro container into this one.
 
         Should take the union of the flows, groups, etc, and check consistency
         of other parameters (e.g. site)
-        '''
+        """
         raise NotImplementedError
 
     def validate(self):
@@ -90,7 +99,18 @@ class RapidProContainer:
 
 
 class FlowContainer:
-    def __init__(self, flow_name, type='messaging', language='eng', uuid=None, spec_version='13.1.0', revision=0, expire_after_minutes=10080, metadata=None, localization=None):
+    def __init__(
+        self,
+        flow_name,
+        type="messaging",
+        language="eng",
+        uuid=None,
+        spec_version="13.1.0",
+        revision=0,
+        expire_after_minutes=10080,
+        metadata=None,
+        localization=None,
+    ):
         # UI is not part of this as it is captured within the nodes.
         # Localization may be handled differently in the future (e.g. stored within nodes or similar);
         # it is likely to be dropped from here, and only here temporarily to avoid losing its data.
@@ -113,9 +133,9 @@ class FlowContainer:
         nodes = [BaseNode.from_dict(node) for node in nodes]
         if "_ui" in data_copy:
             ui = data_copy.pop("_ui")
-            if 'nodes' in ui:
+            if "nodes" in ui:
                 for node in nodes:
-                    node.add_ui_from_dict(ui['nodes'])
+                    node.add_ui_from_dict(ui["nodes"])
         flow_container = FlowContainer(**data_copy)
         flow_container.nodes = nodes
         return flow_container
@@ -142,7 +162,7 @@ class FlowContainer:
             "revision": self.revision,
             "expire_after_minutes": self.expire_after_minutes,
             "metadata": self.metadata,
-            "localization": self.localization
+            "localization": self.localization,
         }
         ui_dict = {}
         for node in self.nodes:
@@ -150,7 +170,7 @@ class FlowContainer:
             if node_ui:
                 ui_dict[node.uuid] = node_ui
         if ui_dict:
-            render_dict["_ui"] = {'nodes': ui_dict}
+            render_dict["_ui"] = {"nodes": ui_dict}
         return render_dict
 
     def find_node(self, uuid):
@@ -160,7 +180,7 @@ class FlowContainer:
         raise ValueError(f"Destination node {uuid} does not exist within flow.")
 
     def _to_rows_recurse(self, node, parent_edge):
-        # The version of the graph encoded in a sheet is always a DAG, if we disregard all go_to edges. 
+        # The version of the graph encoded in a sheet is always a DAG, if we disregard all go_to edges.
         # So we effectively do the DFS version of topological sort here, with the one special case that
         # if we encounter a backward edge (and thus a cycle), we convert it into a go_to edge.
         # We use temporary row_ids here (derived from node uuids) that get converted to sequential
@@ -185,7 +205,7 @@ class FlowContainer:
                 continue
             child_node = self.find_node(exit.destination_uuid)
             if child_node.uuid in self.completed_nodes:
-                # Edge to a later node. 
+                # Edge to a later node.
                 # We prepend, so that in the end,
                 # the edges are in the correct order again, as in this for
                 # loop we go through the edges in reverse order.
@@ -193,7 +213,15 @@ class FlowContainer:
             elif child_node.uuid in self.visited_nodes:
                 # This is a backward edge to an ancestor of this node.
                 child_row_id = child_node.get_row_models()[0].row_id
-                self.rows.insert(0, FlowRowModel(row_id=generate_new_uuid(), type='go_to', edges=[edge], mainarg_destination_row_ids=[child_row_id]))
+                self.rows.insert(
+                    0,
+                    FlowRowModel(
+                        row_id=generate_new_uuid(),
+                        type="go_to",
+                        edges=[edge],
+                        mainarg_destination_row_ids=[child_row_id],
+                    ),
+                )
             else:
                 # A new node we haven't encountered yet
                 self._to_rows_recurse(child_node, edge)
@@ -215,18 +243,21 @@ class FlowContainer:
         for node in self.nodes:
             node.clear_row_model()
         # Generate the list of rows (with temp row_ids)
-        self._to_rows_recurse(self.nodes[0], Edge(from_='start'))
+        self._to_rows_recurse(self.nodes[0], Edge(from_="start"))
         # We now have to remap the temp row_ids to a sequence of numbers
         # Compile the remapping dict
-        temp_row_id_to_row_id = {'start' : 'start'}
+        temp_row_id_to_row_id = {"start": "start"}
         for i, row in enumerate(self.rows):
-            temp_row_id_to_row_id[row.row_id] = str(i+1)
+            temp_row_id_to_row_id[row.row_id] = str(i + 1)
         # Do the remapping
         for row in self.rows:
             row.row_id = temp_row_id_to_row_id[row.row_id]
             # Also remap ids when referenced in a go_to or in an edge.
-            if row.type == 'go_to':
-                row.mainarg_destination_row_ids = [temp_row_id_to_row_id[row_id] for row_id in row.mainarg_destination_row_ids]
+            if row.type == "go_to":
+                row.mainarg_destination_row_ids = [
+                    temp_row_id_to_row_id[row_id]
+                    for row_id in row.mainarg_destination_row_ids
+                ]
             for edge in row.edges:
                 edge.from_ = temp_row_id_to_row_id[edge.from_]
         return self.rows
@@ -255,7 +286,9 @@ class UUIDDict:
         recorded_uuid = uuid_dict.get(name)
         if recorded_uuid:
             if uuid and uuid != recorded_uuid:
-                raise ValueError(f"Group/Flow {name} has multiple uuids: {uuid} and {recorded_uuid}")
+                raise ValueError(
+                    f"Group/Flow {name} has multiple uuids: {uuid} and {recorded_uuid}"
+                )
         else:
             uuid_dict[name] = uuid
 
