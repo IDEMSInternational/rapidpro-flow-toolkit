@@ -14,6 +14,6 @@ class CSVSheetReader:
     def get_sheet(self, name):
         # Assume same path as the main sheet, and take sheet names
         # relative to that path.
-        with open(os.path.join(self.path, f'{name}.csv'), 'r') as table_data:
+        with open(os.path.join(self.path, f'{name}.csv'), mode='r', encoding='utf-8') as table_data:
             table = tablib.import_set(table_data, format='csv')
         return table
