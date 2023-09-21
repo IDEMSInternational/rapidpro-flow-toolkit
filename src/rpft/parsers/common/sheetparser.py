@@ -6,21 +6,20 @@ LOGGER = get_logger()
 
 
 class SheetParser:
-
     def __init__(self, row_parser, table, context={}):
-        '''
+        """
         Args:
             row_parser: parser to convert flat dicts to RowModel instances.
             context: context used for template parsing
             table: Tablib Dataset representing the table to be parsed.
-        '''
+        """
 
         self.row_parser = row_parser
         self.bookmarks = {}
         self.input_rows = []
         for row_idx, row in enumerate(table):
-            row_dict = {h : e for h, e in zip(table.headers, row)}
-            self.input_rows.append((row_dict, row_idx+2))
+            row_dict = {h: e for h, e in zip(table.headers, row)}
+            self.input_rows.append((row_dict, row_idx + 2))
         self.iterator = iter(self.input_rows)
         self.context = copy.deepcopy(context)
 

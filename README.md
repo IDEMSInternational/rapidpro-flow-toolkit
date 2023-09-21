@@ -81,4 +81,4 @@ For instructions on how to set up your development environment for developing th
 [1]: https://developers.google.com/sheets/api/quickstart/python#set_up_your_environment
 [2]: https://developers.google.com/identity/protocols/oauth2/service-account#creatinganaccount
 [3]: https://docs.google.com/document/d/1Onx2RhNoWKW9BQvFrgTc5R5hcwDy1OMsLKnNB7YxQH0/edit?pli=1#
-[4]: https://github.com/IDEMSInternational/rapidpro-flow-toolkit/docs/development.md
+[4]: https://github.com/IDEMSInternational/rapidpro-flow-toolkit/blob/main/docs/development.md

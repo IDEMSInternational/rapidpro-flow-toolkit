@@ -1,6 +1,6 @@
 # Setup
 
-1. Install Python >= 3.7
+1. Install Python >= 3.8
 1. Clone the source code repository: `git clone https://github.com/IDEMSInternational/rapidpro-flow-toolkit`
 1. Change to the project root directory: `cd rapidpro_flow_toolkit`
 1. Create a virtual environment: `python -m venv .venv`

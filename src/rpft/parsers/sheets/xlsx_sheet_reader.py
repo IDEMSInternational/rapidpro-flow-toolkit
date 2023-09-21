@@ -2,14 +2,13 @@ import tablib
 
 
 class XLSXSheetReader:
-
     def __init__(self, filename):
-        with open(filename, 'rb') as table_data:
-            data = tablib.Databook().load(table_data.read(), 'xlsx')
+        with open(filename, "rb") as table_data:
+            data = tablib.Databook().load(table_data.read(), "xlsx")
         self.main_sheet = None
         self.sheets = {}
         for sheet in data.sheets():
-            if sheet.title == 'content_index':
+            if sheet.title == "content_index":
                 self.main_sheet = self._sanitize(sheet)
             else:
                 self.sheets[sheet.title] = self._sanitize(sheet)
@@ -20,7 +19,7 @@ class XLSXSheetReader:
         data = tablib.Dataset()
         data.headers = sheet.headers
         for row in sheet:
-            new_row = tuple(str(e) if e is not None else '' for e in row)
+            new_row = tuple(str(e) if e is not None else "" for e in row)
             data.append(new_row)
         return data
 
