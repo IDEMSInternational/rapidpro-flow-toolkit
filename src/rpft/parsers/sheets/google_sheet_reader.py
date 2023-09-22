@@ -68,9 +68,9 @@ class GoogleSheetReader:
 
     def get_sheet(self, name):
         return self.sheets[name]
-    
-    def get_all_metadata(self):
-        return self.sheet_metadata
+
+    def get_api_service(self):
+        return self.service
 
 
 def get_credentials():
