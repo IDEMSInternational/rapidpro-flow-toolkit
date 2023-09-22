@@ -69,10 +69,6 @@ class GoogleSheetReader:
     def get_sheet(self, name):
         return self.sheets[name]
 
-    def get_api_service(self):
-        return self.service
-
-
 def get_credentials():
     sa_creds = os.getenv("CREDENTIALS")
     if sa_creds:
