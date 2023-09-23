@@ -51,7 +51,7 @@ class BaseNode(ABC):
                 if data["router"]["operand"] == "@child.run.status":
                     return EnterFlowNode.from_dict(data, ui_data)
                 elif data["router"]["operand"] == "@results.webhook_result.category":
-                    return WebhookNode.from_dict(data, ui_data)
+                    return CallWebhookNode.from_dict(data, ui_data)
                 else:
                     return SwitchRouterNode.from_dict(data, ui_data)
             else:
@@ -498,12 +498,12 @@ class EnterFlowNode(BaseNode):
         return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)
 
 
-class WebhookNode(BaseNode):
+class CallWebhookNode(BaseNode):
     def __init__(
         self,
         result_name=None,
         url=None,
-        method="GET",
+        method=None,
         body="",
         headers=None,
         success_destination_uuid=None,
@@ -517,6 +517,13 @@ class WebhookNode(BaseNode):
         Either an action or a flow_name have to be provided.
         """
         super().__init__(uuid, ui_pos=ui_pos)
+
+        method = method or "POST"
+        http_methods = ["CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "POST", "PUT"]
+        if method not in http_methods:
+            raise ValueError("Method for WebhookNode must a valid HTTP method")
+        headers = headers or {}
+        assert type(headers) == dict
 
         if action:
             if action.type != "call_webhook":
@@ -535,7 +542,8 @@ class WebhookNode(BaseNode):
                     "url": url,
                     "method": method,
                     "body": body,
-                    "headers": headers or {},
+                    "headers": headers,
+                    "uuid": generate_new_uuid(),
                 }
             )
             self.add_action(action)
@@ -544,22 +552,22 @@ class WebhookNode(BaseNode):
             self.router = router
         else:
             self.router = SwitchRouter(
-                operand="@results.webhook_result.category",
+                operand=f"@results.{result_name}.category",
                 result_name=None,
                 wait_timeout=None,
             )
-            self.router.default_category.update_name("Expired")
+            self.router.default_category.update_name("Failure")
 
             self.add_choice(
-                comparison_variable="@results.webhook_result.category",
+                comparison_variable=f"@results.{result_name}.category",
                 comparison_type="has_only_text",
                 comparison_arguments=["Success"],
                 category_name="Success",
                 destination_uuid=success_destination_uuid,
             )
+            self.router.update_default_category(failure_destination_uuid, "Failure")
             # Suppress the warning about overwriting default category
             self.router.has_explicit_default_category = False
-            self.router.update_default_category(failure_destination_uuid, "Failure")
 
     def from_dict(data, ui_data=None):
         exits = [Exit.from_dict(exit_data) for exit_data in data["exits"]]
@@ -567,7 +575,7 @@ class WebhookNode(BaseNode):
         actions = [Action.from_dict(action) for action in data["actions"]]
         if len(actions) != 1:
             raise ValueError("WebhookNode node must have exactly one action")
-        return WebhookNode(uuid=data["uuid"], router=router, action=actions[0])
+        return CallWebhookNode(uuid=data["uuid"], router=router, action=actions[0])
 
     def add_choice(self, *args, **kwargs):
         # TODO: validate the input

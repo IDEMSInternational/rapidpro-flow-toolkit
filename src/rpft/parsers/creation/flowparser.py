@@ -17,6 +17,7 @@ from rpft.rapidpro.models.nodes import (
     SwitchRouterNode,
     RandomRouterNode,
     EnterFlowNode,
+    CallWebhookNode,
 )
 from rpft.rapidpro.models.routers import SwitchRouter
 from rpft.parsers.common.cellparser import CellParser
@@ -210,6 +211,19 @@ class RowNodeGroup:
             else:
                 LOGGER.error(
                     "Condition from start_new_flow must be 'Completed' or 'Expired'."
+                )
+            return
+
+        # Completed/Expired edge from start_new_flow
+        if isinstance(exit_node, CallWebhookNode):
+            if condition.value.lower() == "success":
+                exit_node.update_success_exit(destination_uuid)
+                self.has_loose_exit = False
+            elif condition.value.lower() == "failure":
+                exit_node.update_failure_exit(destination_uuid)
+            else:
+                LOGGER.error(
+                    "Condition from call_webhook must be 'Success' or 'Failure'."
                 )
             return
 
@@ -484,6 +498,7 @@ class FlowParser:
             "split_by_group",
             "split_random",
             "start_new_flow",
+            "call_webhook",
         ]:
             return None
         else:
@@ -496,6 +511,21 @@ class FlowParser:
             # have tests checking for group UUIDs.
             uuid = None
         return Group(name=name, uuid=uuid)
+
+    def _validate_webhook_headers(self, headers):
+        # Dict is not yet supported in the row parser,
+        # so we need to convert a list of pairs into dict.
+        if type(headers) == dict:
+            return headers
+        elif type(headers) == list:
+            if headers == [""]:
+                # Future row parser should return [] instead of [""]
+                return {}
+            if not all(map(lambda x: type(x) == list and len(x) == 2, headers)):
+                LOGGER.critical(f"Webhook headers must be a list of pairs.")
+            return {k: v for k, v in headers}
+        else:
+            LOGGER.critical(f"Webhook headers must be a dict.")
 
     def _get_row_node(self, row):
         if (
@@ -537,6 +567,17 @@ class FlowParser:
                     row.mainarg_flow_name, row.obj_id
                 )
             return EnterFlowNode(row.mainarg_flow_name, uuid=node_uuid, ui_pos=ui_pos)
+        elif row.type in ["call_webhook"]:
+            headers = self._validate_webhook_headers(row.webhook.headers)
+            return CallWebhookNode(
+                result_name=row.save_name,
+                url=row.webhook.url,
+                method=row.webhook.method,
+                body=row.webhook.body,
+                headers=headers,
+                uuid=node_uuid,
+                ui_pos=ui_pos,
+            )
         elif row.type in ["wait_for_response"]:
             if row.no_response:
                 return SwitchRouterNode(
