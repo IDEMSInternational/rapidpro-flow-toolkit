@@ -73,4 +73,4 @@ def google_sheets_as_csv(sheet_ids, output_folder):
             ) as csv_file:  # Specify encoding
                 csv_writer = csv.writer(csv_file)
                 csv_writer.writerows(response["values"])
-    print(len(sheet_ids + " sheets sucessfully downloaded and stored as csv files"))
+    print(str(len(sheet_ids)) + " sheets sucessfully downloaded and stored as csv files")
