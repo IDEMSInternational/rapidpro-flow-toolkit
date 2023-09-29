@@ -1,15 +1,12 @@
 import json
-import os
-import time
-import csv
+import shutil
+from pathlib import Path
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets.csv_sheet_reader import CSVSheetReader
-from rpft.parsers.sheets.xlsx_sheet_reader import XLSXSheetReader
 from rpft.parsers.sheets.google_sheet_reader import GoogleSheetReader
-from googleapiclient.discovery import build
-from rpft.parsers.sheets.google_sheet_reader import get_credentials
+from rpft.parsers.sheets.xlsx_sheet_reader import XLSXSheetReader
 
 
 def create_flows(input_files, output_file, sheet_format, data_models=None, tags=[]):
@@ -37,40 +34,32 @@ def create_sheet_reader(sheet_format, input_file, credentials=None):
     return sheet_reader
 
 
-def google_sheets_as_csv(sheet_ids, output_folder):
-    service = build("sheets", "v4", credentials=get_credentials())
-    for sheet_id in sheet_ids:
-        spreadsheet = service.spreadsheets().get(spreadsheetId=sheet_id).execute()
-        sheets = spreadsheet["sheets"]
-        workbook_folder = os.path.join(output_folder, sheet_id)
-        os.makedirs(workbook_folder, exist_ok=True)
+def sheets_to_csv(path, sheet_ids):
+    prepare_dir(path)
 
-        for sheet in sheets:
-            sheet_title = sheet["properties"]["title"]
-            range_name = f"'{sheet_title}'"
+    for sid in sheet_ids:
+        sheet_to_csv(path, sid)
 
-            request = (
-                service.spreadsheets()
-                .values()
-                .get(spreadsheetId=sheet_id, range=range_name)
-            )
-            response = None
 
-            while response is None:
-                try:
-                    response = request.execute()
-                except Exception as e:
-                    if "quota" in str(e).lower():
-                        print("Rate limit exceeded. Backing off and retrying...")
-                        time.sleep(10)
-                    else:
-                        raise
+def sheet_to_csv(path, sheet_id):
+    workbook_dir = prepare_dir(Path(path) / sheet_id)
+    reader = GoogleSheetReader(sheet_id)
 
-            csv_path = os.path.join(workbook_folder, f"{sheet_title}.csv")
+    for name, table in reader.sheets.items():
+        with open(
+            workbook_dir / f"{name}.csv",
+            "w",
+            newline="",
+            encoding="utf-8",
+        ) as csv_file:
+            csv_file.write(table.export("csv"))
 
-            with open(
-                csv_path, "w", newline="", encoding="utf-8"
-            ) as csv_file:  # Specify encoding
-                csv_writer = csv.writer(csv_file)
-                csv_writer.writerows(response["values"])
-    print(str(len(sheet_ids)) + " sheets sucessfully downloaded and stored as csv files")
+
+def prepare_dir(path):
+    directory = Path(path)
+
+    if directory.exists():
+        shutil.rmtree(directory)
+    directory.mkdir(parents=True)
+
+    return directory
