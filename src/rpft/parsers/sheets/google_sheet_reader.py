@@ -37,21 +37,18 @@ class GoogleSheetReader:
             .execute()
         )
 
-        self.main_sheet = None
         self.sheets = {}
         for sheet in result.get("valueRanges", []):
             name = sheet.get("range", "").split("!")[0]
             if name.startswith("'") and name.endswith("'"):
                 name = name[1:-1]
             content = sheet.get("values", [])
-            if name == "content_index":
-                self.main_sheet = self._table_from_content(content)
-            elif name in self.sheets:
+            if name in self.sheets:
                 raise ValueError(f"Warning: Duplicate sheet name: {name}")
             else:
                 self.sheets[name] = self._table_from_content(content)
 
-        if self.main_sheet is None:
+        if self.get_main_sheet() is None:
             raise ValueError(f'{spreadsheet_id} must have a sheet "content_index"')
 
     def _table_from_content(self, content):
@@ -64,10 +61,11 @@ class GoogleSheetReader:
         return table
 
     def get_main_sheet(self):
-        return self.main_sheet
+        return self.get_sheet("content_index")
 
     def get_sheet(self, name):
         return self.sheets[name]
+
 
 def get_credentials():
     sa_creds = os.getenv("CREDENTIALS")
