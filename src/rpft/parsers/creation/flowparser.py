@@ -488,7 +488,7 @@ class FlowParser:
             return set_run_result_action
         elif row.type.startswith("set_contact_"):
             property = row.type.replace("set_contact_", "")
-            if not property in ["channel", "language", "name", "status", "timezone"]:
+            if property not in ["channel", "language", "name", "status", "timezone"]:
                 LOGGER.error(f"Unknown operation set_contact_{property}.")
             action = SetContactPropertyAction(property, row.mainarg_value)
             return action
@@ -515,17 +515,17 @@ class FlowParser:
     def _validate_webhook_headers(self, headers):
         # Dict is not yet supported in the row parser,
         # so we need to convert a list of pairs into dict.
-        if type(headers) == dict:
+        if type(headers) is dict:
             return headers
-        elif type(headers) == list:
+        elif type(headers) is list:
             if headers == [""]:
                 # Future row parser should return [] instead of [""]
                 return {}
             if not all(map(lambda x: type(x) == list and len(x) == 2, headers)):
-                LOGGER.critical(f"Webhook headers must be a list of pairs.")
+                LOGGER.critical("Webhook headers must be a list of pairs.")
             return {k: v for k, v in headers}
         else:
-            LOGGER.critical(f"Webhook headers must be a dict.")
+            LOGGER.critical("Webhook headers must be a dict.")
 
     def _get_row_node(self, row):
         if (
