@@ -244,8 +244,6 @@ class TestFlowContainer(TestToRowModels):
             }
         )
 
-        case1 = row_data2.edges[0].condition
-        case2 = row_data2.edges[1].condition
         container = FlowContainer("test_flow")
 
         node1 = RandomRouterNode()
@@ -322,8 +320,6 @@ class TestFlowContainer(TestToRowModels):
         )
 
         case1 = row_data2.edges[0].condition
-        case2 = row_data3.edges[0].condition
-        case3 = row_data4.edges[0].condition
         container = FlowContainer("test_flow")
         node1 = SwitchRouterNode(
             "@input.text",
@@ -373,7 +369,6 @@ class TestFlowContainer(TestToRowModels):
                     {
                         "from_": "1",
                         "condition": {"value": "expired"},
-                        # 'variable':'@child.run.status', 'type':'has_only_text', 'name':'Expired' are implicit
                     }
                 ],
                 "mainarg_value": "Value",

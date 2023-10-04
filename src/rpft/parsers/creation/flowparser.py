@@ -521,7 +521,7 @@ class FlowParser:
             if headers == [""]:
                 # Future row parser should return [] instead of [""]
                 return {}
-            if not all(map(lambda x: type(x) == list and len(x) == 2, headers)):
+            if not all(map(lambda x: type(x) is list and len(x) == 2, headers)):
                 LOGGER.critical("Webhook headers must be a list of pairs.")
             return {k: v for k, v in headers}
         else:

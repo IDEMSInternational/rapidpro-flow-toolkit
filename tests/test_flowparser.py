@@ -446,7 +446,6 @@ class TestWebhook(TestBlocks):
 
         render_output = self.render_output_from_table_data(table_data)
         node = render_output["nodes"][0]
-        node["actions"][0].pop("uuid")
         self.assertEqual(node["actions"][0]["headers"], {})
         self.assertEqual(node["actions"][0]["method"], "POST")
 
@@ -460,7 +459,6 @@ class TestWebhook(TestBlocks):
 
         render_output = self.render_output_from_table_data(table_data)
         node = render_output["nodes"][0]
-        node["actions"][0].pop("uuid")
         self.assertEqual(node["actions"][0]["headers"], {})
         self.assertEqual(node["actions"][0]["method"], "POST")
 

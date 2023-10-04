@@ -1,6 +1,5 @@
 from typing import List
 from rpft.parsers.common.rowparser import ParserModel
-from pydantic import Field
 
 
 class Condition(ParserModel):
@@ -43,7 +42,7 @@ class Edge(ParserModel):
         return field_map.get(field, field)
 
     def header_name_to_field_name_with_context(header, row):
-        return header_name_to_field_name(header)
+        return Edge.header_name_to_field_name(header)
 
 
 class FlowRowModel(ParserModel):

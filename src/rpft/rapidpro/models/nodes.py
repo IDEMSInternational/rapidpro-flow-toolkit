@@ -523,7 +523,7 @@ class CallWebhookNode(BaseNode):
         if method not in http_methods:
             raise ValueError("Method for WebhookNode must a valid HTTP method")
         headers = headers or {}
-        assert type(headers) == dict
+        assert type(headers) is dict
 
         if action:
             if action.type != "call_webhook":
