@@ -1,17 +1,22 @@
 from typing import List
 from rpft.parsers.common.rowparser import ParserModel
-from pydantic import Field
 
 
 class Condition(ParserModel):
-    value: str = (
-        ""  # Technically, this should be a list as a case may have multiple args
-    )
+    # Technically, value should be a list as a case may have multiple args
+    value: str = ""
     variable: str = ""
     type: str = ""
     name: str = ""
     # TODO: We could specify proper default values here, and write custom
     # validators that replace '' with the actual default value.
+
+
+class Webhook(ParserModel):
+    url: str = ""
+    method: str = ""
+    headers: list = []
+    body: str = ""
 
 
 class WhatsAppTemplating(ParserModel):
@@ -37,7 +42,7 @@ class Edge(ParserModel):
         return field_map.get(field, field)
 
     def header_name_to_field_name_with_context(header, row):
-        return header_name_to_field_name(header)
+        return Edge.header_name_to_field_name(header)
 
 
 class FlowRowModel(ParserModel):
@@ -56,6 +61,7 @@ class FlowRowModel(ParserModel):
     mainarg_expression: str = ""
     mainarg_iterlist: list = []  # no specified type of elements
     wa_template: WhatsAppTemplating = WhatsAppTemplating()
+    webhook: Webhook = Webhook()
     data_sheet: str = ""
     data_row_id: str = ""
     template_arguments: list = []
@@ -92,6 +98,7 @@ class FlowRowModel(ParserModel):
             "mainarg_destination_row_ids": "message_text",
             "mainarg_flow_name": "message_text",
             "mainarg_expression": "message_text",
+            "webhook.body": "message_text",
             # 'mainarg_iterlist' : 'message_text',  # Not supported for export
         }
         return field_map.get(field, field)
@@ -125,6 +132,7 @@ class FlowRowModel(ParserModel):
             "set_contact_timezone": "mainarg_value",
             "split_random": "mainarg_none",
             "go_to": "mainarg_destination_row_ids",
+            "call_webhook": "webhook.body",
             "start_new_flow": "mainarg_flow_name",
             "split_by_value": "mainarg_expression",
             "split_by_group": "mainarg_groups",

@@ -418,6 +418,69 @@ class TestBlocks(unittest.TestCase):
         self.assertEqual(actions, actions_exp)
 
 
+class TestWebhook(TestBlocks):
+    def test_basic_webhook(self):
+        table_data = (
+            "row_id,type,from,message_text,webhook.url,webhook.method,webhook.headers,save_name\n"
+            ",call_webhook,start,Webhook Body,http://localhost:49998/?cmd=success,GET,Authorization;Token AAFFZZHH|,webhook_result\n"
+        )
+        action_exp = {
+            "type": "call_webhook",
+            "body": "Webhook Body",
+            "method": "GET",
+            "url": "http://localhost:49998/?cmd=success",
+            "headers": {"Authorization": "Token AAFFZZHH"},
+            "result_name": "webhook_result",
+        }
+
+        render_output = self.render_output_from_table_data(table_data)
+        node = render_output["nodes"][0]
+        node["actions"][0].pop("uuid")
+        self.assertEqual(node["actions"][0], action_exp)
+
+    def test_webhook_default_args(self):
+        table_data = (
+            "row_id,type,from,message_text,webhook.url,webhook.method,webhook.headers,save_name\n"
+            ",call_webhook,start,Webhook Body,http://localhost:49998/?cmd=success,,,webhook_result\n"
+        )
+
+        render_output = self.render_output_from_table_data(table_data)
+        node = render_output["nodes"][0]
+        self.assertEqual(node["actions"][0]["headers"], {})
+        self.assertEqual(node["actions"][0]["method"], "POST")
+
+    def test_webhook_connectivity(self):
+        table_data = (
+            "row_id,type,from,condition,message_text,webhook.url,webhook.method,webhook.headers,save_name\n"
+            "0,call_webhook,start,,Webhook Body,URL,,,webhook_result\n"
+            ",send_message,0,Success,Webhook Success,,,,\n"
+            ",send_message,0,,Webhook Failure,,,,\n"
+        )
+
+        render_output = self.render_output_from_table_data(table_data)
+        node = render_output["nodes"][0]
+        self.assertEqual(node["actions"][0]["headers"], {})
+        self.assertEqual(node["actions"][0]["method"], "POST")
+
+        # Also check that the connectivity is correct
+        self.run_example_with_actions(
+            table_data,
+            [
+                ("call_webhook", "URL"),
+                ("send_msg", "Webhook Success"),
+            ],
+            context=Context(inputs=["Success"]),
+        )
+        self.run_example_with_actions(
+            table_data,
+            [
+                ("call_webhook", "URL"),
+                ("send_msg", "Webhook Failure"),
+            ],
+            context=Context(inputs=["Failure"]),
+        )
+
+
 class TestLoops(TestBlocks):
     def test_basic_loop(self):
         table_data = (

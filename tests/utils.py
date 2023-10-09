@@ -91,7 +91,9 @@ def find_destination_uuid(current_node, context):
             # Get value of the operand
             if router["operand"] == "@contact.groups":
                 operand = context.group_names
-            elif router["operand"] in ["@input.text", "@child.run.status"]:
+            elif router["operand"] in ["@input.text", "@child.run.status"] or re.match(
+                r"@results\..*\.category", router["operand"]
+            ):
                 operand = context.inputs.pop(0)
             elif router["operand"] in context.variables:
                 operand = context.variables[router["operand"]]
