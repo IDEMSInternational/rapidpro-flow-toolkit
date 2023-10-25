@@ -22,6 +22,19 @@ class TemplateSheet:
         self.argument_definitions = argument_definitions
 
 
+class DataSheet:
+    def __init__(self, rows, row_model):
+        """Args:
+        rows: A dict mapping row_ids (str) to row_model instances.
+        row_model: the model underlying the instances of rows.
+        """
+        self.rows = rows
+        self.row_model = row_model
+
+    def __getitem__(self, key):
+        return self.rows[key]
+
+
 class ParserError(Exception):
     pass
 
@@ -35,8 +48,8 @@ class ContentIndexParser:
     ):
         self.reader = sheet_reader
         self.tag_matcher = tag_matcher
-        self.template_sheets = {}  # values: tablib tables
-        self.data_sheets = {}  # values: OrderedDicts of RowModels
+        self.template_sheets = {}
+        self.data_sheets = {}
         self.flow_definition_rows = []  # list of ContentIndexRowModel
         self.campaign_parsers = {}  # list of CampaignParser
 
@@ -82,9 +95,7 @@ class ContentIndexParser:
                             "For data_sheet rows, at least one "
                             "sheet_name has to be specified"
                         )
-                    self._process_data_sheet(
-                        row.sheet_name, row.new_name, row.data_model
-                    )
+                    self._process_data_sheet(row)
                 elif row.type in ["template_definition", "create_flow"]:
                     if not len(row.sheet_name) == 1:
                         LOGGER.critical(
@@ -157,51 +168,86 @@ class ContentIndexParser:
 
         return active
 
-    def _process_data_sheet(self, sheet_names, new_name, data_model_name):
+    def _process_data_sheet(self, row):
         if not hasattr(self, "user_models_module"):
             LOGGER.critical(
                 "If there are data sheets, a user_data_model_module_name "
                 "has to be provided"
             )
-            return
-        if not data_model_name:
-            LOGGER.critical("No data_model_name provided for data sheet.")
-            return
-        if len(sheet_names) > 1 and not new_name:
-            LOGGER.critical(
-                "If multiple sheets are concatenated, a new_name has to be provided"
+        sheet_names = row.sheet_name
+        if row.operation != "concat" and len(sheet_names) > 1:
+            LOGGER.warning(
+                "data_sheet definition take only one sheet_name, unless the operation "
+                "concat is used. All but the first sheet_name are ignored."
             )
-            return
-        if not new_name:
-            new_name = sheet_names[0]
+        if not row.operation:
+            data_sheet = self._get_data_sheet(sheet_names[0], row.data_model)
+        else:
+            if not row.new_name:
+                LOGGER.critical(
+                    "If an operation is applied to a data_sheet, "
+                    "a new_name has to be provided"
+                )
+            if row.operation == "concat":
+                data_sheet = self._data_sheets_concat(row.sheet_name, row.data_model)
+            elif row.operation == "filter":
+                raise NotImplementedError()
+            elif row.operation == "sort":
+                raise NotImplementedError()
+            else:
+                LOGGER.critical(f'Unknown operation "{row.operation}"')
+        new_name = row.new_name or sheet_names[0]
         if new_name in self.data_sheets:
             LOGGER.warn(
                 f"Duplicate data sheet {new_name}. Overwriting previous definition."
             )
-        content = OrderedDict()
+        self.data_sheets[new_name] = data_sheet
+
+    def _get_data_sheet(self, sheet_name, data_model_name):
+        if sheet_name in self.data_sheets:
+            return self.data_sheets[sheet_name]
+        else:
+            return self._get_new_data_sheet(sheet_name, data_model_name)
+
+    def _get_new_data_sheet(self, sheet_name, data_model_name):
+        if not data_model_name:
+            LOGGER.critical("No data_model_name provided for data sheet.")
+        try:
+            user_model = getattr(self.user_models_module, data_model_name)
+        except AttributeError:
+            LOGGER.critical(
+                f'Undefined data_model_name "{data_model_name}" '
+                f"in {self.user_models_module}."
+            )
+        data_table = self._get_sheet_or_die(sheet_name)
+        with logging_context(sheet_name):
+            data_table = self._get_sheet_or_die(sheet_name).table
+            row_parser = RowParser(user_model, CellParser())
+            sheet_parser = SheetParser(row_parser, data_table)
+            data_rows = sheet_parser.parse_all()
+            model_instances = OrderedDict((row.ID, row) for row in data_rows)
+            return DataSheet(model_instances, user_model)
+
+    def _data_sheets_concat(self, sheet_names, data_model_name):
+        all_data_rows = OrderedDict()
+        user_model = None
         for sheet_name in sheet_names:
             with logging_context(sheet_name):
-                data_table = self._get_sheet_or_die(sheet_name).table
-                try:
-                    user_model = getattr(self.user_models_module, data_model_name)
-                except AttributeError:
+                data_sheet = self._get_data_sheet(sheet_name, data_model_name)
+                if user_model and user_model is not data_sheet.row_model:
                     LOGGER.critical(
-                        f'Undefined data_model_name "{data_model_name}" '
-                        f"in {self.user_models_module}."
+                        "Cannot concatenate data_sheets with different "
+                        "underlying models"
                     )
-                    return
-                row_parser = RowParser(user_model, CellParser())
-                sheet_parser = SheetParser(row_parser, data_table)
-                data_rows = sheet_parser.parse_all()
-                sheet_content = OrderedDict((row.ID, row) for row in data_rows)
-                content.update(sheet_content)
-        self.data_sheets[new_name] = content
+                user_model = data_sheet.row_model
+                all_data_rows.update(data_sheet.rows)
+        return DataSheet(all_data_rows, user_model)
 
-    def get_data_model_instance(self, sheet_name, row_id):
+    def get_data_sheet_row(self, sheet_name, row_id):
         return self.data_sheets[sheet_name][row_id]
 
-    def get_all_data_model_instances(self, sheet_name):
-        return self.data_sheets[sheet_name]
+    def get_data_sheet_rows(self, sheet_name):
+        return self.data_sheets[sheet_name].rows
 
     def get_template_sheet(self, name):
         return self.template_sheets[name]
@@ -251,7 +297,7 @@ class ContentIndexParser:
         for logging_prefix, row in self.flow_definition_rows:
             with logging_context(f"{logging_prefix} | {row.sheet_name[0]}"):
                 if row.data_sheet and not row.data_row_id:
-                    data_rows = self.get_all_data_model_instances(row.data_sheet)
+                    data_rows = self.get_data_sheet_rows(row.data_sheet)
                     for data_row_id in data_rows.keys():
                         with logging_context(f'with data_row_id "{data_row_id}"'):
                             flow = self._parse_flow(
@@ -304,7 +350,7 @@ class ContentIndexParser:
         base_name = new_name or sheet_name
         if data_sheet and data_row_id:
             flow_name = " - ".join([base_name, data_row_id])
-            context = self.get_data_model_instance(data_sheet, data_row_id)
+            context = self.get_data_sheet_row(data_sheet, data_row_id)
         else:
             if data_sheet or data_row_id:
                 LOGGER.warn(
@@ -341,7 +387,7 @@ class ContentIndexParser:
             # Check if these args are non-empty.
             # Once the row parser is cleaned up to eliminate trailing ''
             # entries, this won't be necessary
-            extra_args = args[len(arg_defs):]
+            extra_args = args[len(arg_defs) :]
             non_empty_extra_args = [ea for ea in extra_args if ea]
             if non_empty_extra_args:
                 LOGGER.warn("Too many arguments provided to template")

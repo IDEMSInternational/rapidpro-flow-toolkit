@@ -16,6 +16,8 @@ class ContentIndexRowModel(ParserModel):
     data_row_id: str = ""
     template_argument_definitions: List[TemplateArgument] = []  # internal name
     template_arguments: list = []
+    operation: str = ""
+    arguments: str = ""
     data_model: str = ""
     group: str = ""
     status: str = ""
