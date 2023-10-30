@@ -8,6 +8,16 @@ from rpft.parsers.sheets import CSVSheetReader, GoogleSheetReader, XLSXSheetRead
 
 
 def create_flows(input_files, output_file, sheet_format, data_models=None, tags=[]):
+    """
+    Convert source spreadsheet(s) into RapidPro flows.
+
+    :param sources: list of source spreadsheets to convert
+    :param output_files: (deprecated) path of file to export flows to as JSON
+    :param sheet_format: format of the spreadsheets
+    :param data_models: name of module containing supporting Python data classes
+    :param tags: names of tags to be used to filter the source spreadsheets
+    :returns: dict representing the RapidPro import/export format.
+    """
     parser = ContentIndexParser(
         user_data_model_module_name=data_models, tag_matcher=TagMatcher(tags)
     )
@@ -16,7 +26,13 @@ def create_flows(input_files, output_file, sheet_format, data_models=None, tags=
         reader = create_sheet_reader(sheet_format, input_file)
         parser.add_content_index(reader)
 
-    json.dump(parser.parse_all().render(), open(output_file, "w"), indent=4)
+    flows = parser.parse_all().render()
+
+    if output_file:
+        with open(output_file, "w") as export:
+            json.dump(flows, export, indent=4)
+
+    return flows
 
 
 def create_sheet_reader(sheet_format, input_file, credentials=None):
