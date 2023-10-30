@@ -4,9 +4,7 @@ from pathlib import Path
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
-from rpft.parsers.sheets.csv_sheet_reader import CSVSheetReader
-from rpft.parsers.sheets.google_sheet_reader import GoogleSheetReader
-from rpft.parsers.sheets.xlsx_sheet_reader import XLSXSheetReader
+from rpft.parsers.sheets import CSVSheetReader, GoogleSheetReader, XLSXSheetReader
 
 
 def create_flows(input_files, output_file, sheet_format, data_models=None, tags=[]):
