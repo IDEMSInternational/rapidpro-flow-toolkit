@@ -1,4 +1,5 @@
 import argparse
+import json
 
 from rpft.converters import create_flows
 from rpft.logger.logger import initialize_main_logger
@@ -8,13 +9,16 @@ LOGGER = initialize_main_logger()
 
 def main():
     args = create_parser().parse_args()
-    create_flows(
+    flows = create_flows(
         args.input,
-        args.output,
+        None,
         args.format,
         data_models=args.datamodels,
         tags=args.tags,
     )
+
+    with open(args.output, "w") as export:
+        json.dump(flows, export, indent=4)
 
 
 def create_parser():
@@ -23,8 +27,8 @@ def create_parser():
             "Generate RapidPro flows JSON from spreadsheets\n"
             "\n"
             "Example usage:\n"
-            "create_flows --output=flows.json --format=csv "
-            "--datamodels=example.models sheet1.csv sheet2.csv"
+            "create_flows --output=flows.json --format=csv --datamodels=example.models"
+            " sheet1.csv sheet2.csv"
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
@@ -41,7 +45,8 @@ def create_parser():
         nargs="+",
         help=(
             "CSV/XLSX: path to files on local file system\n"
-            "Google Sheets: sheet ID i.e. https://docs.google.com/spreadsheets/d/[ID]/edit"
+            "Google Sheets: sheet ID i.e."
+            " https://docs.google.com/spreadsheets/d/[ID]/edit"
         ),
     )
     parser.add_argument("-o", "--output", required=True, help="Output JSON filename")
@@ -49,7 +54,7 @@ def create_parser():
         "-f",
         "--format",
         required=True,
-        choices=["csv", "xlsx", "google_sheets"],
+        choices=["csv", "google_sheets", "xlsx"],
         help="Input sheet format",
     )
     parser.add_argument(
