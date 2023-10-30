@@ -2,13 +2,13 @@ import unittest
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
-from rpft.parsers.sheets import CSVSheetReader, XLSXSheetReader
+from rpft.parsers.sheets import CSVSheetReader, XLSXSheetReader, CompositeSheetReader
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
 from tests.utils import traverse_flow, Context
 
 
-class TestParsing(unittest.TestCase):
+class TestTemplate(unittest.TestCase):
     def compare_messages(self, render_output, flow_name, messages_exp, context=None):
         flow_found = False
         for flow in render_output["flows"]:
@@ -22,6 +22,8 @@ class TestParsing(unittest.TestCase):
                 False, msg=f'Flow with name "{flow_name}" does not exist in output.'
             )
 
+
+class TestParsing(TestTemplate):
     def get_flow_names(self, render_output):
         return {flow["name"] for flow in render_output["flows"]}
 
@@ -590,22 +592,9 @@ class TestParseCampaigns(unittest.TestCase):
         self.assertEqual(event["base_language"], "eng")
 
 
-class TestParseFromFile(unittest.TestCase):
+class TestParseFromFile(TestTemplate):
     def setUp(self):
         self.input_dir = TESTS_ROOT / "input/example1"
-
-    def compare_messages(self, render_output, flow_name, messages_exp, context=None):
-        flow_found = False
-        for flow in render_output["flows"]:
-            if flow["name"] == flow_name:
-                flow_found = True
-                actions = traverse_flow(flow, context or Context())
-                actions_exp = list(zip(["send_msg"] * len(messages_exp), messages_exp))
-                self.assertEqual(actions, actions_exp)
-        if not flow_found:
-            self.assertTrue(
-                False, msg=f'Flow with name "{flow_name}" does not exist in output.'
-            )
 
     def compare_to_expected(self, render_output):
         self.compare_messages(render_output, "my_basic_flow", ["Some text"])
@@ -636,12 +625,19 @@ class TestParseFromFile(unittest.TestCase):
         ci_parser = ContentIndexParser(sheet_reader, "tests.input.example1.nestedmodel")
         self.check_example1(ci_parser)
 
+    def test_example1_csv_composite(self):
+        # Same test as test_generate_flows but with csvs
+        sheet_reader = CSVSheetReader(self.input_dir / "content_index.csv")
+        reader = CompositeSheetReader([sheet_reader])
+        ci_parser = ContentIndexParser(reader, "tests.input.example1.nestedmodel")
+        self.check_example1(ci_parser)
+
     def test_example1_split_csv(self):
         # Same test as test_generate_flows but with csvs
-        sheet_reader = CSVSheetReader(self.input_dir / "content_index1.csv")
-        ci_parser = ContentIndexParser(sheet_reader, "tests.input.example1.nestedmodel")
-        sheet_reader = CSVSheetReader(self.input_dir / "content_index2.csv")
-        ci_parser.add_content_index(sheet_reader)
+        sheet_reader1 = CSVSheetReader(self.input_dir / "content_index1.csv")
+        sheet_reader2 = CSVSheetReader(self.input_dir / "content_index2.csv")
+        reader = CompositeSheetReader([sheet_reader1, sheet_reader2])
+        ci_parser = ContentIndexParser(reader, "tests.input.example1.nestedmodel")
         self.check_example1(ci_parser)
 
     def test_example1_xlsx(self):
@@ -649,3 +645,55 @@ class TestParseFromFile(unittest.TestCase):
         sheet_reader = XLSXSheetReader(self.input_dir / "content_index.xlsx")
         ci_parser = ContentIndexParser(sheet_reader, "tests.input.example1.nestedmodel")
         self.check_example1(ci_parser)
+
+    def test_example1_xlsx_composite(self):
+        # Same test as above
+        sheet_reader = XLSXSheetReader(self.input_dir / "content_index.xlsx")
+        reader = CompositeSheetReader([sheet_reader])
+        ci_parser = ContentIndexParser(reader, "tests.input.example1.nestedmodel")
+        self.check_example1(ci_parser)
+
+
+class TestMultiFile(TestTemplate):
+    def setUp(self):
+        self.input_dir = TESTS_ROOT / "input/multifile"
+
+    def check(self, ci_parser, flow_name, messages_exp):
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        self.compare_messages(render_output, flow_name, messages_exp)
+
+    def test_example1(self):
+        sheet_reader1 = XLSXSheetReader(self.input_dir / "example1a.xlsx")
+        sheet_reader2 = XLSXSheetReader(self.input_dir / "example1b.xlsx")
+        reader = CompositeSheetReader([sheet_reader1, sheet_reader2])
+        ci_parser = ContentIndexParser(reader)
+        self.check(ci_parser, "template", ["Hello!"])
+
+        reader = CompositeSheetReader([sheet_reader2, sheet_reader1])
+        ci_parser = ContentIndexParser(reader)
+        self.check(ci_parser, "template", ["Hello!"])
+
+    def test_example2(self):
+        sheet_reader1 = XLSXSheetReader(self.input_dir / "example2a.xlsx")
+        sheet_reader2 = XLSXSheetReader(self.input_dir / "example2b.xlsx")
+        reader = CompositeSheetReader([sheet_reader1, sheet_reader2])
+        ci_parser = ContentIndexParser(reader, "tests.input.multifile.model")
+        self.check(ci_parser, "template - a", ["hi georg"])
+        self.check(ci_parser, "template - b", ["hi chiara"])
+
+        reader = CompositeSheetReader([sheet_reader2, sheet_reader1])
+        ci_parser = ContentIndexParser(reader, "tests.input.multifile.model")
+        self.check(ci_parser, "template - a", ["hello georg"])
+        self.check(ci_parser, "template - b", ["hello chiara"])
+
+    def test_singleindex(self):
+        sheet_reader1 = XLSXSheetReader(self.input_dir / "singleindex_a.xlsx")
+        sheet_reader2 = XLSXSheetReader(self.input_dir / "singleindex_b.xlsx")
+        reader = CompositeSheetReader([sheet_reader1, sheet_reader2])
+        ci_parser = ContentIndexParser(reader)
+        self.check(ci_parser, "template", ["Hello!"])
+
+        reader = CompositeSheetReader([sheet_reader2, sheet_reader1])
+        ci_parser = ContentIndexParser(reader)
+        self.check(ci_parser, "template", ["Hello!"])

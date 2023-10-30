@@ -17,7 +17,8 @@ class TagMatcher:
             else:
                 if current_index is None:
                     raise ValueError(
-                        "Tags parameter must start with a number indicating the tag position."
+                        "Tags parameter must start with a "
+                        "number indicating the tag position."
                     )
                 self.tag_patterns[current_index].append(param)
 

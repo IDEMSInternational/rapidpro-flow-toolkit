@@ -2,6 +2,7 @@ import copy
 import tablib
 
 from rpft.parsers.common.sheetparser import SheetParser
+from rpft.parsers.sheets import AbstractSheetReader
 
 
 class MockCellParser:
@@ -48,16 +49,19 @@ class MockSheetParser(SheetParser):
         return (input_row, -1) if return_index else None
 
 
-class MockSheetReader:
+class MockSheetReader(AbstractSheetReader):
     def __init__(self, main_sheet_data, sheet_data_dict):
-        self.sheet_dict = {
+        self.sheets = {
             "content_index": tablib.import_set(main_sheet_data, format="csv")
         }
         for name, content in sheet_data_dict.items():
-            self.sheet_dict[name] = tablib.import_set(content, format="csv")
+            self.sheets[name] = tablib.import_set(content, format="csv")
 
-    def get_main_sheet(self):
-        return self.get_sheet("content_index")
+    def get_main_sheets(self):
+        sheet, warnings = self.get_sheet("content_index")
+        if sheet is None:
+            return []
+        return [sheet]
 
     def get_sheet(self, name):
-        return self.sheet_dict[name]
+        return self.sheets.get(name), []
