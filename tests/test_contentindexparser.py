@@ -173,6 +173,31 @@ class TestParsing(TestTemplate):
             render_output, "my_template - row3", ["Value3", "Happy3 and Sad3"]
         )
 
+
+    def test_duplicate_create_flow(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
+            "create_flow,my_template,,,,,\n"
+            "create_flow,my_template2,,,my_template,,\n"
+        )
+        my_template = (
+            "row_id,type,from,message_text\n" ",send_message,start,Some text\n"
+        )
+        my_template2 = (
+            "row_id,type,from,message_text\n" ",send_message,start,Other text\n"
+        )
+        sheet_dict = {
+            "ci_sheet": ci_sheet,
+            "my_template": my_template,
+            "my_template2": my_template2,
+        }
+
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader)
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        self.compare_messages(render_output, "my_template", ["Other text"])
+
     def test_bulk_flows_with_args(self):
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,template_arguments,new_name,data_model,status\n"

@@ -84,7 +84,7 @@ class ContentIndexParser:
                             "exactly one sheet_name has to be specified"
                         )
                     if row.type == "template_definition":
-                        self._add_template(row)
+                        self._add_template(row, True)
                     else:
                         self.flow_definition_rows.append((logging_prefix, row))
                 elif row.type == "create_campaign":
@@ -96,20 +96,20 @@ class ContentIndexParser:
                     campaign_parser = self.create_campaign_parser(row)
                     self.campaign_parsers.append((logging_prefix, campaign_parser))
                 else:
-                    LOGGER.error(f'invalid type: "{row.type}"')
+                    LOGGER.error(f"invalid type: '{row.type}'")
 
-    def _add_template(self, row, warn_duplicates=False):
+    def _add_template(self, row, update_duplicates=False):
         sheet_name = row.sheet_name[0]
         # new_name = row.new_name or sheet_name
-        if sheet_name not in self.template_sheets:
+        if sheet_name in self.template_sheets and update_duplicates:
+            LOGGER.info(
+                f"Duplicate template definition sheet '{sheet_name}'. "
+                "Overwriting previous definition."
+            )
+        if sheet_name not in self.template_sheets or update_duplicates:
             sheet = self._get_sheet_or_die(sheet_name)
             self.template_sheets[sheet_name] = TemplateSheet(
                 sheet, row.template_argument_definitions
-            )
-        elif warn_duplicates:
-            LOGGER.warn(
-                f"Duplicate template definition sheet {sheet_name}. "
-                "Overwriting previous definition."
             )
 
     def _populate_missing_templates(self):
@@ -179,7 +179,7 @@ class ContentIndexParser:
     ):
         if (data_sheet and data_row_id) or (not data_sheet and not data_row_id):
             with logging_context(f"{template_name}"):
-                return self.parse_flow(
+                return self._parse_flow(
                     template_name,
                     data_sheet,
                     data_row_id,
@@ -215,13 +215,14 @@ class ContentIndexParser:
                 rapidpro_container.add_campaign(campaign)
 
     def parse_all_flows(self, rapidpro_container):
+        flows = {}
         for logging_prefix, row in self.flow_definition_rows:
             with logging_context(f"{logging_prefix} | {row.sheet_name[0]}"):
                 if row.data_sheet and not row.data_row_id:
                     data_rows = self.get_all_data_model_instances(row.data_sheet)
                     for data_row_id in data_rows.keys():
                         with logging_context(f'with data_row_id "{data_row_id}"'):
-                            self.parse_flow(
+                            flow = self._parse_flow(
                                 row.sheet_name[0],
                                 row.data_sheet,
                                 data_row_id,
@@ -229,13 +230,19 @@ class ContentIndexParser:
                                 rapidpro_container,
                                 row.new_name,
                             )
+                            if flow.name in flows:
+                                LOGGER.warning(
+                                    f"Multiple definitions of {flow.name}. "
+                                    "Overwriting."
+                                )
+                            flows[flow.name] = flow
                 elif not row.data_sheet and row.data_row_id:
                     LOGGER.critical(
                         "For create_flow, if data_row_id is provided, "
                         "data_sheet must also be provided."
                     )
                 else:
-                    self.parse_flow(
+                    flow = self._parse_flow(
                         row.sheet_name[0],
                         row.data_sheet,
                         row.data_row_id,
@@ -243,8 +250,17 @@ class ContentIndexParser:
                         rapidpro_container,
                         row.new_name,
                     )
+                    if flow.name in flows:
+                        LOGGER.warning(
+                            f"Multiple definitions of {flow.name}. "
+                            "Overwriting."
+                        )
+                    flows[flow.name] = flow
+        for flow in flows.values():
+            rapidpro_container.add_flow(flow)
 
-    def parse_flow(
+
+    def _parse_flow(
         self,
         sheet_name,
         data_sheet,
@@ -283,8 +299,7 @@ class ContentIndexParser:
         if parse_as_block:
             return flow_parser.parse_as_block()
         else:
-            return flow_parser.parse()
-        # Is automatically added to the rapidpro_container, for now.
+            return flow_parser.parse(add_to_container=False)
 
     def map_template_arguments_to_context(self, arg_defs, args, context):
         # Template arguments are positional arguments.
