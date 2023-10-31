@@ -598,7 +598,8 @@ class TestParseCampaigns(unittest.TestCase):
 
     def test_parse_message_campaign(self):
         ci_sheet = (
-            "type,sheet_name,new_name,group\n" "create_campaign,my_campaign,,My Group\n"
+            "type,sheet_name,new_name,group\n"
+            "create_campaign,my_campaign,,My Group\n"
         )
         my_campaign = (
             "offset,unit,event_type,delivery_hour,message,relative_to,start_mode,flow\n"
@@ -615,6 +616,32 @@ class TestParseCampaigns(unittest.TestCase):
         self.assertEqual(event["delivery_hour"], 12)
         self.assertEqual(event["message"], {"eng": "Messagetext"})
         self.assertEqual(event["base_language"], "eng")
+
+    def test_duplicate_campaign(self):
+        ci_sheet = (
+            "type,sheet_name,new_name,group\n"
+            "create_campaign,my_campaign,,My Group\n"
+            "create_campaign,my_campaign2,my_campaign,My Group\n"
+        )
+        my_campaign = (
+            "offset,unit,event_type,delivery_hour,message,relative_to,start_mode,flow\n"
+            "150,D,M,12,Messagetext,Created On,I,\n"
+        )
+        my_campaign2 = (
+            "offset,unit,event_type,delivery_hour,message,relative_to,start_mode,flow\n"
+            "150,D,M,6,Messagetext,Created On,I,\n"
+        )
+        sheet_dict = {
+            "my_campaign": my_campaign,
+            "my_campaign2": my_campaign2,
+        }
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader)
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        self.assertEqual(render_output["campaigns"][0]["name"], "my_campaign")
+        event = render_output["campaigns"][0]["events"][0]
+        self.assertEqual(event["delivery_hour"], 6)
 
 
 class TestParseFromFile(TestTemplate):

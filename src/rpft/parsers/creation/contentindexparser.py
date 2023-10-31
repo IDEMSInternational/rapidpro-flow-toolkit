@@ -33,7 +33,7 @@ class ContentIndexParser:
         self.template_sheets = {}  # values: tablib tables
         self.data_sheets = {}  # values: OrderedDicts of RowModels
         self.flow_definition_rows = []  # list of ContentIndexRowModel
-        self.campaign_parsers = []  # list of CampaignParser
+        self.campaign_parsers = {}  # list of CampaignParser
         if user_data_model_module_name:
             self.user_models_module = importlib.import_module(
                 user_data_model_module_name
@@ -94,7 +94,13 @@ class ContentIndexParser:
                             "sheet_name has to be specified"
                         )
                     campaign_parser = self.create_campaign_parser(row)
-                    self.campaign_parsers.append((logging_prefix, campaign_parser))
+                    name = campaign_parser.campaign.name
+                    if name in self.campaign_parsers:
+                        LOGGER.warning(
+                            f"Duplicate campaign definition sheet '{name}'. "
+                            "Overwriting previous definition."
+                        )                        
+                    self.campaign_parsers[name] = (logging_prefix, campaign_parser)
                 else:
                     LOGGER.error(f"invalid type: '{row.type}'")
 
@@ -208,7 +214,7 @@ class ContentIndexParser:
         return CampaignParser(row.new_name or sheet_name, row.group, rows)
 
     def parse_all_campaigns(self, rapidpro_container):
-        for logging_prefix, campaign_parser in self.campaign_parsers:
+        for logging_prefix, campaign_parser in self.campaign_parsers.values():
             sheet_name = campaign_parser.campaign.name
             with logging_context(f"{logging_prefix} | {sheet_name}"):
                 campaign = campaign_parser.parse()
@@ -232,7 +238,7 @@ class ContentIndexParser:
                             )
                             if flow.name in flows:
                                 LOGGER.warning(
-                                    f"Multiple definitions of {flow.name}. "
+                                    f"Multiple definitions of flow '{flow.name}'. "
                                     "Overwriting."
                                 )
                             flows[flow.name] = flow
@@ -252,7 +258,7 @@ class ContentIndexParser:
                     )
                     if flow.name in flows:
                         LOGGER.warning(
-                            f"Multiple definitions of {flow.name}. "
+                            f"Multiple definitions of flow '{flow.name}'. "
                             "Overwriting."
                         )
                     flows[flow.name] = flow
