@@ -66,6 +66,7 @@ class CSVSheetReader():
     def main_sheet(self):
         return self.get_sheet(self.main)
 
+    @property
     def name(self):
         return self.path.stem
 
