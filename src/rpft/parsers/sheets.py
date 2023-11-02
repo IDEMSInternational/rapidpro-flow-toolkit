@@ -30,11 +30,11 @@ class AbstractSheetReader(ABC):
 
 
 class CSVSheetReader(AbstractSheetReader):
-    def __init__(self, path, main):
+    def __init__(self, path, main="content_index"):
         self.path = Path(path)
         self.main = main
         self.sheets = {
-            f.stem: Sheet(self.name, load_csv(f)) for f in path.glob("*.csv")
+            f.stem: Sheet(self.name, load_csv(f)) for f in self.path.glob("*.csv")
         }
 
         if not self.main_sheet:

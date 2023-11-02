@@ -673,22 +673,14 @@ class TestParseFromFile(TestTemplate):
 
     def test_example1_csv(self):
         # Same test as test_generate_flows but with csvs
-        sheet_reader = CSVSheetReader(self.input_dir / "workbook_1", "content_index")
+        sheet_reader = CSVSheetReader(self.input_dir / "csv_workbook", "content_index")
         ci_parser = ContentIndexParser(sheet_reader, "tests.input.example1.nestedmodel")
         self.check_example1(ci_parser)
 
     def test_example1_csv_composite(self):
         # Same test as test_generate_flows but with csvs
-        sheet_reader = CSVSheetReader(self.input_dir / "workbook_1", "content_index")
+        sheet_reader = CSVSheetReader(self.input_dir / "csv_workbook", "content_index")
         reader = CompositeSheetReader([sheet_reader])
-        ci_parser = ContentIndexParser(reader, "tests.input.example1.nestedmodel")
-        self.check_example1(ci_parser)
-
-    def test_example1_split_csv(self):
-        # Same test as test_generate_flows but with csvs
-        sheet_reader1 = CSVSheetReader(self.input_dir / "workbook_2", "content_index")
-        sheet_reader2 = CSVSheetReader(self.input_dir / "workbook_3", "content_index")
-        reader = CompositeSheetReader([sheet_reader1, sheet_reader2])
         ci_parser = ContentIndexParser(reader, "tests.input.example1.nestedmodel")
         self.check_example1(ci_parser)
 

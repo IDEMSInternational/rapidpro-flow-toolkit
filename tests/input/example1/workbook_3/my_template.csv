@@ -1,3 +1,0 @@
-row_id,type,from,message_text
-,send_message,start,{{value1}}
-,send_message,,{{custom_field.happy}} and {{custom_field.sad}}

@@ -6,11 +6,8 @@ from tests import TESTS_ROOT
 
 class TestCsvSheetReader(TestCase):
     def setUp(self):
-        self.source = TESTS_ROOT / "input" / "example1" / "workbook_1"
-        self.reader = CSVSheetReader(
-            path=self.source,
-            main="content_index",
-        )
+        self.source = str(TESTS_ROOT / "input/example1/csv_workbook")
+        self.reader = CSVSheetReader(path=self.source)
 
     def test_access_main_sheet(self):
         self.assertEqual(
