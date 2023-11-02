@@ -10,17 +10,33 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 
-class AbstractSheetReader(ABC):
-    def csv_path(self):
-        return None
+class Sheet:
+    def __init__(self, reader_name, data):
+        self.reader_name = reader_name
+        self.data = data
 
+
+class AbstractSheetReader(ABC):
     @abstractmethod
     def get_main_sheets(self):
         pass
 
     @abstractmethod
-    def get_sheet(self, name):
+    def get_sheets_by_name(self, name):
         pass
+
+
+class SheetDictSheetReader(AbstractSheetReader):
+    '''SheetReader initialized with an attribute sheets: Dict[str, Sheet]'''
+
+    def get_main_sheets(self):
+        return self.get_sheets_by_name("content_index")
+
+    def get_sheets_by_name(self, name):
+        sheet = self.sheets.get(name)
+        if sheet is None:
+            return []
+        return [sheet]
 
 
 class CSVSheetReader(AbstractSheetReader):
@@ -30,13 +46,13 @@ class CSVSheetReader(AbstractSheetReader):
         with open(filename, mode="r", encoding="utf-8") as table_data:
             self.main_sheet = tablib.import_set(table_data, format="csv")
 
-    def csv_path(self):
+    def base_path(self):
         return self.path
 
     def get_main_sheets(self):
-        return [self.main_sheet]
+        return [Sheet(self.name, self.main_sheet)]
 
-    def get_sheet(self, name):
+    def get_sheets_by_name(self, name):
         # Assume same path as the main sheet, and take sheet names
         # relative to that path.
         try:
@@ -46,10 +62,10 @@ class CSVSheetReader(AbstractSheetReader):
                 table = tablib.import_set(table_data, format="csv")
         except FileNotFoundError:
             table = None
-        return table, []
+        return [Sheet(self.name, table)]
 
 
-class XLSXSheetReader(AbstractSheetReader):
+class XLSXSheetReader(SheetDictSheetReader):
     def __init__(self, filename):
         self.name = filename
         with open(filename, "rb") as table_data:
@@ -70,23 +86,14 @@ class XLSXSheetReader(AbstractSheetReader):
             if any(new_row):
                 # omit empty rows
                 data.append(new_row)
-        return data
-
-    def get_main_sheets(self):
-        sheet, warnings = self.get_sheet("content_index")
-        if sheet is None:
-            return []
-        return [sheet]
-
-    def get_sheet(self, name):
-        return self.sheets.get(name), []
+        return Sheet(self.name, data)
 
 
-class GoogleSheetReader(AbstractSheetReader):
+class GoogleSheetReader(SheetDictSheetReader):
     # If modifying these scopes, delete the file token.json.
     SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
-    def __init__(self, spreadsheet_id, credentials=None):
+    def __init__(self, spreadsheet_id):
         """
         Args:
             spreadsheet_id: You can extract it from the spreadsheed URL, like this
@@ -130,16 +137,7 @@ class GoogleSheetReader(AbstractSheetReader):
         for row in content[1:]:
             # Pad row to proper length
             table.append(row + ([""] * (n_headers - len(row))))
-        return table
-
-    def get_main_sheets(self):
-        sheet, warnings = self.get_sheet("content_index")
-        if sheet is None:
-            return []
-        return [sheet]
-
-    def get_sheet(self, name):
-        return self.sheets.get(name), []
+        return Sheet(self.name, table)
 
     def get_credentials(self):
         sa_creds = os.getenv("CREDENTIALS")
@@ -187,25 +185,16 @@ class CompositeSheetReader:
             sheets += reader.get_main_sheets()
         return sheets
 
-    def get_sheet(self, name):
-        warnings = []
-        sheet = None
-        prev_reader = None
+    def get_sheets_by_name(self, name):
+        csv_base_paths = set()
+        sheets = []
         for reader in self.sheetreaders:
-            new_sheet, new_warnings = reader.get_sheet(name)
-            warnings += new_warnings
-            if new_sheet is not None:
-                if (
-                    sheet is not None and (
-                        reader.csv_path() is None
-                        or prev_reader.csv_path() is None
-                        or reader.csv_path() != prev_reader.csv_path()
-                    )
-                ):
-                    warnings += [
-                        f"Duplicate sheet {name}. Overwriting sheet from "
-                        f"{prev_reader.name} with sheet from {reader.name}."
-                    ]
-                sheet = new_sheet
-                prev_reader = reader
-        return sheet, warnings
+            # CSV readers with the same base path share all the sheets in the
+            # same folder, so we need to avoid false duplicates.
+            if isinstance(reader, CSVSheetReader):
+                if reader.base_path() in csv_base_paths:
+                    continue
+                csv_base_paths.add(reader.base_path())
+            new_sheets = reader.get_sheets_by_name(name)
+            sheets += new_sheets
+        return sheets

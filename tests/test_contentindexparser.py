@@ -707,17 +707,39 @@ class TestParseFromFile(TestTemplate):
 
 
 class TestMultiFile(TestTemplate):
-    def setUp(self):
-        self.input_dir = TESTS_ROOT / "input/multifile"
-
     def check(self, ci_parser, flow_name, messages_exp):
         container = ci_parser.parse_all()
         render_output = container.render()
         self.compare_messages(render_output, flow_name, messages_exp)
 
-    def test_example1(self):
-        sheet_reader1 = XLSXSheetReader(self.input_dir / "example1a.xlsx")
-        sheet_reader2 = XLSXSheetReader(self.input_dir / "example1b.xlsx")
+    def test_minimal(self):
+        self.run_minimal()
+
+    def test_minimal_singleindex(self):
+        self.run_minimal(True)
+
+    def run_minimal(self, singleindex=False):
+        ci_sheet1 = (
+            "type,sheet_name\n"
+            "create_flow,template\n"
+        )
+        ci_sheet2 = (
+            "type,sheet_name\n"
+            "template_definition,template\n"
+        )
+        template = (
+            "row_id,type,from,message_text\n"
+            ",send_message,start,Hello!\n"
+        )
+        sheet_dict2 = {
+            "template": template,
+        }
+        sheet_reader1 = MockSheetReader(ci_sheet1)
+        if singleindex:
+            # No content index sheet for the second reader
+            sheet_reader2 = MockSheetReader(None, sheet_dict2)
+        else:
+            sheet_reader2 = MockSheetReader(ci_sheet2, sheet_dict2)
         reader = CompositeSheetReader([sheet_reader1, sheet_reader2])
         ci_parser = ContentIndexParser(reader)
         self.check(ci_parser, "template", ["Hello!"])
@@ -726,26 +748,47 @@ class TestMultiFile(TestTemplate):
         ci_parser = ContentIndexParser(reader)
         self.check(ci_parser, "template", ["Hello!"])
 
-    def test_example2(self):
-        sheet_reader1 = XLSXSheetReader(self.input_dir / "example2a.xlsx")
-        sheet_reader2 = XLSXSheetReader(self.input_dir / "example2b.xlsx")
+    def test_with_model(self):
+        ci_sheet1 = (
+            "type,sheet_name,data_sheet,data_model,status\n"
+            "template_definition,template,,,\n"
+            "data_sheet,names,,NameModel,draft\n"
+            "create_flow,template,names,,\n"
+        )
+        ci_sheet2 = (
+            "type,sheet_name,data_sheet,data_model,status\n"
+            "data_sheet,names,,NameModel,\n"
+            "template_definition,template,,,\n"
+            "create_flow,template,names,,draft\n"
+        )
+        template1 = (
+            "row_id,type,from,message_text\n"
+            ",send_message,start,hello {{name}}\n"
+        )
+        template2 = (
+            "row_id,type,from,message_text\n"
+            ",send_message,start,hi {{name}}\n"
+        )
+        names = (
+            "ID,name\n"
+            "a,georg\n"
+            "b,chiara\n"
+        )
+        sheet_dict1 = {
+            "template": template1,
+            "names": names,
+        }
+        sheet_dict2 = {
+            "template": template2,
+        }
+        sheet_reader1 = MockSheetReader(ci_sheet1, sheet_dict1)
+        sheet_reader2 = MockSheetReader(ci_sheet2, sheet_dict2)
         reader = CompositeSheetReader([sheet_reader1, sheet_reader2])
-        ci_parser = ContentIndexParser(reader, "tests.input.multifile.model")
+        ci_parser = ContentIndexParser(reader, "tests.datarowmodels.minimalmodel")
         self.check(ci_parser, "template - a", ["hi georg"])
         self.check(ci_parser, "template - b", ["hi chiara"])
 
         reader = CompositeSheetReader([sheet_reader2, sheet_reader1])
-        ci_parser = ContentIndexParser(reader, "tests.input.multifile.model")
+        ci_parser = ContentIndexParser(reader, "tests.datarowmodels.minimalmodel")
         self.check(ci_parser, "template - a", ["hello georg"])
         self.check(ci_parser, "template - b", ["hello chiara"])
-
-    def test_singleindex(self):
-        sheet_reader1 = XLSXSheetReader(self.input_dir / "singleindex_a.xlsx")
-        sheet_reader2 = XLSXSheetReader(self.input_dir / "singleindex_b.xlsx")
-        reader = CompositeSheetReader([sheet_reader1, sheet_reader2])
-        ci_parser = ContentIndexParser(reader)
-        self.check(ci_parser, "template", ["Hello!"])
-
-        reader = CompositeSheetReader([sheet_reader2, sheet_reader1])
-        ci_parser = ContentIndexParser(reader)
-        self.check(ci_parser, "template", ["Hello!"])

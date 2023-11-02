@@ -39,13 +39,13 @@ def create_flows(input_files, output_file, sheet_format, data_models=None, tags=
     return flows
 
 
-def create_sheet_reader(sheet_format, input_file, credentials=None):
+def create_sheet_reader(sheet_format, input_file):
     if sheet_format == "csv":
         sheet_reader = CSVSheetReader(input_file)
     elif sheet_format == "xlsx":
         sheet_reader = XLSXSheetReader(input_file)
     elif sheet_format == "google_sheets":
-        sheet_reader = GoogleSheetReader(input_file, credentials)
+        sheet_reader = GoogleSheetReader(input_file)
     else:
         raise Exception(f"Format {sheet_format} currently unsupported.")
 

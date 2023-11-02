@@ -41,9 +41,9 @@ class ContentIndexParser:
         main_sheets = self.sheet_reader.get_main_sheets()
         if not main_sheets:
             LOGGER.critical("No content index sheet provided")
-        # TODO: add name of file that the sheet is from?
         for main_sheet in main_sheets:
-            self._process_content_index_table(main_sheet, "content_index")
+            sheet_name = f"{main_sheet.reader_name}-content_index"
+            self._process_content_index_table(main_sheet.data, sheet_name)
         self._populate_missing_templates()
 
     def _process_content_index_table(self, content_index_table, content_index_name):
@@ -124,18 +124,23 @@ class ContentIndexParser:
                 self._add_template(row)
 
     def _get_sheet_or_die(self, sheet_name):
-        sheet, warnings = self.sheet_reader.get_sheet(sheet_name)
-        if sheet is None:
+        sheets = self.sheet_reader.get_sheets_by_name(sheet_name)
+        if not sheets:
             LOGGER.critical(f"Sheet {sheet_name} does not exist")
-        for warning in warnings:
-            LOGGER.warning(warning)
-        return sheet
+        prev_sheet = sheets[0]
+        for sheet in sheets[1:]:
+            LOGGER.warning(
+                f"Duplicate sheet {sheet_name}. Overwriting sheet from "
+                f"{prev_sheet.reader_name} with sheet from {sheet.reader_name}."
+            )
+            prev_sheet = sheet
+        return sheets[-1].data
 
     def _process_data_sheet(self, sheet_names, new_name, data_model_name):
         if not hasattr(self, "user_models_module"):
             LOGGER.critical(
                 "If there are data sheets, a user_data_model_module_name "
-                "has to be provided (as commandline argument)"
+                "has to be provided"
             )
             return
         if not data_model_name:
