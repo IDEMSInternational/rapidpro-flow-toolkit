@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod
 import json
 import os
+from abc import ABC
 from pathlib import Path
 
 import tablib
@@ -22,45 +22,26 @@ class Sheet:
 
 
 class AbstractSheetReader(ABC):
-    @abstractmethod
-    def get_main_sheets(self):
-        pass
-
-    @abstractmethod
-    def get_sheets_by_name(self, name):
-        pass
-
-
-class SheetDictSheetReader(AbstractSheetReader):
-    '''SheetReader initialized with an attribute sheets: Dict[str, Sheet]'''
-
     def get_main_sheets(self):
         return self.get_sheets_by_name("content_index")
 
     def get_sheets_by_name(self, name):
-        sheet = self.sheets.get(name)
-        if sheet is None:
-            return []
-        return [sheet]
+        return [sheet] if (sheet := self.sheets.get(name)) else []
 
 
-class CSVSheetReader():
+class CSVSheetReader(AbstractSheetReader):
     def __init__(self, path, main):
         self.path = Path(path)
         self.main = main
-        self._sheets_by_name = {f.stem: load_csv(f) for f in path.glob("*.csv")}
+        self.sheets = {
+            f.stem: Sheet(self.name, load_csv(f)) for f in path.glob("*.csv")
+        }
 
         if not self.main_sheet:
             raise SheetReaderError(
                 "Main sheet not found",
                 {"file": str(self.path), "sheet": self.main},
             )
-
-    def get_main_sheets(self):
-        return [Sheet(self.name, self.main_sheet)]
-
-    def get_sheets_by_name(self, name):
-        return [Sheet(self.name, self.get_sheet(name))]
 
     @property
     def main_sheet(self):
@@ -71,10 +52,10 @@ class CSVSheetReader():
         return self.path.stem
 
     def get_sheet(self, name):
-        return self._sheets_by_name.get(name)
+        return self.sheets.get(name)
 
 
-class XLSXSheetReader(SheetDictSheetReader):
+class XLSXSheetReader(AbstractSheetReader):
     def __init__(self, filename):
         self.name = filename
         with open(filename, "rb") as table_data:
@@ -91,14 +72,14 @@ class XLSXSheetReader(SheetDictSheetReader):
             data.headers.pop()
         for row in sheet:
             vals = tuple(str(e) if e is not None else "" for e in row)
-            new_row = vals[:len(data.headers)]
+            new_row = vals[: len(data.headers)]
             if any(new_row):
                 # omit empty rows
                 data.append(new_row)
         return Sheet(self.name, data)
 
 
-class GoogleSheetReader(SheetDictSheetReader):
+class GoogleSheetReader(AbstractSheetReader):
     # If modifying these scopes, delete the file token.json.
     SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 

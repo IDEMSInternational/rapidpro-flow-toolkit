@@ -14,13 +14,13 @@ class TestCsvSheetReader(TestCase):
 
     def test_access_main_sheet(self):
         self.assertEqual(
-            self.reader.main_sheet[3],
+            self.reader.main_sheet.data[3],
             ("data_sheet", "nesteddata", "", "", "", "NestedRowModel", "", "", "", ""),
         )
 
     def test_access_existing_sheet_by_name(self):
         self.assertEqual(
-            self.reader.get_sheet("my_basic_flow")[0],
+            self.reader.get_sheet("my_basic_flow").data[0],
             ("", "send_message", "start", "Some text"),
         )
 
