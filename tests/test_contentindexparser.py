@@ -2,7 +2,7 @@ import unittest
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
-from rpft.parsers.sheets import CSVSheetReader, XLSXSheetReader, CompositeSheetReader
+from rpft.parsers.sheets import CSVSheetReader, XLSXSheetReader
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
 from tests.utils import traverse_flow, Context
@@ -172,7 +172,6 @@ class TestParsing(TestTemplate):
         self.compare_messages(
             render_output, "my_template - row3", ["Value3", "Happy3 and Sad3"]
         )
-
 
     def test_duplicate_create_flow(self):
         ci_sheet = (
@@ -598,8 +597,7 @@ class TestParseCampaigns(unittest.TestCase):
 
     def test_parse_message_campaign(self):
         ci_sheet = (
-            "type,sheet_name,new_name,group\n"
-            "create_campaign,my_campaign,,My Group\n"
+            "type,sheet_name,new_name,group\n" "create_campaign,my_campaign,,My Group\n"
         )
         my_campaign = (
             "offset,unit,event_type,delivery_hour,message,relative_to,start_mode,flow\n"
@@ -673,28 +671,14 @@ class TestParseFromFile(TestTemplate):
 
     def test_example1_csv(self):
         # Same test as test_generate_flows but with csvs
-        sheet_reader = CSVSheetReader(self.input_dir / "csv_workbook", "content_index")
+        sheet_reader = CSVSheetReader(self.input_dir / "csv_workbook")
         ci_parser = ContentIndexParser(sheet_reader, "tests.input.example1.nestedmodel")
-        self.check_example1(ci_parser)
-
-    def test_example1_csv_composite(self):
-        # Same test as test_generate_flows but with csvs
-        sheet_reader = CSVSheetReader(self.input_dir / "csv_workbook", "content_index")
-        reader = CompositeSheetReader([sheet_reader])
-        ci_parser = ContentIndexParser(reader, "tests.input.example1.nestedmodel")
         self.check_example1(ci_parser)
 
     def test_example1_xlsx(self):
         # Same test as above
         sheet_reader = XLSXSheetReader(self.input_dir / "content_index.xlsx")
         ci_parser = ContentIndexParser(sheet_reader, "tests.input.example1.nestedmodel")
-        self.check_example1(ci_parser)
-
-    def test_example1_xlsx_composite(self):
-        # Same test as above
-        sheet_reader = XLSXSheetReader(self.input_dir / "content_index.xlsx")
-        reader = CompositeSheetReader([sheet_reader])
-        ci_parser = ContentIndexParser(reader, "tests.input.example1.nestedmodel")
         self.check_example1(ci_parser)
 
 
@@ -711,34 +695,31 @@ class TestMultiFile(TestTemplate):
         self.run_minimal(True)
 
     def run_minimal(self, singleindex=False):
-        ci_sheet1 = (
-            "type,sheet_name\n"
-            "create_flow,template\n"
-        )
-        ci_sheet2 = (
-            "type,sheet_name\n"
-            "template_definition,template\n"
-        )
-        template = (
-            "row_id,type,from,message_text\n"
-            ",send_message,start,Hello!\n"
-        )
+        ci_sheet1 = "type,sheet_name\n" "create_flow,template\n"
+        ci_sheet2 = "type,sheet_name\n" "template_definition,template\n"
+        template = "row_id,type,from,message_text\n" ",send_message,start,Hello!\n"
         sheet_dict2 = {
             "template": template,
         }
-        sheet_reader1 = MockSheetReader(ci_sheet1)
-        if singleindex:
-            # No content index sheet for the second reader
-            sheet_reader2 = MockSheetReader(None, sheet_dict2)
-        else:
-            sheet_reader2 = MockSheetReader(ci_sheet2, sheet_dict2)
-        reader = CompositeSheetReader([sheet_reader1, sheet_reader2])
-        ci_parser = ContentIndexParser(reader)
-        self.check(ci_parser, "template", ["Hello!"])
+        sheet_reader1 = MockSheetReader(ci_sheet1, name="mock_1")
 
-        reader = CompositeSheetReader([sheet_reader2, sheet_reader1])
-        ci_parser = ContentIndexParser(reader)
-        self.check(ci_parser, "template", ["Hello!"])
+        sheet_reader2 = MockSheetReader(
+            None if singleindex else ci_sheet2,
+            sheet_dict2,
+            name="mock_2",
+        )
+
+        self.check(
+            ContentIndexParser(sheet_readers=[sheet_reader1, sheet_reader2]),
+            "template",
+            ["Hello!"],
+        )
+
+        self.check(
+            ContentIndexParser(sheet_readers=[sheet_reader2, sheet_reader1]),
+            "template",
+            ["Hello!"],
+        )
 
     def test_with_model(self):
         ci_sheet1 = (
@@ -754,18 +735,12 @@ class TestMultiFile(TestTemplate):
             "create_flow,template,names,,draft\n"
         )
         template1 = (
-            "row_id,type,from,message_text\n"
-            ",send_message,start,hello {{name}}\n"
+            "row_id,type,from,message_text\n" ",send_message,start,hello {{name}}\n"
         )
         template2 = (
-            "row_id,type,from,message_text\n"
-            ",send_message,start,hi {{name}}\n"
+            "row_id,type,from,message_text\n" ",send_message,start,hi {{name}}\n"
         )
-        names = (
-            "ID,name\n"
-            "a,georg\n"
-            "b,chiara\n"
-        )
+        names = "ID,name\n" "a,georg\n" "b,chiara\n"
         sheet_dict1 = {
             "template": template1,
             "names": names,
@@ -773,14 +748,18 @@ class TestMultiFile(TestTemplate):
         sheet_dict2 = {
             "template": template2,
         }
-        sheet_reader1 = MockSheetReader(ci_sheet1, sheet_dict1)
-        sheet_reader2 = MockSheetReader(ci_sheet2, sheet_dict2)
-        reader = CompositeSheetReader([sheet_reader1, sheet_reader2])
-        ci_parser = ContentIndexParser(reader, "tests.datarowmodels.minimalmodel")
+        sheet_reader1 = MockSheetReader(ci_sheet1, sheet_dict1, name="mock_1")
+        sheet_reader2 = MockSheetReader(ci_sheet2, sheet_dict2, name="mock_2")
+        ci_parser = ContentIndexParser(
+            sheet_readers=[sheet_reader1, sheet_reader2],
+            user_data_model_module_name="tests.datarowmodels.minimalmodel",
+        )
         self.check(ci_parser, "template - a", ["hi georg"])
         self.check(ci_parser, "template - b", ["hi chiara"])
 
-        reader = CompositeSheetReader([sheet_reader2, sheet_reader1])
-        ci_parser = ContentIndexParser(reader, "tests.datarowmodels.minimalmodel")
+        ci_parser = ContentIndexParser(
+            sheet_readers=[sheet_reader2, sheet_reader1],
+            user_data_model_module_name="tests.datarowmodels.minimalmodel",
+        )
         self.check(ci_parser, "template - a", ["hello georg"])
         self.check(ci_parser, "template - b", ["hello chiara"])

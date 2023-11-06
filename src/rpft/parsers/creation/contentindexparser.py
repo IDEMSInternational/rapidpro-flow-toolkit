@@ -11,6 +11,7 @@ from rpft.parsers.creation.campaignparser import CampaignParser
 from rpft.parsers.creation.campaigneventrowmodel import CampaignEventRowModel
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.logger.logger import get_logger, logging_context
+from rpft.parsers.sheets import Sheet
 
 LOGGER = get_logger()
 
@@ -21,38 +22,50 @@ class TemplateSheet:
         self.argument_definitions = argument_definitions
 
 
+class ParserError(Exception):
+    pass
+
+
 class ContentIndexParser:
     def __init__(
         self,
-        sheet_reader,
+        sheet_reader=None,
         user_data_model_module_name=None,
         tag_matcher=TagMatcher(),
+        sheet_readers=[],
     ):
-        self.sheet_reader = sheet_reader
+        self.readers = ([sheet_reader] if sheet_reader else []) + sheet_readers
         self.tag_matcher = tag_matcher
         self.template_sheets = {}  # values: tablib tables
         self.data_sheets = {}  # values: OrderedDicts of RowModels
         self.flow_definition_rows = []  # list of ContentIndexRowModel
         self.campaign_parsers = {}  # list of CampaignParser
+
         if user_data_model_module_name:
             self.user_models_module = importlib.import_module(
                 user_data_model_module_name
             )
-        main_sheets = self.sheet_reader.get_main_sheets()
-        if not main_sheets:
+
+        indices = [
+            sheet
+            for reader in self.readers
+            if (sheet := reader.get_sheet("content_index"))
+        ]
+
+        if not indices:
             LOGGER.critical("No content index sheet provided")
-        for main_sheet in main_sheets:
-            sheet_name = f"{main_sheet.reader_name}-content_index"
-            self._process_content_index_table(main_sheet.data, sheet_name)
+
+        for sheet in indices:
+            self._process_content_index_table(sheet)
+
         self._populate_missing_templates()
 
-    def _process_content_index_table(self, content_index_table, content_index_name):
-        # content_index_table is in tablib table format
+    def _process_content_index_table(self, sheet: Sheet):
         row_parser = RowParser(ContentIndexRowModel, CellParser())
-        sheet_parser = SheetParser(row_parser, content_index_table)
+        sheet_parser = SheetParser(row_parser, sheet.table)
         content_index_rows = sheet_parser.parse_all()
-        for row_idx, row in enumerate(content_index_rows):
-            logging_prefix = f"{content_index_name} | row {row_idx+2}"
+        for row_idx, row in enumerate(content_index_rows, start=2):
+            logging_prefix = f"{sheet.reader.name}-{sheet.name} | row {row_idx}"
             with logging_context(logging_prefix):
                 if row.status == "draft":
                     continue
@@ -66,8 +79,8 @@ class ContentIndexParser:
                         )
                     sheet_name = row.sheet_name[0]
                     sheet = self._get_sheet_or_die(sheet_name)
-                    with logging_context(f"{sheet_name}"):
-                        self._process_content_index_table(sheet, sheet_name)
+                    with logging_context(f"{sheet.name}"):
+                        self._process_content_index_table(sheet)
                 elif row.type == "data_sheet":
                     if not len(row.sheet_name) >= 1:
                         LOGGER.critical(
@@ -99,14 +112,14 @@ class ContentIndexParser:
                         LOGGER.warning(
                             f"Duplicate campaign definition sheet '{name}'. "
                             "Overwriting previous definition."
-                        )                        
+                        )
                     self.campaign_parsers[name] = (logging_prefix, campaign_parser)
                 else:
                     LOGGER.error(f"invalid type: '{row.type}'")
 
     def _add_template(self, row, update_duplicates=False):
         sheet_name = row.sheet_name[0]
-        # new_name = row.new_name or sheet_name
+
         if sheet_name in self.template_sheets and update_duplicates:
             LOGGER.info(
                 f"Duplicate template definition sheet '{sheet_name}'. "
@@ -115,7 +128,7 @@ class ContentIndexParser:
         if sheet_name not in self.template_sheets or update_duplicates:
             sheet = self._get_sheet_or_die(sheet_name)
             self.template_sheets[sheet_name] = TemplateSheet(
-                sheet, row.template_argument_definitions
+                sheet.table, row.template_argument_definitions
             )
 
     def _populate_missing_templates(self):
@@ -124,17 +137,32 @@ class ContentIndexParser:
                 self._add_template(row)
 
     def _get_sheet_or_die(self, sheet_name):
-        sheets = self.sheet_reader.get_sheets_by_name(sheet_name)
-        if not sheets:
-            LOGGER.critical(f"Sheet {sheet_name} does not exist")
-        prev_sheet = sheets[0]
-        for sheet in sheets[1:]:
-            LOGGER.warning(
-                f"Duplicate sheet {sheet_name}. Overwriting sheet from "
-                f"{prev_sheet.reader_name} with sheet from {sheet.reader_name}."
+        candidates = [
+            sheet for reader in self.readers if (sheet := reader.get_sheet(sheet_name))
+        ]
+
+        if not candidates:
+            raise ParserError(
+                "Sheet not found",
+                {"name": sheet_name, "readers": [r.name for r in self.readers]},
             )
-            prev_sheet = sheet
-        return sheets[-1].data
+
+        active = candidates[-1]
+
+        if len(candidates) > 1:
+            readers = [c.reader.name for c in candidates]
+            LOGGER.warning(
+                "Duplicate sheets found, "
+                + str(
+                    {
+                        "name": sheet_name,
+                        "readers": readers,
+                        "active": active.reader.name,
+                    }
+                ),
+            )
+
+        return active
 
     def _process_data_sheet(self, sheet_names, new_name, data_model_name):
         if not hasattr(self, "user_models_module"):
@@ -160,7 +188,7 @@ class ContentIndexParser:
         content = OrderedDict()
         for sheet_name in sheet_names:
             with logging_context(sheet_name):
-                data_table = self._get_sheet_or_die(sheet_name)
+                data_table = self._get_sheet_or_die(sheet_name).table
                 try:
                     user_model = getattr(self.user_models_module, data_model_name)
                 except AttributeError:
@@ -214,7 +242,7 @@ class ContentIndexParser:
         sheet_name = row.sheet_name[0]
         sheet = self._get_sheet_or_die(sheet_name)
         row_parser = RowParser(CampaignEventRowModel, CellParser())
-        sheet_parser = SheetParser(row_parser, sheet)
+        sheet_parser = SheetParser(row_parser, sheet.table)
         rows = sheet_parser.parse_all()
         return CampaignParser(row.new_name or sheet_name, row.group, rows)
 
@@ -269,7 +297,6 @@ class ContentIndexParser:
                     flows[flow.name] = flow
         for flow in flows.values():
             rapidpro_container.add_flow(flow)
-
 
     def _parse_flow(
         self,

@@ -50,12 +50,20 @@ class MockSheetParser(SheetParser):
 
 
 class MockSheetReader(AbstractSheetReader):
-    def __init__(self, main_sheet_data=None, sheet_data_dict={}):
-        self.name = "MockSheetReader"
+    def __init__(self, main_sheet_data=None, sheet_data_dict={}, name="mock"):
+        self.name = name
         self.sheets = {}
+
         if main_sheet_data:
-            main_sheet = tablib.import_set(main_sheet_data, format="csv")
-            self.sheets["content_index"] = Sheet(self.name, main_sheet)
+            self.sheets["content_index"] = Sheet(
+                reader=self,
+                name="content_index",
+                table=tablib.import_set(main_sheet_data, format="csv"),
+            )
+
         for name, content in sheet_data_dict.items():
-            sheet = tablib.import_set(content, format="csv")
-            self.sheets[name] = Sheet(self.name, sheet)
+            self.sheets[name] = Sheet(
+                reader=self,
+                name=name,
+                table=tablib.import_set(content, format="csv"),
+            )
