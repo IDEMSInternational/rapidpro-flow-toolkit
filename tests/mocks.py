@@ -2,7 +2,7 @@ import copy
 import tablib
 
 from rpft.parsers.common.sheetparser import SheetParser
-from rpft.parsers.sheets import AbstractSheetReader, Sheet, SheetDictSheetReader
+from rpft.parsers.sheets import AbstractSheetReader, Sheet
 
 
 class MockCellParser:
@@ -49,7 +49,7 @@ class MockSheetParser(SheetParser):
         return (input_row, -1) if return_index else None
 
 
-class MockSheetReader(SheetDictSheetReader):
+class MockSheetReader(AbstractSheetReader):
     def __init__(self, main_sheet_data=None, sheet_data_dict={}):
         self.name = "MockSheetReader"
         self.sheets = {}

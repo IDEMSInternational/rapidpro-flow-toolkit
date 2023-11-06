@@ -1,6 +1,7 @@
-from abc import ABC, abstractmethod
 import json
 import os
+from abc import ABC
+from pathlib import Path
 
 import tablib
 from google.auth.transport.requests import Request
@@ -10,6 +11,10 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 
+class SheetReaderError(Exception):
+    pass
+
+
 class Sheet:
     def __init__(self, reader_name, data):
         self.reader_name = reader_name
@@ -17,55 +22,40 @@ class Sheet:
 
 
 class AbstractSheetReader(ABC):
-    @abstractmethod
-    def get_main_sheets(self):
-        pass
-
-    @abstractmethod
-    def get_sheets_by_name(self, name):
-        pass
-
-
-class SheetDictSheetReader(AbstractSheetReader):
-    '''SheetReader initialized with an attribute sheets: Dict[str, Sheet]'''
-
     def get_main_sheets(self):
         return self.get_sheets_by_name("content_index")
 
     def get_sheets_by_name(self, name):
-        sheet = self.sheets.get(name)
-        if sheet is None:
-            return []
-        return [sheet]
+        return [sheet] if (sheet := self.sheets.get(name)) else []
 
 
 class CSVSheetReader(AbstractSheetReader):
-    def __init__(self, filename):
-        self.name = filename
-        self.path = os.path.dirname(filename)
-        with open(filename, mode="r", encoding="utf-8") as table_data:
-            self.main_sheet = tablib.import_set(table_data, format="csv")
+    def __init__(self, path, main="content_index"):
+        self.path = Path(path)
+        self.main = main
+        self.sheets = {
+            f.stem: Sheet(self.name, load_csv(f)) for f in self.path.glob("*.csv")
+        }
 
-    def base_path(self):
-        return self.path
+        if not self.main_sheet:
+            raise SheetReaderError(
+                "Main sheet not found",
+                {"file": str(self.path), "sheet": self.main},
+            )
 
-    def get_main_sheets(self):
-        return [Sheet(self.name, self.main_sheet)]
+    @property
+    def main_sheet(self):
+        return self.get_sheet(self.main)
 
-    def get_sheets_by_name(self, name):
-        # Assume same path as the main sheet, and take sheet names
-        # relative to that path.
-        try:
-            with open(
-                os.path.join(self.path, f"{name}.csv"), mode="r", encoding="utf-8"
-            ) as table_data:
-                table = tablib.import_set(table_data, format="csv")
-        except FileNotFoundError:
-            table = None
-        return [Sheet(self.name, table)]
+    @property
+    def name(self):
+        return self.path.stem
+
+    def get_sheet(self, name):
+        return self.sheets.get(name)
 
 
-class XLSXSheetReader(SheetDictSheetReader):
+class XLSXSheetReader(AbstractSheetReader):
     def __init__(self, filename):
         self.name = filename
         with open(filename, "rb") as table_data:
@@ -82,14 +72,14 @@ class XLSXSheetReader(SheetDictSheetReader):
             data.headers.pop()
         for row in sheet:
             vals = tuple(str(e) if e is not None else "" for e in row)
-            new_row = vals[:len(data.headers)]
+            new_row = vals[: len(data.headers)]
             if any(new_row):
                 # omit empty rows
                 data.append(new_row)
         return Sheet(self.name, data)
 
 
-class GoogleSheetReader(SheetDictSheetReader):
+class GoogleSheetReader(AbstractSheetReader):
     # If modifying these scopes, delete the file token.json.
     SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
@@ -186,15 +176,14 @@ class CompositeSheetReader:
         return sheets
 
     def get_sheets_by_name(self, name):
-        csv_base_paths = set()
         sheets = []
+
         for reader in self.sheetreaders:
-            # CSV readers with the same base path share all the sheets in the
-            # same folder, so we need to avoid false duplicates.
-            if isinstance(reader, CSVSheetReader):
-                if reader.base_path() in csv_base_paths:
-                    continue
-                csv_base_paths.add(reader.base_path())
-            new_sheets = reader.get_sheets_by_name(name)
-            sheets += new_sheets
+            sheets += reader.get_sheets_by_name(name)
+
         return sheets
+
+
+def load_csv(path):
+    with open(path, mode="r", encoding="utf-8") as csv:
+        return tablib.import_set(csv, format="csv")
