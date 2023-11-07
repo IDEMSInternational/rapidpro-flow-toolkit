@@ -2,7 +2,7 @@ import unittest
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
-from rpft.parsers.sheets import CSVSheetReader, XLSXSheetReader
+from rpft.parsers.sheets import CSVSheetReader, XLSXSheetReader, CompositeSheetReader
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
 from tests.utils import traverse_flow, Context
@@ -675,10 +675,24 @@ class TestParseFromFile(TestTemplate):
         ci_parser = ContentIndexParser(sheet_reader, "tests.input.example1.nestedmodel")
         self.check_example1(ci_parser)
 
+    def test_example1_csv_composite(self):
+        # Same test as test_generate_flows but with csvs
+        sheet_reader = CSVSheetReader(self.input_dir / "csv_workbook")
+        reader = CompositeSheetReader([sheet_reader])
+        ci_parser = ContentIndexParser(reader, "tests.input.example1.nestedmodel")
+        self.check_example1(ci_parser)
+
     def test_example1_xlsx(self):
         # Same test as above
         sheet_reader = XLSXSheetReader(self.input_dir / "content_index.xlsx")
         ci_parser = ContentIndexParser(sheet_reader, "tests.input.example1.nestedmodel")
+        self.check_example1(ci_parser)
+
+    def test_example1_xlsx_composite(self):
+        # Same test as above
+        sheet_reader = XLSXSheetReader(self.input_dir / "content_index.xlsx")
+        reader = CompositeSheetReader([sheet_reader])
+        ci_parser = ContentIndexParser(reader, "tests.input.example1.nestedmodel")
         self.check_example1(ci_parser)
 
 
@@ -710,13 +724,13 @@ class TestMultiFile(TestTemplate):
         )
 
         self.check(
-            ContentIndexParser(sheet_readers=[sheet_reader1, sheet_reader2]),
+            ContentIndexParser(CompositeSheetReader([sheet_reader1, sheet_reader2])),
             "template",
             ["Hello!"],
         )
 
         self.check(
-            ContentIndexParser(sheet_readers=[sheet_reader2, sheet_reader1]),
+            ContentIndexParser(CompositeSheetReader([sheet_reader2, sheet_reader1])),
             "template",
             ["Hello!"],
         )
@@ -751,14 +765,14 @@ class TestMultiFile(TestTemplate):
         sheet_reader1 = MockSheetReader(ci_sheet1, sheet_dict1, name="mock_1")
         sheet_reader2 = MockSheetReader(ci_sheet2, sheet_dict2, name="mock_2")
         ci_parser = ContentIndexParser(
-            sheet_readers=[sheet_reader1, sheet_reader2],
+            sheet_reader=CompositeSheetReader([sheet_reader1, sheet_reader2]),
             user_data_model_module_name="tests.datarowmodels.minimalmodel",
         )
         self.check(ci_parser, "template - a", ["hi georg"])
         self.check(ci_parser, "template - b", ["hi chiara"])
 
         ci_parser = ContentIndexParser(
-            sheet_readers=[sheet_reader2, sheet_reader1],
+            sheet_reader=CompositeSheetReader([sheet_reader2, sheet_reader1]),
             user_data_model_module_name="tests.datarowmodels.minimalmodel",
         )
         self.check(ci_parser, "template - a", ["hello georg"])

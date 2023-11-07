@@ -32,9 +32,8 @@ class ContentIndexParser:
         sheet_reader=None,
         user_data_model_module_name=None,
         tag_matcher=TagMatcher(),
-        sheet_readers=[],
     ):
-        self.readers = ([sheet_reader] if sheet_reader else []) + sheet_readers
+        self.reader = sheet_reader
         self.tag_matcher = tag_matcher
         self.template_sheets = {}  # values: tablib tables
         self.data_sheets = {}  # values: OrderedDicts of RowModels
@@ -46,11 +45,7 @@ class ContentIndexParser:
                 user_data_model_module_name
             )
 
-        indices = [
-            sheet
-            for reader in self.readers
-            if (sheet := reader.get_sheet("content_index"))
-        ]
+        indices = self.reader.get_sheets_by_name("content_index")
 
         if not indices:
             LOGGER.critical("No content index sheet provided")
@@ -137,14 +132,12 @@ class ContentIndexParser:
                 self._add_template(row)
 
     def _get_sheet_or_die(self, sheet_name):
-        candidates = [
-            sheet for reader in self.readers if (sheet := reader.get_sheet(sheet_name))
-        ]
+        candidates = self.reader.get_sheets_by_name(sheet_name)
 
         if not candidates:
             raise ParserError(
                 "Sheet not found",
-                {"name": sheet_name, "readers": [r.name for r in self.readers]},
+                {"name": sheet_name},
             )
 
         active = candidates[-1]

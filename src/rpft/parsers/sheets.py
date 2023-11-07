@@ -2,6 +2,7 @@ import json
 import os
 from abc import ABC
 from pathlib import Path
+from typing import List
 
 import tablib
 from google.auth.transport.requests import Request
@@ -25,6 +26,9 @@ class Sheet:
 class AbstractSheetReader(ABC):
     def get_sheet(self, name) -> Sheet:
         return self.sheets.get(name)
+
+    def get_sheets_by_name(self, name) -> List[Sheet]:
+        return [sheet] if (sheet := self.get_sheet(name)) else []
 
 
 class CSVSheetReader(AbstractSheetReader):
@@ -148,6 +152,23 @@ class GoogleSheetReader(AbstractSheetReader):
                 token.write(creds.to_json())
 
         return creds
+
+
+class CompositeSheetReader:
+    def __init__(self, readers=None):
+        self.sheetreaders = readers or []
+        self.name = "Multiple files"
+
+    def add_reader(self, reader):
+        self.sheetreaders.append(reader)
+
+    def get_sheets_by_name(self, name):
+        sheets = []
+
+        for reader in self.sheetreaders:
+            sheets += reader.get_sheets_by_name(name)
+
+        return sheets
 
 
 def load_csv(path):

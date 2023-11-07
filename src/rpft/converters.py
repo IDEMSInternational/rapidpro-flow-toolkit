@@ -8,6 +8,7 @@ from rpft.parsers.sheets import (
     CSVSheetReader,
     GoogleSheetReader,
     XLSXSheetReader,
+    CompositeSheetReader,
 )
 
 
@@ -23,11 +24,11 @@ def create_flows(input_files, output_file, sheet_format, data_models=None, tags=
     :returns: dict representing the RapidPro import/export format.
     """
 
-    parser = ContentIndexParser(
-        sheet_readers=[create_sheet_reader(sheet_format, f) for f in input_files],
-        user_data_model_module_name=data_models,
-        tag_matcher=TagMatcher(tags),
-    )
+    reader = CompositeSheetReader()
+    for input_file in input_files:
+        sub_reader = create_sheet_reader(sheet_format, input_file)
+        reader.add_reader(sub_reader)
+    parser = ContentIndexParser(reader, data_models, TagMatcher(tags))
 
     flows = parser.parse_all().render()
 
