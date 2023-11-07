@@ -2,6 +2,7 @@ import json
 import os
 from abc import ABC
 from pathlib import Path
+from typing import List
 
 import tablib
 from google.auth.transport.requests import Request
@@ -16,43 +17,27 @@ class SheetReaderError(Exception):
 
 
 class Sheet:
-    def __init__(self, reader_name, data):
-        self.reader_name = reader_name
-        self.data = data
+    def __init__(self, reader, name, table):
+        self.reader = reader
+        self.name = name
+        self.table = table
 
 
 class AbstractSheetReader(ABC):
-    def get_main_sheets(self):
-        return self.get_sheets_by_name("content_index")
+    def get_sheet(self, name) -> Sheet:
+        return self.sheets.get(name)
 
-    def get_sheets_by_name(self, name):
-        return [sheet] if (sheet := self.sheets.get(name)) else []
+    def get_sheets_by_name(self, name) -> List[Sheet]:
+        return [sheet] if (sheet := self.get_sheet(name)) else []
 
 
 class CSVSheetReader(AbstractSheetReader):
-    def __init__(self, path, main="content_index"):
-        self.path = Path(path)
-        self.main = main
+    def __init__(self, path):
+        self.name = path
         self.sheets = {
-            f.stem: Sheet(self.name, load_csv(f)) for f in self.path.glob("*.csv")
+            f.stem: Sheet(reader=self, name=f.stem, table=load_csv(f))
+            for f in Path(path).glob("*.csv")
         }
-
-        if not self.main_sheet:
-            raise SheetReaderError(
-                "Main sheet not found",
-                {"file": str(self.path), "sheet": self.main},
-            )
-
-    @property
-    def main_sheet(self):
-        return self.get_sheet(self.main)
-
-    @property
-    def name(self):
-        return self.path.stem
-
-    def get_sheet(self, name):
-        return self.sheets.get(name)
 
 
 class XLSXSheetReader(AbstractSheetReader):
@@ -62,7 +47,11 @@ class XLSXSheetReader(AbstractSheetReader):
             data = tablib.Databook().load(table_data.read(), "xlsx")
         self.sheets = {}
         for sheet in data.sheets():
-            self.sheets[sheet.title] = self._sanitize(sheet)
+            self.sheets[sheet.title] = Sheet(
+                reader=self,
+                name=sheet.title,
+                table=self._sanitize(sheet),
+            )
 
     def _sanitize(self, sheet):
         data = tablib.Dataset()
@@ -76,7 +65,7 @@ class XLSXSheetReader(AbstractSheetReader):
             if any(new_row):
                 # omit empty rows
                 data.append(new_row)
-        return Sheet(self.name, data)
+        return data
 
 
 class GoogleSheetReader(AbstractSheetReader):
@@ -118,7 +107,11 @@ class GoogleSheetReader(AbstractSheetReader):
             if name in self.sheets:
                 raise ValueError(f"Warning: Duplicate sheet name: {name}")
             else:
-                self.sheets[name] = self._table_from_content(content)
+                self.sheets[name] = Sheet(
+                    reader=self,
+                    name=name,
+                    table=self._table_from_content(content),
+                )
 
     def _table_from_content(self, content):
         table = tablib.Dataset()
@@ -127,7 +120,7 @@ class GoogleSheetReader(AbstractSheetReader):
         for row in content[1:]:
             # Pad row to proper length
             table.append(row + ([""] * (n_headers - len(row))))
-        return Sheet(self.name, table)
+        return table
 
     def get_credentials(self):
         sa_creds = os.getenv("CREDENTIALS")
@@ -168,12 +161,6 @@ class CompositeSheetReader:
 
     def add_reader(self, reader):
         self.sheetreaders.append(reader)
-
-    def get_main_sheets(self):
-        sheets = []
-        for reader in self.sheetreaders:
-            sheets += reader.get_main_sheets()
-        return sheets
 
     def get_sheets_by_name(self, name):
         sheets = []
