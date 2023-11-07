@@ -597,7 +597,8 @@ class TestParseCampaigns(unittest.TestCase):
 
     def test_parse_message_campaign(self):
         ci_sheet = (
-            "type,sheet_name,new_name,group\n" "create_campaign,my_campaign,,My Group\n"
+            "type,sheet_name,new_name,group\n"
+            "create_campaign,my_campaign,,My Group\n"
         )
         my_campaign = (
             "offset,unit,event_type,delivery_hour,message,relative_to,start_mode,flow\n"
@@ -709,9 +710,18 @@ class TestMultiFile(TestTemplate):
         self.run_minimal(True)
 
     def run_minimal(self, singleindex=False):
-        ci_sheet1 = "type,sheet_name\n" "create_flow,template\n"
-        ci_sheet2 = "type,sheet_name\n" "template_definition,template\n"
-        template = "row_id,type,from,message_text\n" ",send_message,start,Hello!\n"
+        ci_sheet1 = (
+            "type,sheet_name\n"
+            "create_flow,template\n"
+        )
+        ci_sheet2 = (
+            "type,sheet_name\n"
+            "template_definition,template\n"
+        )
+        template = (
+            "row_id,type,from,message_text\n"
+            ",send_message,start,Hello!\n"
+        )
         sheet_dict2 = {
             "template": template,
         }
@@ -749,12 +759,18 @@ class TestMultiFile(TestTemplate):
             "create_flow,template,names,,draft\n"
         )
         template1 = (
-            "row_id,type,from,message_text\n" ",send_message,start,hello {{name}}\n"
+            "row_id,type,from,message_text\n"
+            ",send_message,start,hello {{name}}\n"
         )
         template2 = (
-            "row_id,type,from,message_text\n" ",send_message,start,hi {{name}}\n"
+            "row_id,type,from,message_text\n"
+            ",send_message,start,hi {{name}}\n"
         )
-        names = "ID,name\n" "a,georg\n" "b,chiara\n"
+        names = (
+            "ID,name\n"
+            "a,georg\n"
+            "b,chiara\n"
+        )
         sheet_dict1 = {
             "template": template1,
             "names": names,
