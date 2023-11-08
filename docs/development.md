@@ -34,8 +34,8 @@ Tests should be run after making any change to the code and certainly before cre
 
 This project uses [pre-commit] to run the following tools before every commit (in order):
 
-- [black]: code formatter
-- [flake8]: linter
+- [black] - code formatter
+- [flake8] - linter
 
 Any violations found by either tool will abort the commit. Simply fix the issues found and try again.
 
