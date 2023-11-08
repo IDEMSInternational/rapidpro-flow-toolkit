@@ -82,7 +82,6 @@ class TestImportExport(unittest.TestCase):
 
     def test_flow_containers(self):
         self.maxDiff = None
-        # TODO: Add test with localization (of different objects) to ensure it is maintained
         containerFilenamesList = self.data_dir.glob("containers/flow_container_*.json")
         for filename in containerFilenamesList:
             with open(filename, "r") as f:

@@ -20,7 +20,8 @@ class TestFlowParserReverse(unittest.TestCase):
                 # @input.text is implicit when left blank.
                 edge_exp["condition"]["variable"] = "@input.text"
         if model.node_uuid and not model_exp.node_uuid:
-            # If no explicit node UUID was specified, don't compare the generated node uuid
+            # If no explicit node UUID was specified, don't compare the generated node
+            # uuid
             model_dict["node_uuid"] = ""
         if model.obj_id and not model_exp.obj_id:
             # If no explicit object UUID was specified, don't compare

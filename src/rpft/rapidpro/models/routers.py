@@ -1,5 +1,4 @@
 import logging
-import string
 
 from rpft.rapidpro.models.common import Exit
 from rpft.rapidpro.utils import generate_new_uuid
@@ -68,7 +67,8 @@ class BaseRouter:
         return [c.get_exit() for c in self.get_categories()]
 
     def get_categories(self):
-        # TODO: Remove this and have the default category included in the list for the SwitchRouter
+        # TODO: Remove this and have the default category included in the list for the
+        # SwitchRouter
         raise NotImplementedError
 
     def render(self):
@@ -93,7 +93,8 @@ class SwitchRouter(BaseRouter):
         wait_timeout:
             None: There is no waiting for a user's message in this router
             0: Waiting for user's message, without a timeout
-            >0: Waiting for user's message, with a timeout (in which case no_response_category is taken)
+            >0: Waiting for user's message, with a timeout (in which case
+                no_response_category is taken)
         """
 
         super().__init__(result_name)
@@ -127,7 +128,8 @@ class SwitchRouter(BaseRouter):
             self.no_response_category = None
             if no_response_category:
                 logger.warning(
-                    f"Router has No Response category but no wait timeout. Ignoring No Response category."
+                    "Router has No Response category but no wait timeout."
+                    " Ignoring No Response category."
                 )
 
     def from_dict(data, exits):
@@ -227,7 +229,7 @@ class SwitchRouter(BaseRouter):
 
     def update_default_category(self, destination_uuid, category_name=None):
         if self.has_explicit_default_category:
-            logger.warning(f"Overwriting default category for Router")
+            logger.warning("Overwriting default category for Router")
         self.default_category.update_destination_uuid(destination_uuid)
         if category_name:
             self.default_category.update_name(category_name)
@@ -237,10 +239,10 @@ class SwitchRouter(BaseRouter):
     def update_no_response_category(self, destination_uuid, category_name=None):
         if not self.wait_timeout:
             logger.warning(
-                f"Updating No Response category, but router has no wait timeout."
+                "Updating No Response category, but router has no wait timeout."
             )
         if self.has_explicit_no_response_category:
-            logger.warning(f"Overwriting No Response category for Router")
+            logger.warning("Overwriting No Response category for Router")
         self.no_response_category.update_destination_uuid(destination_uuid)
         if category_name:
             self.no_response_category.update_name(category_name)
@@ -371,8 +373,6 @@ class RandomRouter(BaseRouter):
         return RandomRouter(result_name, categories)
 
     def add_choice(self, category_name=None, destination_uuid=None):
-        if not category_name:
-            category = f"Bucket {len(self.categories) + 2}"
         self.get_or_create_category(category_name, destination_uuid)
 
     def get_categories(self):
@@ -411,7 +411,8 @@ class RouterCategory:
         :param name: Name of the category
         :param destination_uuid: The UUID of the node that this category should point to
 
-        The destination of the category can be provided either as a destination_uuid or an exit.
+        The destination of the category can be provided either as a destination_uuid or
+        an exit.
         """
         self.uuid = uuid or generate_new_uuid()
         self.name = name
@@ -424,8 +425,8 @@ class RouterCategory:
 
     def from_dict(data, exits):
         """
-        :param data: The router in json format, as in RapidPro flows.
-        :param exits: A list of exit objects containing an exit the category connects to.
+        :param data: The router in json format, as in RapidPro flows
+        :param exits: A list of exit objects containing an exit the category connects to
         """
         matching_exits = [exit for exit in exits if exit.uuid == data["exit_uuid"]]
         if not matching_exits:
@@ -511,11 +512,12 @@ class RouterCase:
         )
 
     def validate(self):
-        if not self.type in RouterCase.TEST_VALIDATIONS:
+        if self.type not in RouterCase.TEST_VALIDATIONS:
             raise ValueError(f'Invalid router test type: "{self.type}"')
         if not RouterCase.TEST_VALIDATIONS[self.type](self.arguments):
             print(
-                f'Warning: Invalid number of arguments {len(self.arguments)} for router test type "{self.type}"'
+                f"Warning: Invalid number of arguments {len(self.arguments)} for router"
+                f'test type "{self.type}"'
             )
 
     def render(self):

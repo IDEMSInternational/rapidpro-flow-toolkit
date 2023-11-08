@@ -30,7 +30,8 @@ def is_list_type(model):
     # Determine whether model is a list type,
     # such as list, List, List[str], ...
     # issubclass only works for Python <=3.6
-    # model.__dict__.get('__origin__') returns different things in different Python version.
+    # model.__dict__.get('__origin__') returns different things in different Python
+    # version.
     # This function tries to accommodate both 3.6 and 3.8 (at least)
     return model == List or model.__dict__.get("__origin__") in [list, List]
 
@@ -44,7 +45,7 @@ def is_list_instance(value):
 
 
 def is_iterable_instance(value):
-    return isinstance(value, Iterable) and not type(value) == str
+    return isinstance(value, Iterable) and not type(value) is str
 
 
 def is_parser_model_type(model):
@@ -81,9 +82,9 @@ class RowParser:
         self.cell_parser = cell_parser
 
     def try_assign_as_kwarg(self, field, key, value, model):
-        # If value can be interpreted as a (field, field_value) pair for a field of model,
-        # assign value to field[key] (which represents the field in the model)
-        if type(value) == list and len(value) == 2 and type(value[0]) == str:
+        # If value can be interpreted as a (field, field_value) pair for a field of
+        # model, assign value to field[key] (which represents the field in the model)
+        if type(value) is list and len(value) == 2 and type(value[0]) is str:
             first_entry_as_key = model.header_name_to_field_name(value[0])
             if first_entry_as_key in model.__fields__:
                 self.assign_value(
@@ -114,7 +115,7 @@ class RowParser:
             # See https://pydantic-docs.helpmanual.io/usage/models/#field-ordering
             model_fields = list(model.__fields__.keys())
 
-            if type(value) != list:
+            if type(value) is not list:
                 # It could be that an object is specified via a single element.
                 value = [value]
             if self.try_assign_as_kwarg(field, key, value, model):
@@ -129,7 +130,8 @@ class RowParser:
                 if self.try_assign_as_kwarg(field, key, entry, model):
                     # This looks like a KWArg
                     # Note: We're resolving an ambiguity here in favor of kwargs.
-                    # in principle, this could also be a positional argument that is a list.
+                    # in principle, this could also be a positional argument that is a
+                    # list.
                     kwarg_found = True
                 else:
                     # This isn't a KWarg, so we interpret is as a positional argument
@@ -149,9 +151,10 @@ class RowParser:
             child_model = model.__args__[0]
             # The created entry should be a list. Value should also be a list
             field[key] = []
-            # Note: This makes a decision on how to resolve an ambiguity when the target field is a list of lists,
-            # but the cell value is a 1-dimensional list. 1;2 → [[1],[2]] rather than [[1,2]]
-            if type(value) != list:
+            # Note: This makes a decision on how to resolve an ambiguity when the target
+            # field is a list of lists, but the cell value is a 1-dimensional list.
+            # 1;2 → [[1],[2]] rather than [[1,2]]
+            if type(value) is not list:
                 # It could be that a list is specified via a single element.
                 if value == "":
                     # Interpret an empty cell as [] rather than ['']
@@ -159,7 +162,8 @@ class RowParser:
                 else:
                     value = [value]
             for entry in value:
-                # For each entry, create a new list entry and assign its value recursively
+                # For each entry, create a new list entry and assign its value
+                # recursively
                 field[key].append(None)
                 self.assign_value(field[key], -1, entry, child_model)
 
@@ -173,7 +177,7 @@ class RowParser:
             # The value should be a basic type
             # TODO: Ensure the types match. E.g. we don't want value to be a list
             if model == bool:
-                if type(value) == str:
+                if type(value) is str:
                     if value.strip():
                         # Special case: empty string is not assigned at all;
                         # in this case, the default value takes effect.
@@ -219,14 +223,14 @@ class RowParser:
         else:
             assert is_parser_model_type(model)
             key = model.header_name_to_field_name(field_name)
-            if not key in model.__fields__:
+            if key not in model.__fields__:
                 raise ValueError(f"Field {key} doesn't exist in target type {model}.")
             child_model = model.__fields__[key].outer_type_
             # TODO: how does ModelField.outer_type_ and ModelField.type_
             # deal with nested lists, e.g. List[List[str]]?
             # Write test cases and fix code.
 
-            if not key in output_field:
+            if key not in output_field:
                 # Create a new entry for this, if necessary
                 # None will later be overwritten by assign_value
                 output_field[key] = None
@@ -307,7 +311,8 @@ class RowParser:
                     asterisk_list_lengths[prefix] = max(
                         asterisk_list_lengths[prefix], len(parsed_v)
                     )
-                    # No else case needed because then the implied list length is 1, i.e. the default value
+                    # No else case needed because then the implied list length is 1,
+                    # i.e. the default value
         # Process each entry
         for k, v in data.items():
             if "*" in k:
@@ -316,7 +321,8 @@ class RowParser:
                 prefix = k.split("*")[0]
                 parsed_v = self.cell_parser.parse(v, context=template_context)
                 if not isinstance(parsed_v, list):
-                    # If there was only one entry, we assume it is used for the entire list
+                    # If there was only one entry, we assume it is used for the entire
+                    # list
                     parsed_v = [parsed_v] * asterisk_list_lengths[prefix]
                 for i, elem in enumerate(parsed_v):
                     self.parse_entry(

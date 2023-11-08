@@ -1,5 +1,4 @@
 import unittest
-import json
 
 from rpft.parsers.common.rowparser import RowParser
 from tests.mocks import MockCellParser

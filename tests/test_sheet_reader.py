@@ -26,9 +26,7 @@ class Base:
 class TestCsvSheetReader(Base.SheetReaderTestCase):
     def setUp(self):
         path = str(TESTS_ROOT / "input/example1/csv_workbook")
-        self.reader = CSVSheetReader(
-            path=path
-        )
+        self.reader = CSVSheetReader(path=path)
         self.expected_reader_name = path
 
 

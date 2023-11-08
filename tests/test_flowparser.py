@@ -288,14 +288,24 @@ class TestParsing(unittest.TestCase):
         )
 
         # TODO: Ideally, there should be more explicit tests here.
-        # At least the functionality is covered by the integration tests simulating the flow.
+        # At least the functionality is covered by the integration tests simulating the
+        # flow.
         # print(json.dumps(render_output, indent=2))
 
         render_ui = render_output["_ui"]["nodes"]
-        f_uuid = lambda i: render_output["nodes"][i]["uuid"]
-        f_uipos_dict = lambda i: render_ui[f_uuid(i)]["position"]
-        f_uipos = lambda i: (f_uipos_dict(i)["left"], f_uipos_dict(i)["top"])
-        f_uitype = lambda i: render_ui[f_uuid(i)]["type"]
+
+        def f_uuid(i):
+            return render_output["nodes"][i]["uuid"]
+
+        def f_uipos_dict(i):
+            return render_ui[f_uuid(i)]["position"]
+
+        def f_uipos(i):
+            return (f_uipos_dict(i)["left"], f_uipos_dict(i)["top"])
+
+        def f_uitype(i):
+            return render_ui[f_uuid(i)]["type"]
+
         self.assertIn(f_uuid(0), render_ui)
         self.assertEqual((340, 0), f_uipos(0))
         self.assertEqual((360, 180), f_uipos(1))
@@ -421,8 +431,8 @@ class TestBlocks(unittest.TestCase):
 class TestWebhook(TestBlocks):
     def test_basic_webhook(self):
         table_data = (
-            "row_id,type,from,message_text,webhook.url,webhook.method,webhook.headers,save_name\n"
-            ",call_webhook,start,Webhook Body,http://localhost:49998/?cmd=success,GET,Authorization;Token AAFFZZHH|,webhook_result\n"
+            "row_id,type,from,message_text,webhook.url,webhook.method,webhook.headers,save_name\n"  # noqa: E501
+            ",call_webhook,start,Webhook Body,http://localhost:49998/?cmd=success,GET,Authorization;Token AAFFZZHH|,webhook_result\n"  # noqa: E501
         )
         action_exp = {
             "type": "call_webhook",
@@ -440,8 +450,8 @@ class TestWebhook(TestBlocks):
 
     def test_webhook_default_args(self):
         table_data = (
-            "row_id,type,from,message_text,webhook.url,webhook.method,webhook.headers,save_name\n"
-            ",call_webhook,start,Webhook Body,http://localhost:49998/?cmd=success,,,webhook_result\n"
+            "row_id,type,from,message_text,webhook.url,webhook.method,webhook.headers,save_name\n"  # noqa: E501
+            ",call_webhook,start,Webhook Body,http://localhost:49998/?cmd=success,,,webhook_result\n"  # noqa: E501
         )
 
         render_output = self.render_output_from_table_data(table_data)
@@ -451,7 +461,7 @@ class TestWebhook(TestBlocks):
 
     def test_webhook_connectivity(self):
         table_data = (
-            "row_id,type,from,condition,message_text,webhook.url,webhook.method,webhook.headers,save_name\n"
+            "row_id,type,from,condition,message_text,webhook.url,webhook.method,webhook.headers,save_name\n"  # noqa: E501
             "0,call_webhook,start,,Webhook Body,URL,,,webhook_result\n"
             ",send_message,0,Success,Webhook Success,,,,\n"
             ",send_message,0,,Webhook Failure,,,,\n"

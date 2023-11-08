@@ -18,7 +18,7 @@ class Action:
     def from_dict(data):
         # Create a generic Action, and cast it to the specific Action subclass
         # in order to bypass the constructor of the subclass
-        if not "type" in data:
+        if "type" not in data:
             raise RapidProActionError("RapidProAction must have a type.")
         action_type = data["type"]
         # TODO: Can we make this more smooth by invoking subclass constructors?
@@ -154,7 +154,8 @@ class SetContactFieldAction(Action):
         self.value = value
         if len(value) > 640:
             raise RapidProActionError(
-                f"Contact fields are limited to 640 characters, but value has length {len(value)}"
+                "Contact fields are limited to 640 characters, but value has length"
+                f" {len(value)}"
             )
 
     def _assign_fields_from_dict(self, data):
@@ -300,7 +301,8 @@ class SetRunResultAction(Action):
         self.category = category
         if len(value) > 640:
             raise RapidProActionError(
-                f"Flow results are limited to 640 characters, but value has length {len(value)}"
+                "Flow results are limited to 640 characters, but value has length"
+                f" {len(value)}"
             )
 
     def render(self):

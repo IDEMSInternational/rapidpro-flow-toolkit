@@ -1,6 +1,5 @@
 import unittest
-import json
-from typing import List, Dict, Optional
+from typing import List, Optional
 from collections import OrderedDict
 
 from rpft.parsers.common.rowparser import RowParser, ParserModel

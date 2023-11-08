@@ -32,8 +32,6 @@ class ContentIndexRowModel(ParserModel):
     def field_name_to_header_name(field):
         if "template_argument_definitions":
             return "template_arguments"
-        else:
-            return header
 
     def header_name_to_field_name_with_context(header, row):
         if row["type"] == "template_definition" and header == "template_arguments":

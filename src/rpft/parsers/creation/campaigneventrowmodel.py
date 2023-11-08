@@ -24,7 +24,8 @@ class CampaignEventRowModel(ParserModel):
     def validate_start_mode(cls, v):
         if v not in ["I", "S", "P"]:
             raise ValueError(
-                "start_mode must be I (interrupt current flow), S (skip event if in flow) or P (send message and don't affect flow)"
+                "start_mode must be I (interrupt current flow), S (skip event if in"
+                " flow) or P (send message and don't affect flow)"
             )
         return v
 
