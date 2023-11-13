@@ -11,6 +11,7 @@ from rpft.parsers.creation.campaignparser import CampaignParser
 from rpft.parsers.creation.campaigneventrowmodel import CampaignEventRowModel
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.logger.logger import get_logger, logging_context
+from rpft.parsers.sheets import Sheet
 
 LOGGER = get_logger()
 
@@ -21,6 +22,10 @@ class TemplateSheet:
         self.argument_definitions = argument_definitions
 
 
+class ParserError(Exception):
+    pass
+
+
 class ContentIndexParser:
     def __init__(
         self,
@@ -28,31 +33,34 @@ class ContentIndexParser:
         user_data_model_module_name=None,
         tag_matcher=TagMatcher(),
     ):
+        self.reader = sheet_reader
         self.tag_matcher = tag_matcher
         self.template_sheets = {}  # values: tablib tables
         self.data_sheets = {}  # values: OrderedDicts of RowModels
         self.flow_definition_rows = []  # list of ContentIndexRowModel
-        self.campaign_parsers = []  # list of CampaignParser
+        self.campaign_parsers = {}  # list of CampaignParser
+
         if user_data_model_module_name:
             self.user_models_module = importlib.import_module(
                 user_data_model_module_name
             )
-        if sheet_reader:
-            self.add_content_index(sheet_reader)
 
-    def add_content_index(self, sheet_reader):
-        main_sheet = sheet_reader.get_main_sheet()
-        self.process_content_index_table(sheet_reader, main_sheet, "content_index")
+        indices = self.reader.get_sheets_by_name("content_index")
 
-    def process_content_index_table(
-        self, sheet_reader, content_index_table, content_index_name
-    ):
-        # content_index_table is in tablib table format
+        if not indices:
+            LOGGER.critical("No content index sheet provided")
+
+        for sheet in indices:
+            self._process_content_index_table(sheet)
+
+        self._populate_missing_templates()
+
+    def _process_content_index_table(self, sheet: Sheet):
         row_parser = RowParser(ContentIndexRowModel, CellParser())
-        sheet_parser = SheetParser(row_parser, content_index_table)
+        sheet_parser = SheetParser(row_parser, sheet.table)
         content_index_rows = sheet_parser.parse_all()
-        for row_idx, row in enumerate(content_index_rows):
-            logging_prefix = f"{content_index_name} | row {row_idx+2}"
+        for row_idx, row in enumerate(content_index_rows, start=2):
+            logging_prefix = f"{sheet.reader.name}-{sheet.name} | row {row_idx}"
             with logging_context(logging_prefix):
                 if row.status == "draft":
                     continue
@@ -61,49 +69,99 @@ class ContentIndexParser:
                 if row.type == "content_index":
                     if not len(row.sheet_name) == 1:
                         LOGGER.critical(
-                            "For content_index rows, exactly one sheet_name has to be specified"
+                            "For content_index rows, "
+                            "exactly one sheet_name has to be specified"
                         )
                     sheet_name = row.sheet_name[0]
-                    sheet = sheet_reader.get_sheet(sheet_name)
-                    with logging_context(f"{sheet_name}"):
-                        self.process_content_index_table(
-                            sheet_reader, sheet, sheet_name
-                        )
+                    sheet = self._get_sheet_or_die(sheet_name)
+                    with logging_context(f"{sheet.name}"):
+                        self._process_content_index_table(sheet)
                 elif row.type == "data_sheet":
                     if not len(row.sheet_name) >= 1:
                         LOGGER.critical(
-                            "For data_sheet rows, at least one sheet_name has to be specified"
+                            "For data_sheet rows, at least one "
+                            "sheet_name has to be specified"
                         )
-                    self.process_data_sheet(
-                        sheet_reader, row.sheet_name, row.new_name, row.data_model
+                    self._process_data_sheet(
+                        row.sheet_name, row.new_name, row.data_model
                     )
                 elif row.type in ["template_definition", "create_flow"]:
                     if not len(row.sheet_name) == 1:
                         LOGGER.critical(
-                            "For template_definition/create_flow rows, exactly one sheet_name has to be specified"
+                            "For template_definition/create_flow rows, "
+                            "exactly one sheet_name has to be specified"
                         )
-                    sheet_name = row.sheet_name[0]
-                    if sheet_name not in self.template_sheets:
-                        sheet = sheet_reader.get_sheet(sheet_name)
-                        self.template_sheets[sheet_name] = TemplateSheet(
-                            sheet, row.template_argument_definitions
-                        )
-                    if row.type == "create_flow":
+                    if row.type == "template_definition":
+                        self._add_template(row, True)
+                    else:
                         self.flow_definition_rows.append((logging_prefix, row))
                 elif row.type == "create_campaign":
                     if not len(row.sheet_name) == 1:
                         LOGGER.critical(
-                            "For create_campaign rows, exactly one sheet_name has to be specified"
+                            "For create_campaign rows, exactly one "
+                            "sheet_name has to be specified"
                         )
-                    campaign_parser = self.create_campaign_parser(sheet_reader, row)
-                    self.campaign_parsers.append((logging_prefix, campaign_parser))
+                    campaign_parser = self.create_campaign_parser(row)
+                    name = campaign_parser.campaign.name
+                    if name in self.campaign_parsers:
+                        LOGGER.warning(
+                            f"Duplicate campaign definition sheet '{name}'. "
+                            "Overwriting previous definition."
+                        )
+                    self.campaign_parsers[name] = (logging_prefix, campaign_parser)
                 else:
-                    LOGGER.error(f'invalid type: "{row.type}"')
+                    LOGGER.error(f"invalid type: '{row.type}'")
 
-    def process_data_sheet(self, sheet_reader, sheet_names, new_name, data_model_name):
+    def _add_template(self, row, update_duplicates=False):
+        sheet_name = row.sheet_name[0]
+
+        if sheet_name in self.template_sheets and update_duplicates:
+            LOGGER.info(
+                f"Duplicate template definition sheet '{sheet_name}'. "
+                "Overwriting previous definition."
+            )
+        if sheet_name not in self.template_sheets or update_duplicates:
+            sheet = self._get_sheet_or_die(sheet_name)
+            self.template_sheets[sheet_name] = TemplateSheet(
+                sheet.table, row.template_argument_definitions
+            )
+
+    def _populate_missing_templates(self):
+        for logging_prefix, row in self.flow_definition_rows:
+            with logging_context(f"{logging_prefix} | {row.sheet_name[0]}"):
+                self._add_template(row)
+
+    def _get_sheet_or_die(self, sheet_name):
+        candidates = self.reader.get_sheets_by_name(sheet_name)
+
+        if not candidates:
+            raise ParserError(
+                "Sheet not found",
+                {"name": sheet_name},
+            )
+
+        active = candidates[-1]
+
+        if len(candidates) > 1:
+            readers = [c.reader.name for c in candidates]
+            LOGGER.warning(
+                "Duplicate sheets found, "
+                + str(
+                    {
+                        "name": sheet_name,
+                        "readers": readers,
+                        "active": active.reader.name,
+                    }
+                ),
+            )
+
+        return active
+
+    def _process_data_sheet(self, sheet_names, new_name, data_model_name):
         if not hasattr(self, "user_models_module"):
             LOGGER.critical(
-                "If there are data sheets, a user_data_model_module_name has to be provided (as commandline argument)"
+                "If there are data sheets, a user_data_model_module_name "
+                "has to be provided"
             )
             return
         if not data_model_name:
@@ -116,15 +174,20 @@ class ContentIndexParser:
             return
         if not new_name:
             new_name = sheet_names[0]
+        if new_name in self.data_sheets:
+            LOGGER.warn(
+                f"Duplicate data sheet {new_name}. Overwriting previous definition."
+            )
         content = OrderedDict()
         for sheet_name in sheet_names:
             with logging_context(sheet_name):
-                data_table = sheet_reader.get_sheet(sheet_name)
+                data_table = self._get_sheet_or_die(sheet_name).table
                 try:
                     user_model = getattr(self.user_models_module, data_model_name)
                 except AttributeError:
                     LOGGER.critical(
-                        f'Undefined data_model_name "{data_model_name}" in {self.user_models_module}.'
+                        f'Undefined data_model_name "{data_model_name}" '
+                        f"in {self.user_models_module}."
                     )
                     return
                 row_parser = RowParser(user_model, CellParser())
@@ -147,9 +210,8 @@ class ContentIndexParser:
         self, template_name, data_sheet, data_row_id, template_arguments
     ):
         if (data_sheet and data_row_id) or (not data_sheet and not data_row_id):
-            flow_name = template_name
             with logging_context(f"{template_name}"):
-                return self.parse_flow(
+                return self._parse_flow(
                     template_name,
                     data_sheet,
                     data_row_id,
@@ -159,7 +221,8 @@ class ContentIndexParser:
                 )
         else:
             LOGGER.critical(
-                "For insert_as_block, either both data_sheet and data_row_id or neither have to be provided."
+                "For insert_as_block, either both data_sheet and data_row_id "
+                "or neither have to be provided."
             )
 
     def parse_all(self):
@@ -168,29 +231,30 @@ class ContentIndexParser:
         self.parse_all_campaigns(rapidpro_container)
         return rapidpro_container
 
-    def create_campaign_parser(self, sheet_reader, row):
+    def create_campaign_parser(self, row):
         sheet_name = row.sheet_name[0]
-        sheet = sheet_reader.get_sheet(sheet_name)
+        sheet = self._get_sheet_or_die(sheet_name)
         row_parser = RowParser(CampaignEventRowModel, CellParser())
-        sheet_parser = SheetParser(row_parser, sheet)
+        sheet_parser = SheetParser(row_parser, sheet.table)
         rows = sheet_parser.parse_all()
         return CampaignParser(row.new_name or sheet_name, row.group, rows)
 
     def parse_all_campaigns(self, rapidpro_container):
-        for logging_prefix, campaign_parser in self.campaign_parsers:
+        for logging_prefix, campaign_parser in self.campaign_parsers.values():
             sheet_name = campaign_parser.campaign.name
             with logging_context(f"{logging_prefix} | {sheet_name}"):
                 campaign = campaign_parser.parse()
                 rapidpro_container.add_campaign(campaign)
 
     def parse_all_flows(self, rapidpro_container):
+        flows = {}
         for logging_prefix, row in self.flow_definition_rows:
             with logging_context(f"{logging_prefix} | {row.sheet_name[0]}"):
                 if row.data_sheet and not row.data_row_id:
                     data_rows = self.get_all_data_model_instances(row.data_sheet)
                     for data_row_id in data_rows.keys():
                         with logging_context(f'with data_row_id "{data_row_id}"'):
-                            self.parse_flow(
+                            flow = self._parse_flow(
                                 row.sheet_name[0],
                                 row.data_sheet,
                                 data_row_id,
@@ -198,12 +262,19 @@ class ContentIndexParser:
                                 rapidpro_container,
                                 row.new_name,
                             )
+                            if flow.name in flows:
+                                LOGGER.warning(
+                                    f"Multiple definitions of flow '{flow.name}'. "
+                                    "Overwriting."
+                                )
+                            flows[flow.name] = flow
                 elif not row.data_sheet and row.data_row_id:
                     LOGGER.critical(
-                        "For create_flow, if data_row_id is provided, data_sheet must also be provided."
+                        "For create_flow, if data_row_id is provided, "
+                        "data_sheet must also be provided."
                     )
                 else:
-                    self.parse_flow(
+                    flow = self._parse_flow(
                         row.sheet_name[0],
                         row.data_sheet,
                         row.data_row_id,
@@ -211,8 +282,16 @@ class ContentIndexParser:
                         rapidpro_container,
                         row.new_name,
                     )
+                    if flow.name in flows:
+                        LOGGER.warning(
+                            f"Multiple definitions of flow '{flow.name}'. "
+                            "Overwriting."
+                        )
+                    flows[flow.name] = flow
+        for flow in flows.values():
+            rapidpro_container.add_flow(flow)
 
-    def parse_flow(
+    def _parse_flow(
         self,
         sheet_name,
         data_sheet,
@@ -229,7 +308,8 @@ class ContentIndexParser:
         else:
             if data_sheet or data_row_id:
                 LOGGER.warn(
-                    "For create_flow, if no data_sheet is provided, data_row_id should be blank as well."
+                    "For create_flow, if no data_sheet is provided, "
+                    "data_row_id should be blank as well."
                 )
             flow_name = base_name
             context = {}
@@ -250,8 +330,7 @@ class ContentIndexParser:
         if parse_as_block:
             return flow_parser.parse_as_block()
         else:
-            return flow_parser.parse()
-        # Is automatically added to the rapidpro_container, for now.
+            return flow_parser.parse(add_to_container=False)
 
     def map_template_arguments_to_context(self, arg_defs, args, context):
         # Template arguments are positional arguments.
@@ -262,7 +341,7 @@ class ContentIndexParser:
             # Check if these args are non-empty.
             # Once the row parser is cleaned up to eliminate trailing ''
             # entries, this won't be necessary
-            extra_args = args[len(arg_defs) :]
+            extra_args = args[len(arg_defs):]
             non_empty_extra_args = [ea for ea in extra_args if ea]
             if non_empty_extra_args:
                 LOGGER.warn("Too many arguments provided to template")
@@ -272,7 +351,8 @@ class ContentIndexParser:
         for arg_def, arg in zip(arg_defs, args + args_padding):
             if arg_def.name in context:
                 LOGGER.critical(
-                    f'Template argument "{arg_def.name}" doubly defined in context: "{context}"'
+                    f'Template argument "{arg_def.name}" doubly defined '
+                    f'in context: "{context}"'
                 )
             arg_value = arg if arg != "" else arg_def.default_value
             if arg_value == "":

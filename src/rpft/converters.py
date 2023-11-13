@@ -4,7 +4,12 @@ from pathlib import Path
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
-from rpft.parsers.sheets import CSVSheetReader, GoogleSheetReader, XLSXSheetReader
+from rpft.parsers.sheets import (
+    CSVSheetReader,
+    GoogleSheetReader,
+    XLSXSheetReader,
+    CompositeSheetReader,
+)
 
 
 def create_flows(input_files, output_file, sheet_format, data_models=None, tags=[]):
@@ -18,13 +23,12 @@ def create_flows(input_files, output_file, sheet_format, data_models=None, tags=
     :param tags: names of tags to be used to filter the source spreadsheets
     :returns: dict representing the RapidPro import/export format.
     """
-    parser = ContentIndexParser(
-        user_data_model_module_name=data_models, tag_matcher=TagMatcher(tags)
-    )
 
+    reader = CompositeSheetReader()
     for input_file in input_files:
-        reader = create_sheet_reader(sheet_format, input_file)
-        parser.add_content_index(reader)
+        sub_reader = create_sheet_reader(sheet_format, input_file)
+        reader.add_reader(sub_reader)
+    parser = ContentIndexParser(reader, data_models, TagMatcher(tags))
 
     flows = parser.parse_all().render()
 
@@ -35,7 +39,7 @@ def create_flows(input_files, output_file, sheet_format, data_models=None, tags=
     return flows
 
 
-def create_sheet_reader(sheet_format, input_file, credentials=None):
+def create_sheet_reader(sheet_format, input_file):
     if sheet_format == "csv":
         sheet_reader = CSVSheetReader(input_file)
     elif sheet_format == "xlsx":

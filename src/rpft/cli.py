@@ -60,7 +60,8 @@ def create_parser():
     parser.add_argument(
         "--datamodels",
         help=(
-            "Module defining models for data sheets e.g. if the definitions reside in "
+            "Module name of the module defining user data models, i.e. models "
+            "underlying the data sheets. E.g. if the model definitions reside in "
             "./myfolder/mysubfolder/mymodelsfile.py, then this argument should be "
             "myfolder.mysubfolder.mymodelsfile"
         ),

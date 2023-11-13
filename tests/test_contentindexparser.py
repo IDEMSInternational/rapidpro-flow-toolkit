@@ -2,13 +2,13 @@ import unittest
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
-from rpft.parsers.sheets import CSVSheetReader, XLSXSheetReader
+from rpft.parsers.sheets import CSVSheetReader, XLSXSheetReader, CompositeSheetReader
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
 from tests.utils import traverse_flow, Context
 
 
-class TestParsing(unittest.TestCase):
+class TestTemplate(unittest.TestCase):
     def compare_messages(self, render_output, flow_name, messages_exp, context=None):
         flow_found = False
         for flow in render_output["flows"]:
@@ -22,6 +22,8 @@ class TestParsing(unittest.TestCase):
                 False, msg=f'Flow with name "{flow_name}" does not exist in output.'
             )
 
+
+class TestParsing(TestTemplate):
     def get_flow_names(self, render_output):
         return {flow["name"] for flow in render_output["flows"]}
 
@@ -170,6 +172,30 @@ class TestParsing(unittest.TestCase):
         self.compare_messages(
             render_output, "my_template - row3", ["Value3", "Happy3 and Sad3"]
         )
+
+    def test_duplicate_create_flow(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
+            "create_flow,my_template,,,,,\n"
+            "create_flow,my_template2,,,my_template,,\n"
+        )
+        my_template = (
+            "row_id,type,from,message_text\n" ",send_message,start,Some text\n"
+        )
+        my_template2 = (
+            "row_id,type,from,message_text\n" ",send_message,start,Other text\n"
+        )
+        sheet_dict = {
+            "ci_sheet": ci_sheet,
+            "my_template": my_template,
+            "my_template2": my_template2,
+        }
+
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader)
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        self.compare_messages(render_output, "my_template", ["Other text"])
 
     def test_bulk_flows_with_args(self):
         ci_sheet = (
@@ -571,7 +597,8 @@ class TestParseCampaigns(unittest.TestCase):
 
     def test_parse_message_campaign(self):
         ci_sheet = (
-            "type,sheet_name,new_name,group\n" "create_campaign,my_campaign,,My Group\n"
+            "type,sheet_name,new_name,group\n"
+            "create_campaign,my_campaign,,My Group\n"
         )
         my_campaign = (
             "offset,unit,event_type,delivery_hour,message,relative_to,start_mode,flow\n"
@@ -589,23 +616,36 @@ class TestParseCampaigns(unittest.TestCase):
         self.assertEqual(event["message"], {"eng": "Messagetext"})
         self.assertEqual(event["base_language"], "eng")
 
+    def test_duplicate_campaign(self):
+        ci_sheet = (
+            "type,sheet_name,new_name,group\n"
+            "create_campaign,my_campaign,,My Group\n"
+            "create_campaign,my_campaign2,my_campaign,My Group\n"
+        )
+        my_campaign = (
+            "offset,unit,event_type,delivery_hour,message,relative_to,start_mode,flow\n"
+            "150,D,M,12,Messagetext,Created On,I,\n"
+        )
+        my_campaign2 = (
+            "offset,unit,event_type,delivery_hour,message,relative_to,start_mode,flow\n"
+            "150,D,M,6,Messagetext,Created On,I,\n"
+        )
+        sheet_dict = {
+            "my_campaign": my_campaign,
+            "my_campaign2": my_campaign2,
+        }
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader)
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        self.assertEqual(render_output["campaigns"][0]["name"], "my_campaign")
+        event = render_output["campaigns"][0]["events"][0]
+        self.assertEqual(event["delivery_hour"], 6)
 
-class TestParseFromFile(unittest.TestCase):
+
+class TestParseFromFile(TestTemplate):
     def setUp(self):
         self.input_dir = TESTS_ROOT / "input/example1"
-
-    def compare_messages(self, render_output, flow_name, messages_exp, context=None):
-        flow_found = False
-        for flow in render_output["flows"]:
-            if flow["name"] == flow_name:
-                flow_found = True
-                actions = traverse_flow(flow, context or Context())
-                actions_exp = list(zip(["send_msg"] * len(messages_exp), messages_exp))
-                self.assertEqual(actions, actions_exp)
-        if not flow_found:
-            self.assertTrue(
-                False, msg=f'Flow with name "{flow_name}" does not exist in output.'
-            )
 
     def compare_to_expected(self, render_output):
         self.compare_messages(render_output, "my_basic_flow", ["Some text"])
@@ -632,16 +672,15 @@ class TestParseFromFile(unittest.TestCase):
 
     def test_example1_csv(self):
         # Same test as test_generate_flows but with csvs
-        sheet_reader = CSVSheetReader(self.input_dir / "content_index.csv")
+        sheet_reader = CSVSheetReader(self.input_dir / "csv_workbook")
         ci_parser = ContentIndexParser(sheet_reader, "tests.input.example1.nestedmodel")
         self.check_example1(ci_parser)
 
-    def test_example1_split_csv(self):
+    def test_example1_csv_composite(self):
         # Same test as test_generate_flows but with csvs
-        sheet_reader = CSVSheetReader(self.input_dir / "content_index1.csv")
-        ci_parser = ContentIndexParser(sheet_reader, "tests.input.example1.nestedmodel")
-        sheet_reader = CSVSheetReader(self.input_dir / "content_index2.csv")
-        ci_parser.add_content_index(sheet_reader)
+        sheet_reader = CSVSheetReader(self.input_dir / "csv_workbook")
+        reader = CompositeSheetReader([sheet_reader])
+        ci_parser = ContentIndexParser(reader, "tests.input.example1.nestedmodel")
         self.check_example1(ci_parser)
 
     def test_example1_xlsx(self):
@@ -649,3 +688,108 @@ class TestParseFromFile(unittest.TestCase):
         sheet_reader = XLSXSheetReader(self.input_dir / "content_index.xlsx")
         ci_parser = ContentIndexParser(sheet_reader, "tests.input.example1.nestedmodel")
         self.check_example1(ci_parser)
+
+    def test_example1_xlsx_composite(self):
+        # Same test as above
+        sheet_reader = XLSXSheetReader(self.input_dir / "content_index.xlsx")
+        reader = CompositeSheetReader([sheet_reader])
+        ci_parser = ContentIndexParser(reader, "tests.input.example1.nestedmodel")
+        self.check_example1(ci_parser)
+
+
+class TestMultiFile(TestTemplate):
+    def check(self, ci_parser, flow_name, messages_exp):
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        self.compare_messages(render_output, flow_name, messages_exp)
+
+    def test_minimal(self):
+        self.run_minimal()
+
+    def test_minimal_singleindex(self):
+        self.run_minimal(True)
+
+    def run_minimal(self, singleindex=False):
+        ci_sheet1 = (
+            "type,sheet_name\n"
+            "create_flow,template\n"
+        )
+        ci_sheet2 = (
+            "type,sheet_name\n"
+            "template_definition,template\n"
+        )
+        template = (
+            "row_id,type,from,message_text\n"
+            ",send_message,start,Hello!\n"
+        )
+        sheet_dict2 = {
+            "template": template,
+        }
+        sheet_reader1 = MockSheetReader(ci_sheet1, name="mock_1")
+
+        sheet_reader2 = MockSheetReader(
+            None if singleindex else ci_sheet2,
+            sheet_dict2,
+            name="mock_2",
+        )
+
+        self.check(
+            ContentIndexParser(CompositeSheetReader([sheet_reader1, sheet_reader2])),
+            "template",
+            ["Hello!"],
+        )
+
+        self.check(
+            ContentIndexParser(CompositeSheetReader([sheet_reader2, sheet_reader1])),
+            "template",
+            ["Hello!"],
+        )
+
+    def test_with_model(self):
+        ci_sheet1 = (
+            "type,sheet_name,data_sheet,data_model,status\n"
+            "template_definition,template,,,\n"
+            "data_sheet,names,,NameModel,draft\n"
+            "create_flow,template,names,,\n"
+        )
+        ci_sheet2 = (
+            "type,sheet_name,data_sheet,data_model,status\n"
+            "data_sheet,names,,NameModel,\n"
+            "template_definition,template,,,\n"
+            "create_flow,template,names,,draft\n"
+        )
+        template1 = (
+            "row_id,type,from,message_text\n"
+            ",send_message,start,hello {{name}}\n"
+        )
+        template2 = (
+            "row_id,type,from,message_text\n"
+            ",send_message,start,hi {{name}}\n"
+        )
+        names = (
+            "ID,name\n"
+            "a,georg\n"
+            "b,chiara\n"
+        )
+        sheet_dict1 = {
+            "template": template1,
+            "names": names,
+        }
+        sheet_dict2 = {
+            "template": template2,
+        }
+        sheet_reader1 = MockSheetReader(ci_sheet1, sheet_dict1, name="mock_1")
+        sheet_reader2 = MockSheetReader(ci_sheet2, sheet_dict2, name="mock_2")
+        ci_parser = ContentIndexParser(
+            sheet_reader=CompositeSheetReader([sheet_reader1, sheet_reader2]),
+            user_data_model_module_name="tests.datarowmodels.minimalmodel",
+        )
+        self.check(ci_parser, "template - a", ["hi georg"])
+        self.check(ci_parser, "template - b", ["hi chiara"])
+
+        ci_parser = ContentIndexParser(
+            sheet_reader=CompositeSheetReader([sheet_reader2, sheet_reader1]),
+            user_data_model_module_name="tests.datarowmodels.minimalmodel",
+        )
+        self.check(ci_parser, "template - a", ["hello georg"])
+        self.check(ci_parser, "template - b", ["hello chiara"])

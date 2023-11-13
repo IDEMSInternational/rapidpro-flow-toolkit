@@ -348,10 +348,11 @@ class FlowParser:
             LOGGER.critical("Unexpected end of flow. Did you forget end_for/end_block?")
         return self.current_node_group()
 
-    def parse(self):
+    def parse(self, add_to_container=True):
         self._parse_block()
         flow_container = self._compile_flow()
-        self.rapidpro_container.add_flow(flow_container)
+        if add_to_container:
+            self.rapidpro_container.add_flow(flow_container)
         return flow_container
 
     def _parse_block(self, depth=0, block_type="root_block", omit_content=False):
