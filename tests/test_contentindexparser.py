@@ -8,6 +8,13 @@ from tests.mocks import MockSheetReader
 from tests.utils import traverse_flow, Context
 
 
+# flake8: noqa: E501
+
+
+def csv_join(*args):
+    return "\n".join(args) + "\n"
+
+
 class TestTemplate(unittest.TestCase):
     def compare_messages(self, render_output, flow_name, messages_exp, context=None):
         flow_found = False
@@ -33,8 +40,9 @@ class TestParsing(TestTemplate):
             "template_definition,my_template,,,,,\n"
             "template_definition,my_template2,,,,,draft\n"
         )
-        my_template = (
-            "row_id,type,from,message_text\n" ",send_message,start,Some text\n"
+        my_template = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
         )
 
         sheet_reader = MockSheetReader(ci_sheet, {"my_template": my_template})
@@ -55,11 +63,13 @@ class TestParsing(TestTemplate):
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
             "template_definition,my_template2,,,,,\n"
         )
-        my_template = (
-            "row_id,type,from,message_text\n" ",send_message,start,Some text\n"
+        my_template = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
         )
-        my_template2 = (
-            "row_id,type,from,message_text\n" ",send_message,start,Other text\n"
+        my_template2 = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Other text",
         )
         sheet_dict = {
             "ci_sheet2": ci_sheet2,
@@ -79,7 +89,11 @@ class TestParsing(TestTemplate):
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
             "data_sheet,simpledata,,,,SimpleRowModel,\n"
         )
-        simpledata = "ID,value1,value2\n" "rowA,1A,2A\n" "rowB,1B,2B\n"
+        simpledata = csv_join(
+            "ID,value1,value2",
+            "rowA,1A,2A",
+            "rowB,1B,2B",
+        )
 
         sheet_reader = MockSheetReader(ci_sheet, {"simpledata": simpledata})
         ci_parser = ContentIndexParser(sheet_reader, "tests.datarowmodels.simplemodel")
@@ -118,8 +132,14 @@ class TestParsing(TestTemplate):
         self.check_concat(ci_sheet)
 
     def check_concat(self, ci_sheet):
-        simpleA = "ID,value1,value2\n" "rowA,1A,2A\n"
-        simpleB = "ID,value1,value2\n" "rowB,1B,2B\n"
+        simpleA = csv_join(
+            "ID,value1,value2",
+            "rowA,1A,2A",
+        )
+        simpleB = csv_join(
+            "ID,value1,value2",
+            "rowB,1B,2B",
+        )
         sheet_dict = {
             "simpleA": simpleA,
             "simpleB": simpleB,
@@ -160,8 +180,9 @@ class TestParsing(TestTemplate):
             ",send_message,start,{{value1}}\n"
             ",send_message,,{{custom_field.happy}} and {{custom_field.sad}}\n"
         )
-        my_basic_flow = (
-            "row_id,type,from,message_text\n" ",send_message,start,Some text\n"
+        my_basic_flow = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
         )
         sheet_dict = {
             "nesteddata": nesteddata,
@@ -202,11 +223,13 @@ class TestParsing(TestTemplate):
             "create_flow,my_template,,,,,\n"
             "create_flow,my_template2,,,my_template,,\n"
         )
-        my_template = (
-            "row_id,type,from,message_text\n" ",send_message,start,Some text\n"
+        my_template = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
         )
-        my_template2 = (
-            "row_id,type,from,message_text\n" ",send_message,start,Other text\n"
+        my_template2 = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Other text",
         )
         sheet_dict = {
             "ci_sheet": ci_sheet,
@@ -444,13 +467,20 @@ class TestParsing(TestTemplate):
             "data_sheet,metadata,,,,EvalMetadataModel,,\n"
             "create_flow,flow,content,,,,metadata,\n"
         )
-        metadata = "ID,include_if\n" "a,text\n"
+        metadata = csv_join(
+            "ID,include_if",
+            "a,text",
+        )
         flow = (
             '"row_id","type","from","loop_variable","include_if","message_text"\n'
             ',"send_message",,,,"hello"\n'
             ',"send_message",,,"{@metadata[""a""].include_if|eval == ""yes""@}","{{text}}"\n'
         )
-        content = "ID,text\n" "id1,yes\n" "id2,no\n"
+        content = csv_join(
+            "ID,text",
+            "id1,yes",
+            "id2,no",
+        )
         sheet_dict = {
             "metadata": metadata,
             "content": content,
@@ -592,8 +622,9 @@ class TestParseCampaigns(unittest.TestCase):
             "offset,unit,event_type,delivery_hour,message,relative_to,start_mode,flow\n"
             "15,H,F,,,Created On,I,my_basic_flow\n"
         )
-        my_basic_flow = (
-            "row_id,type,from,message_text\n" ",send_message,start,Some text\n"
+        my_basic_flow = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
         )
 
         sheet_reader = MockSheetReader(
@@ -619,9 +650,9 @@ class TestParseCampaigns(unittest.TestCase):
         self.assertIsNone(event.get("base_language"))
 
     def test_parse_message_campaign(self):
-        ci_sheet = (
-            "type,sheet_name,new_name,group\n"
-            "create_campaign,my_campaign,,My Group\n"
+        ci_sheet = csv_join(
+            "type,sheet_name,new_name,group",
+            "create_campaign,my_campaign,,My Group",
         )
         my_campaign = (
             "offset,unit,event_type,delivery_hour,message,relative_to,start_mode,flow\n"
@@ -733,17 +764,17 @@ class TestMultiFile(TestTemplate):
         self.run_minimal(True)
 
     def run_minimal(self, singleindex=False):
-        ci_sheet1 = (
-            "type,sheet_name\n"
-            "create_flow,template\n"
+        ci_sheet1 = csv_join(
+            "type,sheet_name",
+            "create_flow,template",
         )
-        ci_sheet2 = (
-            "type,sheet_name\n"
-            "template_definition,template\n"
+        ci_sheet2 = csv_join(
+            "type,sheet_name",
+            "template_definition,template",
         )
-        template = (
-            "row_id,type,from,message_text\n"
-            ",send_message,start,Hello!\n"
+        template = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Hello!",
         )
         sheet_dict2 = {
             "template": template,
@@ -781,18 +812,18 @@ class TestMultiFile(TestTemplate):
             "template_definition,template,,,\n"
             "create_flow,template,names,,draft\n"
         )
-        template1 = (
-            "row_id,type,from,message_text\n"
-            ",send_message,start,hello {{name}}\n"
+        template1 = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,hello {{name}}",
         )
-        template2 = (
-            "row_id,type,from,message_text\n"
-            ",send_message,start,hi {{name}}\n"
+        template2 = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,hi {{name}}",
         )
-        names = (
-            "ID,name\n"
-            "a,georg\n"
-            "b,chiara\n"
+        names = csv_join(
+            "ID,name",
+            "a,georg",
+            "b,chiara",
         )
         sheet_dict1 = {
             "template": template1,
