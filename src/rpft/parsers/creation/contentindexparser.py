@@ -251,18 +251,35 @@ class ContentIndexParser:
         data_sheet = self._get_data_sheet(sheet_name, data_model_name)
         new_row_data = OrderedDict()
         for rowID, row in data_sheet.rows.items():
-            if eval(operation.expression, {}, dict(row)) is True:
-                new_row_data[rowID] = row
+            try:
+                if eval(operation.expression, {}, dict(row)) is True:
+                    new_row_data[rowID] = row
+            except NameError as e:
+                LOGGER.critical(f"Invalid filtering expression: {e}")
+            except SyntaxError as e:
+                LOGGER.critical(
+                    f'Invalid filtering expression: "{e.text}". '
+                    f"SyntaxError at line {e.lineno} character {e.offset}"
+                )
         return DataSheet(new_row_data, data_sheet.row_model)
 
     def _data_sheets_sort(self, sheet_name, data_model_name, operation):
         data_sheet = self._get_data_sheet(sheet_name, data_model_name)
         reverse = True if operation.order.lower() == "descending" else False
-        new_row_data_list = sorted(
-            data_sheet.rows.items(),
-            key=lambda kvpair: eval(operation.expression, {}, dict(kvpair[1])),
-            reverse=reverse,
-        )
+        try:
+            new_row_data_list = sorted(
+                data_sheet.rows.items(),
+                key=lambda kvpair: eval(operation.expression, {}, dict(kvpair[1])),
+                reverse=reverse,
+            )
+        except NameError as e:
+            LOGGER.critical(f"Invalid sorting expression: {e}")
+        except SyntaxError as e:
+            LOGGER.critical(
+                f'Invalid sorting expression: "{e.text}". '
+                f"SyntaxError at line {e.lineno} character {e.offset}"
+            )
+
         new_row_data = OrderedDict()
         for k, v in new_row_data_list:
             new_row_data[k] = v
