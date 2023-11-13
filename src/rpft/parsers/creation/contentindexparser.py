@@ -1,17 +1,17 @@
 import importlib
 from collections import OrderedDict
 
-from rpft.parsers.creation.contentindexrowmodel import ContentIndexRowModel
-from rpft.parsers.common.cellparser import CellParser
-from rpft.parsers.common.sheetparser import SheetParser
-from rpft.parsers.common.rowparser import RowParser
-from rpft.rapidpro.models.containers import RapidProContainer
-from rpft.parsers.creation.flowparser import FlowParser
-from rpft.parsers.creation.campaignparser import CampaignParser
-from rpft.parsers.creation.campaigneventrowmodel import CampaignEventRowModel
-from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.logger.logger import get_logger, logging_context
+from rpft.parsers.common.cellparser import CellParser
+from rpft.parsers.common.rowparser import RowParser
+from rpft.parsers.common.sheetparser import SheetParser
+from rpft.parsers.creation.campaigneventrowmodel import CampaignEventRowModel
+from rpft.parsers.creation.campaignparser import CampaignParser
+from rpft.parsers.creation.contentindexrowmodel import ContentIndexRowModel
+from rpft.parsers.creation.flowparser import FlowParser
+from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import Sheet
+from rpft.rapidpro.models.containers import RapidProContainer
 
 LOGGER = get_logger()
 
@@ -195,7 +195,9 @@ class ContentIndexParser:
                     sheet_names[0], row.data_model, row.operation
                 )
             elif row.operation.type == "sort":
-                raise NotImplementedError()
+                data_sheet = self._data_sheets_sort(
+                    sheet_names[0], row.data_model, row.operation
+                )
             else:
                 LOGGER.critical(f'Unknown operation "{row.operation}"')
         new_name = row.new_name or sheet_names[0]
@@ -251,6 +253,19 @@ class ContentIndexParser:
         for rowID, row in data_sheet.rows.items():
             if eval(operation.expression, {}, dict(row)) is True:
                 new_row_data[rowID] = row
+        return DataSheet(new_row_data, data_sheet.row_model)
+
+    def _data_sheets_sort(self, sheet_name, data_model_name, operation):
+        data_sheet = self._get_data_sheet(sheet_name, data_model_name)
+        reverse = True if operation.order.lower() == "descending" else False
+        new_row_data_list = sorted(
+            data_sheet.rows.items(),
+            key=lambda kvpair: eval(operation.expression, {}, dict(kvpair[1])),
+            reverse=reverse,
+        )
+        new_row_data = OrderedDict()
+        for k, v in new_row_data_list:
+            new_row_data[k] = v
         return DataSheet(new_row_data, data_sheet.row_model)
 
     def get_data_sheet_row(self, sheet_name, row_id):

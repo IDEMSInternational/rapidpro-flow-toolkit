@@ -1,5 +1,6 @@
-from rpft.parsers.common.rowparser import ParserModel
 from typing import List
+
+from rpft.parsers.common.rowparser import ParserModel
 
 
 class TemplateArgument(ParserModel):
@@ -11,6 +12,7 @@ class TemplateArgument(ParserModel):
 class Operation(ParserModel):
     type: str = ""
     expression: str = ""
+    order: str = ""
 
 
 class ContentIndexRowModel(ParserModel):
