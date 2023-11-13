@@ -104,56 +104,6 @@ class TestParsing(TestTemplate):
         self.assertEqual(datamodelB.value1, "1B")
         self.assertEqual(datamodelB.value2, "2B")
 
-    def test_concat(self):
-        # Concatenate two fresh sheets
-        ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
-            "data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,concat\n"
-        )
-        self.check_concat(ci_sheet)
-
-    def test_concat2(self):
-        # Concatenate a fresh sheet with an existing sheet
-        ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
-            "data_sheet,simpleA,,,renamedA,SimpleRowModel,\n"
-            "data_sheet,renamedA;simpleB,,,simpledata,SimpleRowModel,concat\n"
-        )
-        self.check_concat(ci_sheet)
-
-    def test_concat3(self):
-        # Concatenate two existing sheets
-        ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
-            "data_sheet,simpleA,,,renamedA,SimpleRowModel,\n"
-            "data_sheet,simpleB,,,renamedB,SimpleRowModel,\n"
-            "data_sheet,renamedA;renamedB,,,simpledata,SimpleRowModel,concat\n"
-        )
-        self.check_concat(ci_sheet)
-
-    def check_concat(self, ci_sheet):
-        simpleA = csv_join(
-            "ID,value1,value2",
-            "rowA,1A,2A",
-        )
-        simpleB = csv_join(
-            "ID,value1,value2",
-            "rowB,1B,2B",
-        )
-        sheet_dict = {
-            "simpleA": simpleA,
-            "simpleB": simpleB,
-        }
-
-        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, "tests.datarowmodels.simplemodel")
-        datamodelA = ci_parser.get_data_sheet_row("simpledata", "rowA")
-        datamodelB = ci_parser.get_data_sheet_row("simpledata", "rowB")
-        self.assertEqual(datamodelA.value1, "1A")
-        self.assertEqual(datamodelA.value2, "2A")
-        self.assertEqual(datamodelB.value1, "1B")
-        self.assertEqual(datamodelB.value2, "2B")
-
     def test_generate_flows(self):
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
@@ -610,6 +560,125 @@ class TestParsing(TestTemplate):
             },
         )
 
+
+class TestOperation(unittest.TestCase):
+    def test_concat(self):
+        # Concatenate two fresh sheets
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type\n"
+            "data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,concat\n"
+        )
+        self.check_concat(ci_sheet)
+
+    def test_concat2(self):
+        # Concatenate a fresh sheet with an existing sheet
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type\n"
+            "data_sheet,simpleA,,,renamedA,SimpleRowModel,\n"
+            "data_sheet,renamedA;simpleB,,,simpledata,SimpleRowModel,concat\n"
+        )
+        self.check_concat(ci_sheet)
+
+    def test_concat3(self):
+        # Concatenate two existing sheets
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type\n"
+            "data_sheet,simpleA,,,renamedA,SimpleRowModel,\n"
+            "data_sheet,simpleB,,,renamedB,SimpleRowModel,\n"
+            "data_sheet,renamedA;renamedB,,,simpledata,SimpleRowModel,concat\n"
+        )
+        self.check_concat(ci_sheet)
+
+    def check_concat(self, ci_sheet):
+        simpleA = csv_join(
+            "ID,value1,value2",
+            "rowA,1A,2A",
+        )
+        simpleB = csv_join(
+            "ID,value1,value2",
+            "rowB,1B,2B",
+        )
+        sheet_dict = {
+            "simpleA": simpleA,
+            "simpleB": simpleB,
+        }
+
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader, "tests.datarowmodels.simplemodel")
+        datamodelA = ci_parser.get_data_sheet_row("simpledata", "rowA")
+        datamodelB = ci_parser.get_data_sheet_row("simpledata", "rowB")
+        self.assertEqual(datamodelA.value1, "1A")
+        self.assertEqual(datamodelA.value2, "2A")
+        self.assertEqual(datamodelB.value1, "1B")
+        self.assertEqual(datamodelB.value2, "2B")
+
+    def test_filter_fresh(self):
+        # The filter operation is referencing a sheet new (not previously parsed) sheet
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,filter|expression;value2=='fruit'\n"
+        )
+        self.check_example1(ci_sheet)
+
+    def test_filter_existing(self):
+        # The filter operation is referencing a previously parsed sheet
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
+            "data_sheet,simpleA,,,,SimpleRowModel,\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,filter|expression;value2=='fruit'\n"
+        )
+        self.check_example1(ci_sheet)
+
+    def test_filter_existing_renamed(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
+            "data_sheet,simpleA,,,renamedA,SimpleRowModel,\n"
+            "data_sheet,renamedA,,,simpledata,SimpleRowModel,filter|expression;value2=='fruit'\n"
+        )
+        self.check_example1(ci_sheet)
+
+    def check_example1(self, ci_sheet):
+        exp_keys = ["rowA", "rowC"]
+        rows = self.check_filter(ci_sheet, exp_keys)
+        self.assertEqual(rows["rowA"].value1, "orange")
+        self.assertEqual(rows["rowA"].value2, "fruit")
+        self.assertEqual(rows["rowC"].value1, "apple")
+        self.assertEqual(rows["rowC"].value2, "fruit")
+
+    def check_filter(self, ci_sheet, exp_keys):
+        simple = csv_join(
+            "ID,value1,value2",
+            "rowA,orange,fruit",
+            "rowB,potato,root",
+            "rowC,apple,fruit",
+            "rowD,Manioc,root",
+        )
+        sheet_dict = {
+            "simpleA": simple,
+        }
+
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader, "tests.datarowmodels.simplemodel")
+        rows = ci_parser.get_data_sheet_rows("simpledata")
+        self.assertEqual(len(rows), len(exp_keys))
+        self.assertEqual(list(rows.keys()), exp_keys)
+        return rows
+
+    def test_filter_fresh2(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,\"filter|expression;value1 in ['orange','apple']\"\n"
+        )
+        exp_keys = ["rowA", "rowC"]
+        rows = self.check_filter(ci_sheet, exp_keys)
+
+    def test_filter_fresh3(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,filter|expression;value1.lower() > 'd'\n"
+        )
+        exp_keys = ["rowA", "rowB", "rowD"]
+        rows = self.check_filter(ci_sheet, exp_keys)
 
 class TestParseCampaigns(unittest.TestCase):
     def test_parse_flow_campaign(self):

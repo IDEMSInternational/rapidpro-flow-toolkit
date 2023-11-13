@@ -175,12 +175,12 @@ class ContentIndexParser:
                 "has to be provided"
             )
         sheet_names = row.sheet_name
-        if row.operation != "concat" and len(sheet_names) > 1:
+        if row.operation.type != "concat" and len(sheet_names) > 1:
             LOGGER.warning(
                 "data_sheet definition take only one sheet_name, unless the operation "
                 "concat is used. All but the first sheet_name are ignored."
             )
-        if not row.operation:
+        if not row.operation.type:
             data_sheet = self._get_data_sheet(sheet_names[0], row.data_model)
         else:
             if not row.new_name:
@@ -188,11 +188,13 @@ class ContentIndexParser:
                     "If an operation is applied to a data_sheet, "
                     "a new_name has to be provided"
                 )
-            if row.operation == "concat":
-                data_sheet = self._data_sheets_concat(row.sheet_name, row.data_model)
-            elif row.operation == "filter":
-                raise NotImplementedError()
-            elif row.operation == "sort":
+            if row.operation.type == "concat":
+                data_sheet = self._data_sheets_concat(sheet_names, row.data_model)
+            elif row.operation.type == "filter":
+                data_sheet = self._data_sheets_filter(
+                    sheet_names[0], row.data_model, row.operation
+                )
+            elif row.operation.type == "sort":
                 raise NotImplementedError()
             else:
                 LOGGER.critical(f'Unknown operation "{row.operation}"')
@@ -242,6 +244,14 @@ class ContentIndexParser:
                 user_model = data_sheet.row_model
                 all_data_rows.update(data_sheet.rows)
         return DataSheet(all_data_rows, user_model)
+
+    def _data_sheets_filter(self, sheet_name, data_model_name, operation):
+        data_sheet = self._get_data_sheet(sheet_name, data_model_name)
+        new_row_data = OrderedDict()
+        for rowID, row in data_sheet.rows.items():
+            if eval(operation.expression, {}, dict(row)) is True:
+                new_row_data[rowID] = row
+        return DataSheet(new_row_data, data_sheet.row_model)
 
     def get_data_sheet_row(self, sheet_name, row_id):
         return self.data_sheets[sheet_name][row_id]

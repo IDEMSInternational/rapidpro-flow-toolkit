@@ -8,6 +8,11 @@ class TemplateArgument(ParserModel):
     default_value: str = ""
 
 
+class Operation(ParserModel):
+    type: str = ""
+    expression: str = ""
+
+
 class ContentIndexRowModel(ParserModel):
     type: str = ""
     new_name: str = ""
@@ -16,8 +21,7 @@ class ContentIndexRowModel(ParserModel):
     data_row_id: str = ""
     template_argument_definitions: List[TemplateArgument] = []  # internal name
     template_arguments: list = []
-    operation: str = ""
-    arguments: str = ""
+    operation: Operation = Operation()
     data_model: str = ""
     group: str = ""
     status: str = ""
