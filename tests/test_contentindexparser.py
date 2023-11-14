@@ -569,6 +569,14 @@ class TestOperation(unittest.TestCase):
         )
         self.check_concat(ci_sheet)
 
+    def test_concat_implicit(self):
+        # Concatenate two fresh sheets
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type\n"
+            "data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,\n"
+        )
+        self.check_concat(ci_sheet)
+
     def test_concat2(self):
         # Concatenate a fresh sheet with an existing sheet
         ci_sheet = (

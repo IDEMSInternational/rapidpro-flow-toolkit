@@ -175,13 +175,19 @@ class ContentIndexParser:
                 "has to be provided"
             )
         sheet_names = row.sheet_name
-        if row.operation.type != "concat" and len(sheet_names) > 1:
+        if row.operation.type in ["filter", "sort"] and len(sheet_names) > 1:
             LOGGER.warning(
-                "data_sheet definition take only one sheet_name, unless the operation "
-                "concat is used. All but the first sheet_name are ignored."
+                "data_sheet definition take only one sheet_name for filter and sort "
+                "operations. All but the first sheet_name are ignored."
             )
         if not row.operation.type:
-            data_sheet = self._get_data_sheet(sheet_names[0], row.data_model)
+            if len(sheet_names) > 1:
+                LOGGER.warning(
+                    "Implicitly concatenating data sheets without concat operation. "
+                    "Implicit concatenation is deprecated and may be removed "
+                    "in the future."
+                )
+            data_sheet = self._data_sheets_concat(sheet_names, row.data_model)
         else:
             if not row.new_name:
                 LOGGER.critical(
