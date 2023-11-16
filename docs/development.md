@@ -18,7 +18,7 @@ source .venv/bin/activate
 pip install --upgrade pip
 
 # Install the project in dev mode
-pip install --editable '.[dev]'
+pip install --editable .
 ```
 
 # Running tests
@@ -32,12 +32,17 @@ Tests should be run after making any change to the code and certainly before cre
 
 # Pre-commit hooks
 
-This project uses [pre-commit] to run the following tools before every commit (in order):
+You may use [pre-commit] to run the following tools before every commit (in order):
 
 - [black] - code formatter
 - [flake8] - linter
 
 Any violations found by either tool will abort the commit. Simply fix the issues found and try again.
+
+To install pre-commit:
+```
+pip install pre-commit
+```
 
 # Build
 
