@@ -1,11 +1,18 @@
-from rpft.parsers.common.rowparser import ParserModel
 from typing import List
+
+from rpft.parsers.common.rowparser import ParserModel
 
 
 class TemplateArgument(ParserModel):
     name: str
     type: str = ""
     default_value: str = ""
+
+
+class Operation(ParserModel):
+    type: str = ""
+    expression: str = ""
+    order: str = ""
 
 
 class ContentIndexRowModel(ParserModel):
@@ -16,6 +23,7 @@ class ContentIndexRowModel(ParserModel):
     data_row_id: str = ""
     template_argument_definitions: List[TemplateArgument] = []  # internal name
     template_arguments: list = []
+    operation: Operation = Operation()
     data_model: str = ""
     group: str = ""
     status: str = ""
