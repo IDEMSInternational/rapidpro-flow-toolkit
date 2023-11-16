@@ -67,7 +67,7 @@ def get_logger():
     return logging.getLogger(LOGGER_NAME)
 
 
-def initialize_main_logger():
+def initialize_main_logger(file_path="errors.log"):
     LOGGER = logging.getLogger(LOGGER_NAME)
     LOGGER.setLevel(logging.INFO)
     context_filter = ContextFilter()
@@ -77,7 +77,7 @@ def initialize_main_logger():
     stdout_formatter = logging.Formatter(
         "%(levelname)s: %(processing_stack)s: %(message)s\n"
     )
-    stdout_handler = ShutdownHandler("errors.log", "w")
+    stdout_handler = ShutdownHandler(file_path, "w")
     stdout_handler.setFormatter(stdout_formatter)
     LOGGER.addHandler(stdout_handler)
     return LOGGER
