@@ -20,11 +20,12 @@ rpft --help
 Below is a concrete example of a valid execution of the command line tool. The line breaks are merely for improving readability; the command would also be valid on a single line.
 
 ```sh
-rpft create_flows \
+cd tests/input/example1
+PYTHONPATH=. rpft create_flows \
   --output flows.json \
-  --datamodels=tests.input.example1.nestedmodel \
+  --datamodels=nestedmodel \
   --format=csv \
-  src/rpft/tests/input/example1/content_index.csv
+  csv_workbook
 ```
 
 # Using the toolkit in other Python projects
@@ -36,9 +37,9 @@ rpft create_flows \
 ```python
 from rpft.converters import create_flows
 
-sheets = ["sheet1.csv", "sheet2.csv"]
+sources = ["workbook.xlsx", "csv_workbook"]
 create_flows(
-    sheets, "flows.json", "csv", data_models="your_project.models"
+    sources, "flows.json", "csv", data_models="your_project.models"
 )
 ```
 
@@ -46,7 +47,10 @@ _It should be noted that this project is still considered beta software that may
 
 # RapidPro flow spreadsheet format
 
-The expected contents of the input spreadsheets is [documented separately][3].
+The expected contents of the input spreadsheets is documented separately:
+
+- [RapidPro sheet specification]
+- [New features documentation]
 
 # Processing Google Sheets
 
@@ -82,3 +86,5 @@ For instructions on how to set up your development environment for developing th
 [2]: https://developers.google.com/identity/protocols/oauth2/service-account#creatinganaccount
 [3]: https://docs.google.com/document/d/1Onx2RhNoWKW9BQvFrgTc5R5hcwDy1OMsLKnNB7YxQH0/edit?pli=1#
 [4]: https://github.com/IDEMSInternational/rapidpro-flow-toolkit/blob/main/docs/development.md
+[RapidPro sheet specification]: https://docs.google.com/document/d/1m2yrzZS8kRGihUkPW0YjMkT_Fmz_L7Gl53WjD0AJRV0/edit?usp=sharing
+[New features documentation]: https://docs.google.com/document/d/1Onx2RhNoWKW9BQvFrgTc5R5hcwDy1OMsLKnNB7YxQH0/edit?usp=sharing

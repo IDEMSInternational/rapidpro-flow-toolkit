@@ -2,14 +2,19 @@ import unittest
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
-from rpft.parsers.sheets.csv_sheet_reader import CSVSheetReader
-from rpft.parsers.sheets.xlsx_sheet_reader import XLSXSheetReader
+from rpft.parsers.sheets import CompositeSheetReader, CSVSheetReader, XLSXSheetReader
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
-from tests.utils import traverse_flow, Context
+from tests.utils import Context, traverse_flow
+
+# flake8: noqa: E501
 
 
-class TestParsing(unittest.TestCase):
+def csv_join(*args):
+    return "\n".join(args) + "\n"
+
+
+class TestTemplate(unittest.TestCase):
     def compare_messages(self, render_output, flow_name, messages_exp, context=None):
         flow_found = False
         for flow in render_output["flows"]:
@@ -23,6 +28,8 @@ class TestParsing(unittest.TestCase):
                 False, msg=f'Flow with name "{flow_name}" does not exist in output.'
             )
 
+
+class TestParsing(TestTemplate):
     def get_flow_names(self, render_output):
         return {flow["name"] for flow in render_output["flows"]}
 
@@ -32,8 +39,9 @@ class TestParsing(unittest.TestCase):
             "template_definition,my_template,,,,,\n"
             "template_definition,my_template2,,,,,draft\n"
         )
-        my_template = (
-            "row_id,type,from,message_text\n" ",send_message,start,Some text\n"
+        my_template = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
         )
 
         sheet_reader = MockSheetReader(ci_sheet, {"my_template": my_template})
@@ -54,11 +62,13 @@ class TestParsing(unittest.TestCase):
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
             "template_definition,my_template2,,,,,\n"
         )
-        my_template = (
-            "row_id,type,from,message_text\n" ",send_message,start,Some text\n"
+        my_template = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
         )
-        my_template2 = (
-            "row_id,type,from,message_text\n" ",send_message,start,Other text\n"
+        my_template2 = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Other text",
         )
         sheet_dict = {
             "ci_sheet2": ci_sheet2,
@@ -78,33 +88,16 @@ class TestParsing(unittest.TestCase):
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
             "data_sheet,simpledata,,,,SimpleRowModel,\n"
         )
-        simpledata = "ID,value1,value2\n" "rowA,1A,2A\n" "rowB,1B,2B\n"
+        simpledata = csv_join(
+            "ID,value1,value2",
+            "rowA,1A,2A",
+            "rowB,1B,2B",
+        )
 
         sheet_reader = MockSheetReader(ci_sheet, {"simpledata": simpledata})
         ci_parser = ContentIndexParser(sheet_reader, "tests.datarowmodels.simplemodel")
-        datamodelA = ci_parser.get_data_model_instance("simpledata", "rowA")
-        datamodelB = ci_parser.get_data_model_instance("simpledata", "rowB")
-        self.assertEqual(datamodelA.value1, "1A")
-        self.assertEqual(datamodelA.value2, "2A")
-        self.assertEqual(datamodelB.value1, "1B")
-        self.assertEqual(datamodelB.value2, "2B")
-
-    def test_concat(self):
-        ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
-            "data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,\n"
-        )
-        simpleA = "ID,value1,value2\n" "rowA,1A,2A\n"
-        simpleB = "ID,value1,value2\n" "rowB,1B,2B\n"
-        sheet_dict = {
-            "simpleA": simpleA,
-            "simpleB": simpleB,
-        }
-
-        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
-        ci_parser = ContentIndexParser(sheet_reader, "tests.datarowmodels.simplemodel")
-        datamodelA = ci_parser.get_data_model_instance("simpledata", "rowA")
-        datamodelB = ci_parser.get_data_model_instance("simpledata", "rowB")
+        datamodelA = ci_parser.get_data_sheet_row("simpledata", "rowA")
+        datamodelB = ci_parser.get_data_sheet_row("simpledata", "rowB")
         self.assertEqual(datamodelA.value1, "1A")
         self.assertEqual(datamodelA.value2, "2A")
         self.assertEqual(datamodelB.value1, "1B")
@@ -136,8 +129,9 @@ class TestParsing(unittest.TestCase):
             ",send_message,start,{{value1}}\n"
             ",send_message,,{{custom_field.happy}} and {{custom_field.sad}}\n"
         )
-        my_basic_flow = (
-            "row_id,type,from,message_text\n" ",send_message,start,Some text\n"
+        my_basic_flow = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
         )
         sheet_dict = {
             "nesteddata": nesteddata,
@@ -171,6 +165,32 @@ class TestParsing(unittest.TestCase):
         self.compare_messages(
             render_output, "my_template - row3", ["Value3", "Happy3 and Sad3"]
         )
+
+    def test_duplicate_create_flow(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
+            "create_flow,my_template,,,,,\n"
+            "create_flow,my_template2,,,my_template,,\n"
+        )
+        my_template = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
+        )
+        my_template2 = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Other text",
+        )
+        sheet_dict = {
+            "ci_sheet": ci_sheet,
+            "my_template": my_template,
+            "my_template2": my_template2,
+        }
+
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader)
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        self.compare_messages(render_output, "my_template", ["Other text"])
 
     def test_bulk_flows_with_args(self):
         ci_sheet = (
@@ -396,13 +416,20 @@ class TestParsing(unittest.TestCase):
             "data_sheet,metadata,,,,EvalMetadataModel,,\n"
             "create_flow,flow,content,,,,metadata,\n"
         )
-        metadata = "ID,include_if\n" "a,text\n"
+        metadata = csv_join(
+            "ID,include_if",
+            "a,text",
+        )
         flow = (
             '"row_id","type","from","loop_variable","include_if","message_text"\n'
             ',"send_message",,,,"hello"\n'
             ',"send_message",,,"{@metadata[""a""].include_if|eval == ""yes""@}","{{text}}"\n'
         )
-        content = "ID,text\n" "id1,yes\n" "id2,no\n"
+        content = csv_join(
+            "ID,text",
+            "id1,yes",
+            "id2,no",
+        )
         sheet_dict = {
             "metadata": metadata,
             "content": content,
@@ -533,6 +560,172 @@ class TestParsing(unittest.TestCase):
         )
 
 
+class TestOperation(unittest.TestCase):
+    def test_concat(self):
+        # Concatenate two fresh sheets
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type\n"
+            "data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,concat\n"
+        )
+        self.check_concat(ci_sheet)
+
+    def test_concat_implicit(self):
+        # Concatenate two fresh sheets
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type\n"
+            "data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,\n"
+        )
+        self.check_concat(ci_sheet)
+
+    def test_concat2(self):
+        # Concatenate a fresh sheet with an existing sheet
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type\n"
+            "data_sheet,simpleA,,,renamedA,SimpleRowModel,\n"
+            "data_sheet,renamedA;simpleB,,,simpledata,SimpleRowModel,concat\n"
+        )
+        self.check_concat(ci_sheet)
+
+    def test_concat3(self):
+        # Concatenate two existing sheets
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type\n"
+            "data_sheet,simpleA,,,renamedA,SimpleRowModel,\n"
+            "data_sheet,simpleB,,,renamedB,SimpleRowModel,\n"
+            "data_sheet,renamedA;renamedB,,,simpledata,SimpleRowModel,concat\n"
+        )
+        self.check_concat(ci_sheet)
+
+    def check_concat(self, ci_sheet):
+        simpleA = csv_join(
+            "ID,value1,value2",
+            "rowA,1A,2A",
+        )
+        simpleB = csv_join(
+            "ID,value1,value2",
+            "rowB,1B,2B",
+        )
+        sheet_dict = {
+            "simpleA": simpleA,
+            "simpleB": simpleB,
+        }
+
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader, "tests.datarowmodels.simplemodel")
+        datamodelA = ci_parser.get_data_sheet_row("simpledata", "rowA")
+        datamodelB = ci_parser.get_data_sheet_row("simpledata", "rowB")
+        self.assertEqual(datamodelA.value1, "1A")
+        self.assertEqual(datamodelA.value2, "2A")
+        self.assertEqual(datamodelB.value1, "1B")
+        self.assertEqual(datamodelB.value2, "2B")
+
+    def test_filter_fresh(self):
+        # The filter operation is referencing a sheet new (not previously parsed) sheet
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,filter|expression;value2=='fruit'\n"
+        )
+        self.check_example1(ci_sheet)
+
+    def test_filter_existing(self):
+        # The filter operation is referencing a previously parsed sheet
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
+            "data_sheet,simpleA,,,,SimpleRowModel,\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,filter|expression;value2=='fruit'\n"
+        )
+        self.check_example1(ci_sheet, original="simpleA")
+
+    def test_filter_existing_renamed(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
+            "data_sheet,simpleA,,,renamedA,SimpleRowModel,\n"
+            "data_sheet,renamedA,,,simpledata,SimpleRowModel,filter|expression;value2=='fruit'\n"
+        )
+        self.check_example1(ci_sheet, original="renamedA")
+
+    def check_example1(self, ci_sheet, original=None):
+        exp_keys = ["rowA", "rowC"]
+        rows = self.check_filtersort(ci_sheet, exp_keys, original)
+        self.assertEqual(rows["rowA"].value1, "orange")
+        self.assertEqual(rows["rowA"].value2, "fruit")
+        self.assertEqual(rows["rowC"].value1, "apple")
+        self.assertEqual(rows["rowC"].value2, "fruit")
+
+    def check_filtersort(self, ci_sheet, exp_keys, original=None):
+        simple = csv_join(
+            "ID,value1,value2",
+            "rowA,orange,fruit",
+            "rowB,potato,root",
+            "rowC,apple,fruit",
+            "rowD,Manioc,root",
+        )
+        all_keys = ["rowA", "rowB", "rowC", "rowD"]
+        sheet_dict = {
+            "simpleA": simple,
+        }
+
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader, "tests.datarowmodels.simplemodel")
+
+        # Ensure input data hasn't been modified
+        if original:
+            original_rows = ci_parser.get_data_sheet_rows(original)
+            self.assertEqual(list(original_rows.keys()), all_keys)
+
+        # Ensure output data is as expected
+        rows = ci_parser.get_data_sheet_rows("simpledata")
+        self.assertEqual(len(rows), len(exp_keys))
+        self.assertEqual(list(rows.keys()), exp_keys)
+        return rows
+
+    def test_filter_fresh2(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,\"filter|expression;value1 in ['orange','apple']\"\n"
+        )
+        exp_keys = ["rowA", "rowC"]
+        self.check_filtersort(ci_sheet, exp_keys)
+
+    def test_filter_fresh3(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,filter|expression;value1.lower() > 'd'\n"
+        )
+        exp_keys = ["rowA", "rowB", "rowD"]
+        self.check_filtersort(ci_sheet, exp_keys)
+
+    def test_sort(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,sort|expression;value1.lower()\n"
+        )
+        exp_keys = ["rowC", "rowD", "rowA", "rowB"]
+        rows = self.check_filtersort(ci_sheet, exp_keys)
+        self.assertEqual(rows["rowA"].value1, "orange")
+        self.assertEqual(rows["rowA"].value2, "fruit")
+        self.assertEqual(rows["rowB"].value1, "potato")
+        self.assertEqual(rows["rowC"].value1, "apple")
+        self.assertEqual(rows["rowD"].value1, "Manioc")
+
+    def test_sort_existing(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
+            "data_sheet,simpleA,,,,SimpleRowModel,\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,sort|expression;value1.lower()\n"
+        )
+        exp_keys = ["rowC", "rowD", "rowA", "rowB"]
+        self.check_filtersort(ci_sheet, exp_keys, original="simpleA")
+
+    def test_sort_descending(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,sort|expression;value1.lower()|order;descending\n"
+        )
+        exp_keys = ["rowB", "rowA", "rowD", "rowC"]
+        self.check_filtersort(ci_sheet, exp_keys)
+
+
 class TestParseCampaigns(unittest.TestCase):
     def test_parse_flow_campaign(self):
         ci_sheet = (
@@ -544,8 +737,9 @@ class TestParseCampaigns(unittest.TestCase):
             "offset,unit,event_type,delivery_hour,message,relative_to,start_mode,flow\n"
             "15,H,F,,,Created On,I,my_basic_flow\n"
         )
-        my_basic_flow = (
-            "row_id,type,from,message_text\n" ",send_message,start,Some text\n"
+        my_basic_flow = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
         )
 
         sheet_reader = MockSheetReader(
@@ -571,8 +765,9 @@ class TestParseCampaigns(unittest.TestCase):
         self.assertIsNone(event.get("base_language"))
 
     def test_parse_message_campaign(self):
-        ci_sheet = (
-            "type,sheet_name,new_name,group\n" "create_campaign,my_campaign,,My Group\n"
+        ci_sheet = csv_join(
+            "type,sheet_name,new_name,group",
+            "create_campaign,my_campaign,,My Group",
         )
         my_campaign = (
             "offset,unit,event_type,delivery_hour,message,relative_to,start_mode,flow\n"
@@ -590,23 +785,36 @@ class TestParseCampaigns(unittest.TestCase):
         self.assertEqual(event["message"], {"eng": "Messagetext"})
         self.assertEqual(event["base_language"], "eng")
 
+    def test_duplicate_campaign(self):
+        ci_sheet = (
+            "type,sheet_name,new_name,group\n"
+            "create_campaign,my_campaign,,My Group\n"
+            "create_campaign,my_campaign2,my_campaign,My Group\n"
+        )
+        my_campaign = (
+            "offset,unit,event_type,delivery_hour,message,relative_to,start_mode,flow\n"
+            "150,D,M,12,Messagetext,Created On,I,\n"
+        )
+        my_campaign2 = (
+            "offset,unit,event_type,delivery_hour,message,relative_to,start_mode,flow\n"
+            "150,D,M,6,Messagetext,Created On,I,\n"
+        )
+        sheet_dict = {
+            "my_campaign": my_campaign,
+            "my_campaign2": my_campaign2,
+        }
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader)
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        self.assertEqual(render_output["campaigns"][0]["name"], "my_campaign")
+        event = render_output["campaigns"][0]["events"][0]
+        self.assertEqual(event["delivery_hour"], 6)
 
-class TestParseFromFile(unittest.TestCase):
+
+class TestParseFromFile(TestTemplate):
     def setUp(self):
         self.input_dir = TESTS_ROOT / "input/example1"
-
-    def compare_messages(self, render_output, flow_name, messages_exp, context=None):
-        flow_found = False
-        for flow in render_output["flows"]:
-            if flow["name"] == flow_name:
-                flow_found = True
-                actions = traverse_flow(flow, context or Context())
-                actions_exp = list(zip(["send_msg"] * len(messages_exp), messages_exp))
-                self.assertEqual(actions, actions_exp)
-        if not flow_found:
-            self.assertTrue(
-                False, msg=f'Flow with name "{flow_name}" does not exist in output.'
-            )
 
     def compare_to_expected(self, render_output):
         self.compare_messages(render_output, "my_basic_flow", ["Some text"])
@@ -633,16 +841,15 @@ class TestParseFromFile(unittest.TestCase):
 
     def test_example1_csv(self):
         # Same test as test_generate_flows but with csvs
-        sheet_reader = CSVSheetReader(self.input_dir / "content_index.csv")
+        sheet_reader = CSVSheetReader(self.input_dir / "csv_workbook")
         ci_parser = ContentIndexParser(sheet_reader, "tests.input.example1.nestedmodel")
         self.check_example1(ci_parser)
 
-    def test_example1_split_csv(self):
+    def test_example1_csv_composite(self):
         # Same test as test_generate_flows but with csvs
-        sheet_reader = CSVSheetReader(self.input_dir / "content_index1.csv")
-        ci_parser = ContentIndexParser(sheet_reader, "tests.input.example1.nestedmodel")
-        sheet_reader = CSVSheetReader(self.input_dir / "content_index2.csv")
-        ci_parser.add_content_index(sheet_reader)
+        sheet_reader = CSVSheetReader(self.input_dir / "csv_workbook")
+        reader = CompositeSheetReader([sheet_reader])
+        ci_parser = ContentIndexParser(reader, "tests.input.example1.nestedmodel")
         self.check_example1(ci_parser)
 
     def test_example1_xlsx(self):
@@ -650,3 +857,108 @@ class TestParseFromFile(unittest.TestCase):
         sheet_reader = XLSXSheetReader(self.input_dir / "content_index.xlsx")
         ci_parser = ContentIndexParser(sheet_reader, "tests.input.example1.nestedmodel")
         self.check_example1(ci_parser)
+
+    def test_example1_xlsx_composite(self):
+        # Same test as above
+        sheet_reader = XLSXSheetReader(self.input_dir / "content_index.xlsx")
+        reader = CompositeSheetReader([sheet_reader])
+        ci_parser = ContentIndexParser(reader, "tests.input.example1.nestedmodel")
+        self.check_example1(ci_parser)
+
+
+class TestMultiFile(TestTemplate):
+    def check(self, ci_parser, flow_name, messages_exp):
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        self.compare_messages(render_output, flow_name, messages_exp)
+
+    def test_minimal(self):
+        self.run_minimal()
+
+    def test_minimal_singleindex(self):
+        self.run_minimal(True)
+
+    def run_minimal(self, singleindex=False):
+        ci_sheet1 = csv_join(
+            "type,sheet_name",
+            "create_flow,template",
+        )
+        ci_sheet2 = csv_join(
+            "type,sheet_name",
+            "template_definition,template",
+        )
+        template = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Hello!",
+        )
+        sheet_dict2 = {
+            "template": template,
+        }
+        sheet_reader1 = MockSheetReader(ci_sheet1, name="mock_1")
+
+        sheet_reader2 = MockSheetReader(
+            None if singleindex else ci_sheet2,
+            sheet_dict2,
+            name="mock_2",
+        )
+
+        self.check(
+            ContentIndexParser(CompositeSheetReader([sheet_reader1, sheet_reader2])),
+            "template",
+            ["Hello!"],
+        )
+
+        self.check(
+            ContentIndexParser(CompositeSheetReader([sheet_reader2, sheet_reader1])),
+            "template",
+            ["Hello!"],
+        )
+
+    def test_with_model(self):
+        ci_sheet1 = (
+            "type,sheet_name,data_sheet,data_model,status\n"
+            "template_definition,template,,,\n"
+            "data_sheet,names,,NameModel,draft\n"
+            "create_flow,template,names,,\n"
+        )
+        ci_sheet2 = (
+            "type,sheet_name,data_sheet,data_model,status\n"
+            "data_sheet,names,,NameModel,\n"
+            "template_definition,template,,,\n"
+            "create_flow,template,names,,draft\n"
+        )
+        template1 = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,hello {{name}}",
+        )
+        template2 = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,hi {{name}}",
+        )
+        names = csv_join(
+            "ID,name",
+            "a,georg",
+            "b,chiara",
+        )
+        sheet_dict1 = {
+            "template": template1,
+            "names": names,
+        }
+        sheet_dict2 = {
+            "template": template2,
+        }
+        sheet_reader1 = MockSheetReader(ci_sheet1, sheet_dict1, name="mock_1")
+        sheet_reader2 = MockSheetReader(ci_sheet2, sheet_dict2, name="mock_2")
+        ci_parser = ContentIndexParser(
+            sheet_reader=CompositeSheetReader([sheet_reader1, sheet_reader2]),
+            user_data_model_module_name="tests.datarowmodels.minimalmodel",
+        )
+        self.check(ci_parser, "template - a", ["hi georg"])
+        self.check(ci_parser, "template - b", ["hi chiara"])
+
+        ci_parser = ContentIndexParser(
+            sheet_reader=CompositeSheetReader([sheet_reader2, sheet_reader1]),
+            user_data_model_module_name="tests.datarowmodels.minimalmodel",
+        )
+        self.check(ci_parser, "template - a", ["hello georg"])
+        self.check(ci_parser, "template - b", ["hello chiara"])
