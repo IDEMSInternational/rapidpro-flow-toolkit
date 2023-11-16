@@ -31,9 +31,6 @@ class DataSheet:
         self.rows = rows
         self.row_model = row_model
 
-    def __getitem__(self, key):
-        return self.rows[key]
-
 
 class ParserError(Exception):
     pass
@@ -292,7 +289,7 @@ class ContentIndexParser:
         return DataSheet(new_row_data, data_sheet.row_model)
 
     def get_data_sheet_row(self, sheet_name, row_id):
-        return self.data_sheets[sheet_name][row_id]
+        return self.data_sheets[sheet_name].rows[row_id]
 
     def get_data_sheet_rows(self, sheet_name):
         return self.data_sheets[sheet_name].rows
@@ -454,6 +451,6 @@ class ContentIndexParser:
                     f'Required template argument "{arg_def.name}" not provided'
                 )
             if arg_def.type == "sheet":
-                context[arg_def.name] = self.data_sheets[arg_value]
+                context[arg_def.name] = self.get_data_sheet_rows(arg_value)
             else:
                 context[arg_def.name] = arg_value
