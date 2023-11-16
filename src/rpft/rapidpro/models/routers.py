@@ -373,7 +373,10 @@ class RandomRouter(BaseRouter):
         return RandomRouter(result_name, categories)
 
     def add_choice(self, category_name=None, destination_uuid=None):
-        self.get_or_create_category(category_name, destination_uuid)
+        self.get_or_create_category(
+            category_name if category_name else f"Bucket {len(self.categories) + 2}",
+            destination_uuid,
+        )
 
     def get_categories(self):
         return self.categories
