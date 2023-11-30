@@ -25,7 +25,7 @@ pip install --editable .
 
 Run the whole test suite.
 ```sh
-python -m unittest discover -s src
+python -m unittest discover -s tests
 ```
 
 Tests should be run after making any change to the code and certainly before creating a git commit.
