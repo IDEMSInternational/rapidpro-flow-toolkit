@@ -11,7 +11,8 @@ from rpft.rapidpro.utils import generate_new_uuid
 # Ideal class tree of nodes:
 # BaseNode
 #   BasicNode (allows for actions, only has one exit [no router])
-#   SwitchRouterNode (has router and multiple exits; should support actions for its subclasses.)
+#   SwitchRouterNode (has router and multiple exits; should support actions for its
+#   subclasses.)
 #     EnterFlowNode
 #     WebhookNode
 #   RandomRouterNode

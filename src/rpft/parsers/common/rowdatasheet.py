@@ -1,8 +1,6 @@
 import networkx as nx
 import tablib
 
-# from .sheetparser import SheetParser
-
 
 class RowDataSheet:
     def __init__(self, row_parser, rows):
@@ -13,10 +11,6 @@ class RowDataSheet:
         """
         self.row_parser = row_parser
         self.rows = rows
-
-    # def from_file(row_parser, context, filename, file_format='csv'):
-    #     sheet_parser = SheetParser(row_parser, context, filename, file_format)
-    #     return sheet_parser.get_row_data_sheet()
 
     def export(self, filename, file_format="csv"):
         """
@@ -30,7 +24,7 @@ class RowDataSheet:
         """
         data = self.convert_to_tablib()
         exported_data = data.export(file_format)
-        write_type = "w" if type(exported_data) == str else "wb"
+        write_type = "w" if type(exported_data) is str else "wb"
         with open(filename, write_type) as f:
             f.write(exported_data)
 

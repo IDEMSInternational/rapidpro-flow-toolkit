@@ -100,5 +100,5 @@ class Group:
     def render(self):
         render_dict = {"name": self.name, "uuid": self.uuid}
         if self.query:
-            render_dict["query"] = query
+            render_dict["query"] = self.query
         return render_dict

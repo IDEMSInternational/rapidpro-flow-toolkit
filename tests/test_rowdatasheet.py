@@ -1,9 +1,7 @@
 import unittest
-import json
 from collections import OrderedDict
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import List, Dict, Optional
 
 from rpft.parsers.common.rowdatasheet import RowDataSheet
 from tests.mocks import MockRowParser
@@ -96,7 +94,7 @@ class TestRowDataSheet(unittest.TestCase):
     def test_get_headers_cycle(self):
         with self.assertRaises(ValueError):
             sheet = RowDataSheet(self.rowparser, [rowA, rowCycle])
-            headers = sheet._get_headers()
+            sheet._get_headers()
 
     def test_to_tablib_ABCD(self):
         self.compare_tablibs([rowA, rowB, rowC, rowD], contentABCD_exp)

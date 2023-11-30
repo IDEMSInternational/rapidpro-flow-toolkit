@@ -112,8 +112,10 @@ class FlowContainer:
         localization=None,
     ):
         # UI is not part of this as it is captured within the nodes.
-        # Localization may be handled differently in the future (e.g. stored within nodes or similar);
-        # it is likely to be dropped from here, and only here temporarily to avoid losing its data.
+        # Localization may be handled differently in the future (e.g. stored within
+        # nodes or similar);
+        # it is likely to be dropped from here, and only here temporarily to avoid
+        # losing its data.
         self.uuid = uuid or generate_new_uuid()
         self.name = flow_name
         self.language = language
@@ -180,11 +182,13 @@ class FlowContainer:
         raise ValueError(f"Destination node {uuid} does not exist within flow.")
 
     def _to_rows_recurse(self, node, parent_edge):
-        # The version of the graph encoded in a sheet is always a DAG, if we disregard all go_to edges.
-        # So we effectively do the DFS version of topological sort here, with the one special case that
-        # if we encounter a backward edge (and thus a cycle), we convert it into a go_to edge.
-        # We use temporary row_ids here (derived from node uuids) that get converted to sequential
-        # ids later.
+        # The version of the graph encoded in a sheet is always a DAG, if we disregard
+        # all go_to edges.
+        # So we effectively do the DFS version of topological sort here, with the one
+        # special case that if we encounter a backward edge (and thus a cycle), we
+        # convert it into a go_to edge.
+        # We use temporary row_ids here (derived from node uuids) that get converted to
+        # sequential ids later.
         self.visited_nodes.add(node.uuid)
         temp_row_id = node.uuid
         # Initiate the row model(s) for the node with one incoming edge.
@@ -199,9 +203,10 @@ class FlowContainer:
         # and thus appear last in the sheet.
         for exit, edge in exits_edges[::-1]:
             if not exit.destination_uuid:
-                # If the edge leads nowhere, there's no way of encoding it in the sheet format.
-                # In practice, this means that cases/categories from routers may be dropped if
-                # they are not connected to anything.
+                # If the edge leads nowhere, there's no way of encoding it in the sheet
+                # format.
+                # In practice, this means that cases/categories from routers may be
+                # dropped if they are not connected to anything.
                 continue
             child_node = self.find_node(exit.destination_uuid)
             if child_node.uuid in self.completed_nodes:

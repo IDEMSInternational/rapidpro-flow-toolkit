@@ -1,5 +1,4 @@
 import unittest
-import json
 
 from rpft.parsers.common.rowparser import RowParser
 from rpft.parsers.creation.flowrowmodel import FlowRowModel
@@ -16,7 +15,8 @@ input1 = {
     "condition_name": "",
     "message_text": "Text of message",
     "choices": ["Answer 1", "Answer 2"],
-    "ui_position": "",  # CellParser is unaware of types, so '' is NOT turned into a list by the cell parser.
+    # CellParser is unaware of types, so '' is NOT turned into a list by the cell parser
+    "ui_position": "",
 }
 
 output1_exp = FlowRowModel(

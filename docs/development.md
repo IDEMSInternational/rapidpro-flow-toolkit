@@ -1,17 +1,47 @@
 # Setup
 
-1. Install Python >= 3.8
-1. Clone the source code repository: `git clone https://github.com/IDEMSInternational/rapidpro-flow-toolkit`
-1. Change to the project root directory: `cd rapidpro_flow_toolkit`
-1. Create a virtual environment: `python -m venv .venv`
-1. Activate venv: `source .venv/bin/activate`
-1. Upgrade pip: `pip install --upgrade pip`
-1. Install the project in dev mode: `pip install --editable .`
+```sh
+# Install Python >= 3.8
+# Clone the source code repository
+git clone https://github.com/IDEMSInternational/rapidpro-flow-toolkit
+
+# Change to the project root directory
+cd rapidpro_flow_toolkit
+
+# Create a virtual environment
+python -m venv .venv
+
+# Activate venv
+source .venv/bin/activate
+
+# Upgrade pip
+pip install --upgrade pip
+
+# Install the project in dev mode
+pip install --editable .
+```
 
 # Running tests
 
+Run the whole test suite.
 ```sh
 python -m unittest discover -s src
+```
+
+Tests should be run after making any change to the code and certainly before creating a git commit.
+
+# Pre-commit hooks
+
+You may use [pre-commit] to run the following tools before every commit (in order):
+
+- [black] - code formatter
+- [flake8] - linter
+
+Any violations found by either tool will abort the commit. Simply fix the issues found and try again.
+
+To install pre-commit:
+```
+pip install pre-commit
 ```
 
 # Build
@@ -71,3 +101,6 @@ Once ready:
 
 
 [1]: https://packaging.python.org/en/latest/guides/using-testpypi/
+[pre-commit]: https://pre-commit.com/
+[black]: https://black.readthedocs.io/en/stable/index.html
+[flake8]: https://flake8.pycqa.org/en/latest/

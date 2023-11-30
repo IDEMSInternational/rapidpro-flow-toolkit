@@ -1,7 +1,7 @@
 from jinja2 import Environment
 from jinja2.nativetypes import NativeEnvironment
 from jinja2 import contextfilter
-from rpft.logger.logger import get_logger, logging_context
+from rpft.logger.logger import get_logger
 
 LOGGER = get_logger()
 
@@ -30,7 +30,7 @@ class CellParser:
 
     def split_into_lists(self, string):
         l1 = self.split_by_separator(string, "|")
-        if type(l1) == str:
+        if type(l1) is str:
             output = self.split_by_separator(string, ";")
         else:
             output = [self.split_by_separator(s, ";") for s in l1]
@@ -38,7 +38,7 @@ class CellParser:
 
     def cleanse(self, nested_list):
         # Unescape escaped characters (\, |, ;)
-        if type(nested_list) == str:
+        if type(nested_list) is str:
             return (
                 nested_list.strip()
                 .replace("\\\\", "\1")
@@ -47,7 +47,7 @@ class CellParser:
                 .replace("\1", "\\")
             )
         else:
-            return [self.cleanse(l) for l in nested_list]
+            return [self.cleanse(item) for item in nested_list]
 
     def split_by_separator(self, string, sep):
         pos = 0
@@ -103,7 +103,8 @@ class CellParser:
             # Ensure this is a single template, not e.g. '{@ x @} {@ y @}'
             if not stripped_value[2:].find("{@") == -1:
                 LOGGER.critical(
-                    f'Cell may not contain nested "{{@" templates. Cell content: "{stripped_value}"'
+                    'Cell may not contain nested "{{@" templates.'
+                    f'Cell content: "{stripped_value}"'
                 )
             if is_object is not None:
                 is_object.boolean = True
@@ -114,5 +115,6 @@ class CellParser:
             return template.render(context)
         except Exception as e:
             LOGGER.critical(
-                f'Error while parsing cell "{stripped_value}" with context "{context}": {str(e)}'
+                f'Error while parsing cell "{stripped_value}" with context "{context}":'
+                f" {str(e)}"
             )
