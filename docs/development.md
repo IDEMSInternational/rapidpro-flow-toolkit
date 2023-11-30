@@ -11,7 +11,7 @@
 # Running tests
 
 ```sh
-python -m unittest discover -s src
+python -m unittest discover -s tests
 ```
 
 # Build
