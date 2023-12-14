@@ -52,17 +52,17 @@ class MockSheetParser(SheetParser):
 class MockSheetReader(AbstractSheetReader):
     def __init__(self, main_sheet_data=None, sheet_data_dict={}, name="mock"):
         self.name = name
-        self.sheets = {}
+        self._sheets = {}
 
         if main_sheet_data:
-            self.sheets["content_index"] = Sheet(
+            self._sheets["content_index"] = Sheet(
                 reader=self,
                 name="content_index",
                 table=tablib.import_set(main_sheet_data, format="csv"),
             )
 
         for name, content in sheet_data_dict.items():
-            self.sheets[name] = Sheet(
+            self._sheets[name] = Sheet(
                 reader=self,
                 name=name,
                 table=tablib.import_set(content, format="csv"),

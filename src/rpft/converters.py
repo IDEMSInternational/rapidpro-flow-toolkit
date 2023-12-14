@@ -5,6 +5,7 @@ from pathlib import Path
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import (
+    AbstractSheetReader,
     CSVSheetReader,
     GoogleSheetReader,
     XLSXSheetReader,
@@ -71,6 +72,20 @@ def sheet_to_csv(path, sheet_id):
             encoding="utf-8",
         ) as csv_file:
             csv_file.write(sheet.table.export("csv"))
+
+
+def to_json(reader: AbstractSheetReader) -> str:
+    book = {
+        "meta": {
+            "version": "0.1.0",
+        },
+        "sheets": {
+            name: sheet.table.dict
+            for name, sheet in reader.sheets.items()
+        },
+    }
+
+    return json.dumps(book, ensure_ascii=False, indent=2, sort_keys=True)
 
 
 def prepare_dir(path):
