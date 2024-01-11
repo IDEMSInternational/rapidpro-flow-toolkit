@@ -116,11 +116,17 @@ class GoogleSheetReader(AbstractSheetReader):
     def _table_from_content(self, content):
         table = tablib.Dataset()
         table.headers = content[0]
-        n_headers = len(table.headers)
+
         for row in content[1:]:
-            # Pad row to proper length
-            table.append(row + ([""] * (n_headers - len(row))))
+            table.append(self._prepare_row(row, len(table.headers)))
+
         return table
+
+    def _prepare_row(self, row, max_cols):
+        return pad(
+            [cell.replace("\r\n", "\n") for cell in row],
+            max_cols,
+        )
 
     def get_credentials(self):
         sa_creds = os.getenv("CREDENTIALS")
@@ -174,3 +180,7 @@ class CompositeSheetReader:
 def load_csv(path):
     with open(path, mode="r", encoding="utf-8") as csv:
         return tablib.import_set(csv, format="csv")
+
+
+def pad(row, n):
+    return row + ([""] * (n - len(row)))
