@@ -63,14 +63,14 @@ def sheet_to_csv(path, sheet_id):
     workbook_dir = prepare_dir(Path(path) / sheet_id)
     reader = GoogleSheetReader(sheet_id)
 
-    for name, table in reader.sheets.items():
+    for name, sheet in reader.sheets.items():
         with open(
             workbook_dir / f"{name}.csv",
             "w",
             newline="",
             encoding="utf-8",
         ) as csv_file:
-            csv_file.write(table.export("csv"))
+            csv_file.write(sheet.table.export("csv"))
 
 
 def prepare_dir(path):
