@@ -5,7 +5,6 @@ from rpft.rapidpro.models.common import FlowReference, Group
 
 
 class Trigger:
-
     def __init__(
         self,
         trigger_type,
@@ -20,6 +19,8 @@ class Trigger:
     ):
         self.trigger_type = trigger_type
         self.keyword = keyword or None
+        if self.trigger_type == "K" and not keyword:
+            raise ValueError('Triggers type "K" must have a keyword')
         self.channel = channel or None
         if not flow and not flow_name:
             raise ValueError("Trigger must have flow or a flow_name")

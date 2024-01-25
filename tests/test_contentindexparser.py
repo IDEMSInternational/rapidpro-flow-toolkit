@@ -812,6 +812,55 @@ class TestParseCampaigns(unittest.TestCase):
         self.assertEqual(event["delivery_hour"], 6)
 
 
+class TestParseTriggers(unittest.TestCase):
+    def test_parse_triggers(self):
+        ci_sheet = (
+            "type,sheet_name\n"
+            "create_triggers,my_triggers\n"
+            "create_flow,my_basic_flow\n"
+        )
+        my_triggers = (
+            "type,keyword,flow,groups\n"
+            "K,the word,my_basic_flow,My Group\n"
+            "C,,my_basic_flow,My Group;Other Group\n"
+            "M,,my_basic_flow,\n"
+        )
+        my_basic_flow = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
+        )
+
+        sheet_reader = MockSheetReader(
+            ci_sheet, {"my_triggers": my_triggers, "my_basic_flow": my_basic_flow}
+        )
+        ci_parser = ContentIndexParser(sheet_reader)
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        flow_uuid = render_output["flows"][0]["uuid"]
+        mygroup_uuid = render_output["groups"][0]["uuid"]
+        othergroup_uuid = render_output["groups"][1]["uuid"]
+        self.assertEqual(render_output["triggers"][0]["trigger_type"], "K")
+        self.assertEqual(render_output["triggers"][1]["trigger_type"], "C")
+        self.assertEqual(render_output["triggers"][2]["trigger_type"], "M")
+        self.assertEqual(render_output["triggers"][0]["keyword"], "the word")
+        self.assertIsNone(render_output["triggers"][1]["keyword"])
+        self.assertIsNone(render_output["triggers"][2]["keyword"])
+        for i in range(3):
+            self.assertIsNone(render_output["triggers"][i]["channel"])
+            self.assertEqual(
+                render_output["triggers"][i]["flow"]["name"], "my_basic_flow"
+            )
+            self.assertEqual(render_output["triggers"][i]["flow"]["uuid"], flow_uuid)
+        groups0 = render_output["triggers"][0]["groups"]
+        groups1 = render_output["triggers"][1]["groups"]
+        self.assertEqual(groups0[0]["name"], "My Group")
+        self.assertEqual(groups0[0]["uuid"], mygroup_uuid)
+        self.assertEqual(groups1[0]["name"], "My Group")
+        self.assertEqual(groups1[0]["uuid"], mygroup_uuid)
+        self.assertEqual(groups1[1]["name"], "Other Group")
+        self.assertEqual(groups1[1]["uuid"], othergroup_uuid)
+
+
 class TestParseFromFile(TestTemplate):
     def setUp(self):
         self.input_dir = TESTS_ROOT / "input/example1"
