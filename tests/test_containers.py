@@ -4,6 +4,7 @@ from rpft.rapidpro.models.containers import RapidProContainer, FlowContainer
 from rpft.rapidpro.models.actions import Group, AddContactGroupAction
 from rpft.rapidpro.models.nodes import BasicNode, SwitchRouterNode, EnterFlowNode
 from rpft.rapidpro.models.campaigns import Campaign, CampaignEvent
+from rpft.rapidpro.models.triggers import Trigger
 
 
 def get_flow_with_group_and_flow_node():
@@ -130,3 +131,23 @@ class TestRapidProContainer(unittest.TestCase):
         )
         self.assertEqual(rpc.flows[0].nodes[1].actions[0].flow.uuid, "fake-flow-uuid")
         self.assertEqual(rpc.campaigns[0].events[0].flow.uuid, "fake-flow-uuid")
+
+    def test_get_uuids_from_trigger(self):
+        rpc = RapidProContainer()
+        rpc.add_flow(get_flow_with_group_and_flow_node())
+        trigger = Trigger(
+            "K",
+            "keyword",
+            flow_name="Second Flow",
+            flow_uuid="fake-flow-uuid",
+            group_names=["No UUID Group"],
+            group_uuids=["fake-group-uuid"],
+        )
+        rpc.add_trigger(trigger)
+        rpc.update_global_uuids()
+        self.assertEqual(rpc.triggers[0].groups[0].uuid, "fake-group-uuid")
+        self.assertEqual(
+            rpc.flows[0].nodes[0].actions[0].groups[0].uuid, "fake-group-uuid"
+        )
+        self.assertEqual(rpc.flows[0].nodes[1].actions[0].flow.uuid, "fake-flow-uuid")
+        self.assertEqual(rpc.triggers[0].flow.uuid, "fake-flow-uuid")
