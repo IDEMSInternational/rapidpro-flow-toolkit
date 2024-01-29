@@ -1,6 +1,7 @@
 import logging
 
 from rpft.rapidpro.models.common import Exit
+from rpft.rapidpro.models.exceptions import RapidProRouterError
 from rpft.rapidpro.utils import generate_new_uuid
 from rpft.parsers.creation.flowrowmodel import Condition, Edge
 
@@ -427,6 +428,8 @@ class RouterCategory:
         an exit.
         """
         self.uuid = uuid or generate_new_uuid()
+        if len(name) > 115:
+            raise RapidProRouterError(f"Category name too long (>115): {name}")
         self.name = name
         if exit:
             self.exit = exit

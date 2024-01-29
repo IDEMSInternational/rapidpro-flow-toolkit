@@ -22,7 +22,10 @@ from rpft.rapidpro.models.actions import (
     WhatsAppMessageTemplating,
 )
 from rpft.rapidpro.models.containers import FlowContainer
-from rpft.rapidpro.models.exceptions import RapidProActionError
+from rpft.rapidpro.models.exceptions import (
+    RapidProActionError,
+    RapidProRouterError,
+)
 from rpft.rapidpro.models.nodes import (
     BasicNode,
     CallWebhookNode,
@@ -129,7 +132,10 @@ class NoOpNodeGroup:
     def add_parent_edge(self, source_node_group, condition):
         self.parent_edges.append(NoOpNodeGroup.ParentEdge(source_node_group, condition))
         if self.router_node is not None:
-            source_node_group.add_exit(self.router_node.uuid, condition)
+            try:
+                source_node_group.add_exit(self.router_node.uuid, condition)
+            except RapidProRouterError as e:
+                LOGGER.critical(str(e))
 
     def add_exit(self, destination_uuid, condition):
         if not self.router_node:
@@ -671,7 +677,10 @@ class FlowParser:
     def _add_row_edge(self, edge, destination_uuid):
         from_node_group = self._get_node_group_from_edge(edge)
         if from_node_group is not None:
-            from_node_group.add_exit(destination_uuid, edge.condition)
+            try:
+                from_node_group.add_exit(destination_uuid, edge.condition)
+            except RapidProRouterError as e:
+                LOGGER.critical(str(e))
 
     def _parse_goto_row(self, row):
         # If there is a single destination, connect all edges to that destination.
