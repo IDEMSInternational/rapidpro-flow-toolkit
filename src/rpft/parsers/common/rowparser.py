@@ -10,6 +10,10 @@ class RowParserError(Exception):
     pass
 
 
+class RowParserError(Exception):
+    pass
+
+
 class ParserModel(BaseModel):
     def header_name_to_field_name(header):
         # Given a human-friendly column header name, map it to the
@@ -32,6 +36,18 @@ class ParserModel(BaseModel):
         return header
 
 
+def get_list_child_model(model):
+    if is_basic_list_type(model):
+        # If not specified, list elements may be anything.
+        # Without additional information, we assume strings.
+        child_model = str
+    else:            
+        # Get the type that's inside the list
+        assert len(model.__args__) == 1
+        child_model = model.__args__[0]
+    return child_model
+
+
 def is_list_type(model):
     # Determine whether model is a list type,
     # such as list, List, List[str], ...
@@ -39,11 +55,11 @@ def is_list_type(model):
     # model.__dict__.get('__origin__') returns different things in different Python
     # version.
     # This function tries to accommodate both 3.6 and 3.8 (at least)
-    return model == List or model.__dict__.get("__origin__") in [list, List]
+    return is_basic_list_type(model) or model is List or model.__dict__.get("__origin__") in [list, List]
 
 
 def is_basic_list_type(model):
-    return model == list
+    return model is list
 
 
 def is_list_instance(value):
@@ -81,6 +97,19 @@ def is_default_value(model_instance, field, field_value):
         return True
 
 
+def str_to_bool(string):
+    # in this case, the default value takes effect.
+    if string.lower() == "false" or string == "0":
+        return False
+    elif string.lower() == "true" or string == "1":
+        return True
+    else:
+        raise RowParserError(
+            'Boolean must be true/1 or false/0 '
+            f'but is "{string}"'
+        )
+
+
 class RowParser:
     # Takes a dictionary of cell entries, whose keys are the column names
     # and the values are the cell content converted into nested lists.
@@ -96,7 +125,7 @@ class RowParser:
     def try_assign_as_kwarg(self, field, key, value, model):
         # If value can be interpreted as a (field, field_value) pair for a field of
         # model, assign value to field[key] (which represents the field in the model)
-        if type(value) is list and len(value) == 2 and type(value[0]) is str:
+        if is_list_instance(value) and len(value) == 2 and type(value[0]) is str:
             first_entry_as_key = model.header_name_to_field_name(value[0])
             if first_entry_as_key in model.__fields__:
                 self.assign_value(
@@ -156,17 +185,20 @@ class RowParser:
                         entry,
                         model.__fields__[entry_key].outer_type_,
                     )
-
+        elif is_basic_list_type(model):
+            # We cannot iterate deeper if we don't know what to expect.
+            if is_iterable_instance(value):
+                field[key] = list(value)
+            else:
+                field[key] = [value]
         elif is_list_type(model):
-            # Get the type that's inside the list
-            assert len(model.__args__) == 1
-            child_model = model.__args__[0]
+            child_model = get_list_child_model(model)
             # The created entry should be a list. Value should also be a list
             field[key] = []
             # Note: This makes a decision on how to resolve an ambiguity when the target
             # field is a list of lists, but the cell value is a 1-dimensional list.
             # 1;2 → [[1],[2]] rather than [[1,2]]
-            if type(value) is not list:
+            if not is_list_instance(value):
                 # It could be that a list is specified via a single element.
                 if value == "":
                     # Interpret an empty cell as [] rather than ['']
@@ -178,27 +210,16 @@ class RowParser:
                 # recursively
                 field[key].append(None)
                 self.assign_value(field[key], -1, entry, child_model)
-
-        elif is_basic_list_type(model):
-            if is_iterable_instance(value):
-                field[key] = list(value)
-            else:
-                field[key] = [value]
         else:
             assert is_basic_type(model)
             # The value should be a basic type
             # TODO: Ensure the types match. E.g. we don't want value to be a list
             if model == bool:
                 if type(value) is str:
-                    if value.strip():
-                        # Special case: empty string is not assigned at all;
-                        # in this case, the default value takes effect.
-                        if value.strip().lower() == "false":
-                            field[key] = False
-                        else:
-                            # This is consistent with python: Anything that's
-                            # not '' or explicitly False is True.
-                            field[key] = True
+                    stripped = value.strip()
+                    # Special case: empty string is not assigned at all.
+                    if stripped:
+                        field[key] = str_to_bool(stripped)
                 else:
                     field[key] = bool(value)
             else:
@@ -219,10 +240,7 @@ class RowParser:
         # It'd be nicer to already have a template.
         field_name = field_path[0]
         if is_list_type(model):
-            # Get the type that's inside the list
-            assert len(model.__args__) == 1
-            child_model = model.__args__[0]
-
+            child_model = get_list_child_model(model)
             index = int(field_name) - 1
             if len(output_field) <= index:
                 # Create a new list entry for this, if necessary
@@ -248,7 +266,7 @@ class RowParser:
                 output_field[key] = None
 
         if len(field_path) == 1:
-            # We're reach the end of the field_path
+            # We've reached the end of the field_path
             # Therefore we've found where we need to assign
             return output_field, key, child_model
         else:
@@ -278,8 +296,7 @@ class RowParser:
         # as being of type model.
         if not value_is_parsed:
             if (
-                is_basic_list_type(model)
-                or is_list_type(model)
+                is_list_type(model)
                 or is_parser_model_type(model)
             ):
                 # If the expected type of the value is list/object,
