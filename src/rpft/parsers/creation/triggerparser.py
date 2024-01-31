@@ -16,11 +16,14 @@ class TriggerParser:
                 try:
                     trigger = Trigger(
                         row.type,
-                        row.keyword,
+                        row.keywords,
                         row.channel,
+                        row.match_type,
                         flow_name=row.flow,
                         group_names=row.groups,
                         group_uuids=[],
+                        exclude_group_names=row.exclude_groups,
+                        exclude_group_uuids=[],
                     )
                     triggers.append(trigger)
                 except ValueError as e:

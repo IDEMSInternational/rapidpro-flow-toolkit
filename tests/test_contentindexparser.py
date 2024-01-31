@@ -820,10 +820,11 @@ class TestParseTriggers(unittest.TestCase):
             "create_flow,my_basic_flow\n"
         )
         my_triggers = (
-            "type,keyword,flow,groups\n"
-            "K,the word,my_basic_flow,My Group\n"
-            "C,,my_basic_flow,My Group;Other Group\n"
-            "M,,my_basic_flow,\n"
+            "type,keywords,flow,groups,exclude_groups,match_type\n"
+            "K,the word,my_basic_flow,My Group,,\n"
+            "C,,my_basic_flow,My Group;Other Group,,\n"
+            "M,,my_basic_flow,,My Group,\n"
+            "K,first;second,my_basic_flow,,,F\n"
         )
         my_basic_flow = csv_join(
             "row_id,type,from,message_text",
@@ -842,9 +843,16 @@ class TestParseTriggers(unittest.TestCase):
         self.assertEqual(render_output["triggers"][0]["trigger_type"], "K")
         self.assertEqual(render_output["triggers"][1]["trigger_type"], "C")
         self.assertEqual(render_output["triggers"][2]["trigger_type"], "M")
+        self.assertEqual(render_output["triggers"][0]["keywords"], ["the word"])
         self.assertEqual(render_output["triggers"][0]["keyword"], "the word")
+        self.assertEqual(render_output["triggers"][1]["keywords"], [])
         self.assertIsNone(render_output["triggers"][1]["keyword"])
+        self.assertEqual(render_output["triggers"][2]["keywords"], [])
         self.assertIsNone(render_output["triggers"][2]["keyword"])
+        self.assertEqual(render_output["triggers"][3]["keywords"], ["first", "second"])
+        self.assertEqual(render_output["triggers"][3]["keyword"], "first")
+        self.assertEqual(render_output["triggers"][0]["match_type"], "F")
+        self.assertEqual(render_output["triggers"][3]["match_type"], "F")
         for i in range(3):
             self.assertIsNone(render_output["triggers"][i]["channel"])
             self.assertEqual(
@@ -853,12 +861,15 @@ class TestParseTriggers(unittest.TestCase):
             self.assertEqual(render_output["triggers"][i]["flow"]["uuid"], flow_uuid)
         groups0 = render_output["triggers"][0]["groups"]
         groups1 = render_output["triggers"][1]["groups"]
+        groups2 = render_output["triggers"][2]["exclude_groups"]
         self.assertEqual(groups0[0]["name"], "My Group")
         self.assertEqual(groups0[0]["uuid"], mygroup_uuid)
         self.assertEqual(groups1[0]["name"], "My Group")
         self.assertEqual(groups1[0]["uuid"], mygroup_uuid)
         self.assertEqual(groups1[1]["name"], "Other Group")
         self.assertEqual(groups1[1]["uuid"], othergroup_uuid)
+        self.assertEqual(groups2[0]["name"], "My Group")
+        self.assertEqual(groups2[0]["uuid"], mygroup_uuid)
 
 
 class TestParseFromFile(TestTemplate):

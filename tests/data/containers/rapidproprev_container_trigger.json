@@ -41,20 +41,16 @@
     {
       "trigger_type": "K",
       "keyword": "the keyword",
-      "keywords": ["the keyword"],
       "flow": {
         "name": "flow_with_node",
         "uuid": "c1a32f07-ff0f-4b8b-a700-360c13f53914"
       },
       "groups": [],
-      "exclude_groups": [],
-      "match_type": "F",
       "channel": null
     },
     {
       "trigger_type": "M",
       "keyword": null,
-      "keywords": [],
       "flow": {
         "name": "flow_with_node",
         "uuid": "c1a32f07-ff0f-4b8b-a700-360c13f53914"
@@ -76,12 +72,10 @@
     {
       "trigger_type": "C",
       "keyword": null,
-      "keywords": [],
       "flow": {
         "uuid": "a119cac4-daac-44a2-bb36-39852489c317",
         "name": "JM - Quiz - Template"
       },
-      "exclude_groups": [],
       "groups": [
         {
           "uuid": "8224bfe2-acec-434f-bc7c-14c584fc4bc8",
