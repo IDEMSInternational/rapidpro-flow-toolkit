@@ -73,8 +73,8 @@
       "trigger_type": "C",
       "keyword": null,
       "flow": {
-        "uuid": "a119cac4-daac-44a2-bb36-39852489c317",
-        "name": "JM - Quiz - Template"
+        "uuid": "c1a32f07-ff0f-4b8b-a700-360c13f53914",
+        "name": "flow_with_node"
       },
       "groups": [
         {

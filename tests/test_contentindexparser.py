@@ -3,6 +3,7 @@ import unittest
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import CompositeSheetReader, CSVSheetReader, XLSXSheetReader
+from rpft.rapidpro.models.triggers import RapidProTriggerError
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
 from tests.utils import Context, traverse_flow
@@ -870,6 +871,24 @@ class TestParseTriggers(unittest.TestCase):
         self.assertEqual(groups1[1]["uuid"], othergroup_uuid)
         self.assertEqual(groups2[0]["name"], "My Group")
         self.assertEqual(groups2[0]["uuid"], mygroup_uuid)
+
+    def test_parse_triggers_without_flow(self):
+        ci_sheet = (
+            "type,sheet_name\n"
+            "create_triggers,my_triggers\n"
+        )
+        my_triggers = (
+            "type,keywords,flow,groups,exclude_groups,match_type\n"
+            "K,the word,my_basic_flow,My Group,,\n"
+        )
+
+        sheet_reader = MockSheetReader(
+            ci_sheet, {"my_triggers": my_triggers}
+        )
+        ci_parser = ContentIndexParser(sheet_reader)
+        container = ci_parser.parse_all()
+        with self.assertRaises(RapidProTriggerError):
+            render_output = container.render()
 
 
 class TestParseFromFile(TestTemplate):

@@ -4,6 +4,10 @@ from itertools import zip_longest
 from rpft.rapidpro.models.common import FlowReference, Group
 
 
+class RapidProTriggerError(Exception):
+    pass
+
+
 class Trigger:
     def __init__(
         self,
@@ -80,7 +84,12 @@ class Trigger:
             data_copy.pop("keyword")
         return Trigger(**data_copy)
 
-    def record_global_uuids(self, uuid_dict):
+    def record_global_uuids(self, uuid_dict, require_existing=False):
+        if require_existing:
+            if not uuid_dict.contains_flow(self.flow.name):
+                raise RapidProTriggerError(
+                    f"Trigger references undefined flow name {self.flow.name}"
+                )
         if self.flow is not None:
             self.flow.record_uuid(uuid_dict)
         if self.groups is not None:

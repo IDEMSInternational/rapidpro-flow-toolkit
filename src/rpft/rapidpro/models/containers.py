@@ -74,7 +74,7 @@ class RapidProContainer:
         for campaign in self.campaigns:
             campaign.record_global_uuids(self.uuid_dict)
         for trigger in self.triggers:
-            trigger.record_global_uuids(self.uuid_dict)
+            trigger.record_global_uuids(self.uuid_dict, require_existing=True)
         self.uuid_dict.generate_missing_uuids()
         for flow in self.flows:
             flow.assign_global_uuids(self.uuid_dict)
@@ -313,6 +313,9 @@ class UUIDDict:
 
     def get_flow_uuid(self, name):
         return self.flow_dict[name]
+
+    def contains_flow(self, name):
+        return name in self.flow_dict
 
     def get_group_list(self):
         return [Group(name, uuid) for name, uuid in self.group_dict.items()]
