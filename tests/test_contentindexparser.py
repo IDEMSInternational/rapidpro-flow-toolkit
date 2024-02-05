@@ -3,6 +3,7 @@ import unittest
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import CompositeSheetReader, CSVSheetReader, XLSXSheetReader
+from rpft.rapidpro.models.triggers import RapidProTriggerError
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
 from tests.utils import Context, traverse_flow
@@ -810,6 +811,84 @@ class TestParseCampaigns(unittest.TestCase):
         self.assertEqual(render_output["campaigns"][0]["name"], "my_campaign")
         event = render_output["campaigns"][0]["events"][0]
         self.assertEqual(event["delivery_hour"], 6)
+
+
+class TestParseTriggers(unittest.TestCase):
+    def test_parse_triggers(self):
+        ci_sheet = (
+            "type,sheet_name\n"
+            "create_triggers,my_triggers\n"
+            "create_flow,my_basic_flow\n"
+        )
+        my_triggers = (
+            "type,keywords,flow,groups,exclude_groups,match_type\n"
+            "K,the word,my_basic_flow,My Group,,\n"
+            "C,,my_basic_flow,My Group;Other Group,,\n"
+            "M,,my_basic_flow,,My Group,\n"
+            "K,first;second,my_basic_flow,,,F\n"
+        )
+        my_basic_flow = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
+        )
+
+        sheet_reader = MockSheetReader(
+            ci_sheet, {"my_triggers": my_triggers, "my_basic_flow": my_basic_flow}
+        )
+        ci_parser = ContentIndexParser(sheet_reader)
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        flow_uuid = render_output["flows"][0]["uuid"]
+        mygroup_uuid = render_output["groups"][0]["uuid"]
+        othergroup_uuid = render_output["groups"][1]["uuid"]
+        self.assertEqual(render_output["triggers"][0]["trigger_type"], "K")
+        self.assertEqual(render_output["triggers"][1]["trigger_type"], "C")
+        self.assertEqual(render_output["triggers"][2]["trigger_type"], "M")
+        self.assertEqual(render_output["triggers"][0]["keywords"], ["the word"])
+        self.assertEqual(render_output["triggers"][0]["keyword"], "the word")
+        self.assertEqual(render_output["triggers"][1]["keywords"], [])
+        self.assertIsNone(render_output["triggers"][1]["keyword"])
+        self.assertEqual(render_output["triggers"][2]["keywords"], [])
+        self.assertIsNone(render_output["triggers"][2]["keyword"])
+        self.assertEqual(render_output["triggers"][3]["keywords"], ["first", "second"])
+        self.assertEqual(render_output["triggers"][3]["keyword"], "first")
+        self.assertEqual(render_output["triggers"][0]["match_type"], "F")
+        self.assertEqual(render_output["triggers"][3]["match_type"], "F")
+        for i in range(3):
+            self.assertIsNone(render_output["triggers"][i]["channel"])
+            self.assertEqual(
+                render_output["triggers"][i]["flow"]["name"], "my_basic_flow"
+            )
+            self.assertEqual(render_output["triggers"][i]["flow"]["uuid"], flow_uuid)
+        groups0 = render_output["triggers"][0]["groups"]
+        groups1 = render_output["triggers"][1]["groups"]
+        groups2 = render_output["triggers"][2]["exclude_groups"]
+        self.assertEqual(groups0[0]["name"], "My Group")
+        self.assertEqual(groups0[0]["uuid"], mygroup_uuid)
+        self.assertEqual(groups1[0]["name"], "My Group")
+        self.assertEqual(groups1[0]["uuid"], mygroup_uuid)
+        self.assertEqual(groups1[1]["name"], "Other Group")
+        self.assertEqual(groups1[1]["uuid"], othergroup_uuid)
+        self.assertEqual(groups2[0]["name"], "My Group")
+        self.assertEqual(groups2[0]["uuid"], mygroup_uuid)
+
+    def test_parse_triggers_without_flow(self):
+        ci_sheet = (
+            "type,sheet_name\n"
+            "create_triggers,my_triggers\n"
+        )
+        my_triggers = (
+            "type,keywords,flow,groups,exclude_groups,match_type\n"
+            "K,the word,my_basic_flow,My Group,,\n"
+        )
+
+        sheet_reader = MockSheetReader(
+            ci_sheet, {"my_triggers": my_triggers}
+        )
+        ci_parser = ContentIndexParser(sheet_reader)
+        container = ci_parser.parse_all()
+        with self.assertRaises(RapidProTriggerError):
+            render_output = container.render()
 
 
 class TestParseFromFile(TestTemplate):

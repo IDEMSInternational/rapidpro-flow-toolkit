@@ -103,6 +103,22 @@ class TestImportExport(unittest.TestCase):
             render_output = container.render()
             self.assertEqual(render_output, container_data, msg=filename)
 
+    def test_rapidproprev_container_triggers(self):
+        # Previous versions of RapidPro had a different trigger formats.
+        # Check compatibility in this test.
+        self.maxDiff = None
+        with open(
+            self.data_dir / "containers/rapidpro_container_trigger.json", "r"
+        ) as f:
+            expected_container_data = json.load(f)
+        with open(
+            self.data_dir / "containers/rapidproprev_container_trigger.json", "r"
+        ) as f:
+            container_data = json.load(f)
+        container = RapidProContainer.from_dict(container_data)
+        render_output = container.render()
+        self.assertEqual(render_output, expected_container_data)
+
     def test_campaign_events(self):
         self.maxDiff = None
         filenamesList = self.data_dir.glob("campaigns/event_*.json")

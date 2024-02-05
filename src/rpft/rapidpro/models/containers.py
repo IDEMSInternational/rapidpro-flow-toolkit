@@ -1,10 +1,11 @@
 import copy
 
-from rpft.rapidpro.utils import generate_new_uuid
-from rpft.rapidpro.models.nodes import BaseNode
+from rpft.parsers.creation.flowrowmodel import Edge, FlowRowModel
 from rpft.rapidpro.models.actions import Group
 from rpft.rapidpro.models.campaigns import Campaign
-from rpft.parsers.creation.flowrowmodel import FlowRowModel, Edge
+from rpft.rapidpro.models.nodes import BaseNode
+from rpft.rapidpro.models.triggers import Trigger
+from rpft.rapidpro.utils import generate_new_uuid
 
 
 class RapidProContainer:
@@ -36,9 +37,12 @@ class RapidProContainer:
         campaigns = data_copy.pop("campaigns")
         campaigns = [Campaign.from_dict(campaign) for campaign in campaigns]
         container = RapidProContainer(**data_copy)
+        triggers = data_copy.pop("triggers")
+        triggers = [Trigger.from_dict(trigger) for trigger in triggers]
         container.flows = flows
         container.groups = groups
         container.campaigns = campaigns
+        container.triggers = triggers
         return container
 
     def add_flow(self, flow):
@@ -47,6 +51,9 @@ class RapidProContainer:
 
     def add_campaign(self, campaign):
         self.campaigns.append(campaign)
+
+    def add_trigger(self, trigger):
+        self.triggers.append(trigger)
 
     def record_group_uuid(self, name, uuid):
         self.uuid_dict.record_group_uuid(name, uuid)
@@ -66,11 +73,15 @@ class RapidProContainer:
             flow.record_global_uuids(self.uuid_dict)
         for campaign in self.campaigns:
             campaign.record_global_uuids(self.uuid_dict)
+        for trigger in self.triggers:
+            trigger.record_global_uuids(self.uuid_dict, require_existing=True)
         self.uuid_dict.generate_missing_uuids()
         for flow in self.flows:
             flow.assign_global_uuids(self.uuid_dict)
         for campaign in self.campaigns:
             campaign.assign_global_uuids(self.uuid_dict)
+        for trigger in self.triggers:
+            trigger.assign_global_uuids(self.uuid_dict)
 
     def merge(self, container):
         """Merge another RapidPro container into this one.
@@ -93,7 +104,7 @@ class RapidProContainer:
             "flows": [flow.render() for flow in self.flows],
             "groups": [group.render() for group in self.groups],
             "site": self.site,
-            "triggers": self.triggers,
+            "triggers": [trigger.render() for trigger in self.triggers],
             "version": self.version,
         }
 
@@ -302,6 +313,9 @@ class UUIDDict:
 
     def get_flow_uuid(self, name):
         return self.flow_dict[name]
+
+    def contains_flow(self, name):
+        return name in self.flow_dict
 
     def get_group_list(self):
         return [Group(name, uuid) for name, uuid in self.group_dict.items()]

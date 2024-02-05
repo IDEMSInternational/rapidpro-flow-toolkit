@@ -10,6 +10,8 @@ from rpft.parsers.creation.campaignparser import CampaignParser
 from rpft.parsers.creation.contentindexrowmodel import ContentIndexRowModel
 from rpft.parsers.creation.flowparser import FlowParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
+from rpft.parsers.creation.triggerparser import TriggerParser
+from rpft.parsers.creation.triggerrowmodel import TriggerRowModel
 from rpft.parsers.sheets import Sheet
 from rpft.rapidpro.models.containers import RapidProContainer
 
@@ -48,7 +50,8 @@ class ContentIndexParser:
         self.template_sheets = {}
         self.data_sheets = {}
         self.flow_definition_rows = []  # list of ContentIndexRowModel
-        self.campaign_parsers = {}  # list of CampaignParser
+        self.campaign_parsers = {}  # name-indexed dict of CampaignParser
+        self.trigger_parsers = []
 
         if user_data_model_module_name:
             self.user_models_module = importlib.import_module(
@@ -76,12 +79,12 @@ class ContentIndexParser:
                     continue
                 if not self.tag_matcher.matches(row.tags):
                     continue
+                if len(row.sheet_name) != 1 and row.type != "data_sheet":
+                    LOGGER.critical(
+                        f"For {row.type} rows, "
+                        "exactly one sheet_name has to be specified"
+                    )
                 if row.type == "content_index":
-                    if not len(row.sheet_name) == 1:
-                        LOGGER.critical(
-                            "For content_index rows, "
-                            "exactly one sheet_name has to be specified"
-                        )
                     sheet_name = row.sheet_name[0]
                     sheet = self._get_sheet_or_die(sheet_name)
                     with logging_context(f"{sheet.name}"):
@@ -94,21 +97,11 @@ class ContentIndexParser:
                         )
                     self._process_data_sheet(row)
                 elif row.type in ["template_definition", "create_flow"]:
-                    if not len(row.sheet_name) == 1:
-                        LOGGER.critical(
-                            "For template_definition/create_flow rows, "
-                            "exactly one sheet_name has to be specified"
-                        )
                     if row.type == "template_definition":
                         self._add_template(row, True)
                     else:
                         self.flow_definition_rows.append((logging_prefix, row))
                 elif row.type == "create_campaign":
-                    if not len(row.sheet_name) == 1:
-                        LOGGER.critical(
-                            "For create_campaign rows, exactly one "
-                            "sheet_name has to be specified"
-                        )
                     campaign_parser = self.create_campaign_parser(row)
                     name = campaign_parser.campaign.name
                     if name in self.campaign_parsers:
@@ -117,6 +110,9 @@ class ContentIndexParser:
                             "Overwriting previous definition."
                         )
                     self.campaign_parsers[name] = (logging_prefix, campaign_parser)
+                elif row.type == "create_triggers":
+                    trigger_parser = self.create_trigger_parser(row)
+                    self.trigger_parsers.append((logging_prefix, trigger_parser))
                 else:
                     LOGGER.error(f"invalid type: '{row.type}'")
 
@@ -320,6 +316,7 @@ class ContentIndexParser:
         rapidpro_container = RapidProContainer()
         self.parse_all_flows(rapidpro_container)
         self.parse_all_campaigns(rapidpro_container)
+        self.parse_all_triggers(rapidpro_container)
         return rapidpro_container
 
     def create_campaign_parser(self, row):
@@ -330,12 +327,28 @@ class ContentIndexParser:
         rows = sheet_parser.parse_all()
         return CampaignParser(row.new_name or sheet_name, row.group, rows)
 
+    def create_trigger_parser(self, row):
+        sheet_name = row.sheet_name[0]
+        sheet = self._get_sheet_or_die(sheet_name)
+        row_parser = RowParser(TriggerRowModel, CellParser())
+        sheet_parser = SheetParser(row_parser, sheet.table)
+        rows = sheet_parser.parse_all()
+        return TriggerParser(sheet_name, rows)
+
     def parse_all_campaigns(self, rapidpro_container):
         for logging_prefix, campaign_parser in self.campaign_parsers.values():
             sheet_name = campaign_parser.campaign.name
             with logging_context(f"{logging_prefix} | {sheet_name}"):
                 campaign = campaign_parser.parse()
                 rapidpro_container.add_campaign(campaign)
+
+    def parse_all_triggers(self, rapidpro_container):
+        for logging_prefix, trigger_parser in self.trigger_parsers:
+            sheet_name = trigger_parser.sheet_name
+            with logging_context(f"{logging_prefix} | {sheet_name}"):
+                triggers = trigger_parser.parse()
+                for trigger in triggers:
+                    rapidpro_container.add_trigger(trigger)
 
     def parse_all_flows(self, rapidpro_container):
         flows = {}
