@@ -3,7 +3,8 @@ import collections
 
 class TagMatcher:
     def __init__(self, params=[]):
-        self.tag_patterns = collections.defaultdict(list)
+        self.include_patterns = collections.defaultdict(list)
+        self.exclude_patterns = collections.defaultdict(list)
         if not params:
             return
         current_index = None
@@ -20,11 +21,18 @@ class TagMatcher:
                         "Tags parameter must start with a "
                         "number indicating the tag position."
                     )
-                self.tag_patterns[current_index].append(param)
+                if param[0] == "!":
+                    self.exclude_patterns[current_index].append(param[1:])
+                else:
+                    self.include_patterns[current_index].append(param)
+                    # Empty string is accepted by default
+                    self.include_patterns[current_index].append("")
 
     def matches(self, tags):
         matches = True
         for i, tag in enumerate(tags):
-            if tag and i in self.tag_patterns and tag not in self.tag_patterns[i]:
+            if i in self.include_patterns and tag not in self.include_patterns[i]:
+                matches = False
+            if i in self.exclude_patterns and tag in self.exclude_patterns[i]:
                 matches = False
         return matches

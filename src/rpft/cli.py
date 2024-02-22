@@ -72,8 +72,11 @@ def create_parser():
         help=(
             "Tags to filter the content index sheet. A sequence of lists, with each "
             "list starting with an integer (tag position) followed by tags to include "
-            "for this position. Example: 1 foo bar 2 baz means: only include rows if "
-            "tags:1 is empty, foo or bar, and tags:2 is empty or baz"
+            "or exclude for this position. To exclude, precede by '!'.\n"
+            "Example: 1 foo bar 2 baz means: only include rows if "
+            "tags:1 is empty, foo or bar, and tags:2 is empty or baz\n"
+            "Example: 1 foo bar ! 2 !baz means: only include rows if "
+            "tags:1 is foo or bar (but not empty), and tags:2 is not baz"
         ),
     )
     return parser
