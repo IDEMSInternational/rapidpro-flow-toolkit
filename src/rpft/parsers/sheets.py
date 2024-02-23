@@ -1,9 +1,8 @@
 import json
 import os
 from abc import ABC
-from collections.abc import Mapping
 from pathlib import Path
-from typing import List
+from typing import List, Mapping
 
 import tablib
 from google.auth.transport.requests import Request
