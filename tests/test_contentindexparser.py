@@ -40,12 +40,24 @@ class TestParsing(TestTemplate):
             "template_definition,my_template,,,,,\n"
             "template_definition,my_template2,,,,,draft\n"
         )
+        self.check_basic_template_definition(ci_sheet)
+
+    def test_ignore_template_definition(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
+            "template_definition,my_template,,,,,\n"
+            "template_definition,my_template2,,,,,\n"
+            "ignore_row,my_template2,,,,,\n"
+        )
+        self.check_basic_template_definition(ci_sheet)
+
+    def check_basic_template_definition(self, ci_sheet):
         my_template = csv_join(
             "row_id,type,from,message_text",
             ",send_message,start,Some text",
         )
 
-        sheet_reader = MockSheetReader(ci_sheet, {"my_template": my_template})
+        sheet_reader = MockSheetReader(ci_sheet, {"my_template": my_template, "my_template2": my_template})
         ci_parser = ContentIndexParser(sheet_reader)
         template_sheet = ci_parser.get_template_sheet("my_template")
         self.assertEqual(template_sheet.table[0][1], "send_message")
@@ -103,6 +115,69 @@ class TestParsing(TestTemplate):
         self.assertEqual(datamodelA.value2, "2A")
         self.assertEqual(datamodelB.value1, "1B")
         self.assertEqual(datamodelB.value2, "2B")
+
+    def test_ignore_flow_definition(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
+            "create_flow,my_basic_flow,,,,,\n"
+            "create_flow,my_basic_flow,,,my_renamed_basic_flow,,\n"
+            "create_flow,my_basic_flow,,,my_renamed_basic_flow2,,\n"
+            "ignore_row,my_basic_flow,,,,,\n"
+            "ignore_row,my_renamed_basic_flow,,,,,\n"
+        )
+        my_basic_flow = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
+        )
+        sheet_dict = {
+            "my_basic_flow": my_basic_flow,
+        }
+
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader, "tests.datarowmodels.nestedmodel")
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        self.assertEqual(len(render_output["flows"]), 1)
+        self.assertEqual(render_output["flows"][0]["name"], "my_renamed_basic_flow2")
+
+    def test_ignore_templated_flow_definition(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
+            "create_flow,my_template,nesteddata,,,,\n"
+            "create_flow,my_template,nesteddata,,bulk_renamed,,\n"
+            "create_flow,my_template,nesteddata,row1,row1_renamed,,\n"
+            "create_flow,my_template,nesteddata,row2,row2_renamed,,\n"
+            "create_flow,my_template,nesteddata,row2,,,\n"
+            "ignore_row,my_template,,,,,\n"
+            "ignore_row,row1_renamed,,,,,\n"
+            "data_sheet,nesteddata,,,,NestedRowModel,\n"
+        )
+        nesteddata = (
+            "ID,value1,custom_field.happy,custom_field.sad\n"
+            "row1,Value1,Happy1,Sad1\n"
+            "row2,Value2,Happy2,Sad2\n"
+        )
+        my_template = (
+            "row_id,type,from,message_text\n"
+            ",send_message,start,{{value1}}\n"
+            ",send_message,,{{custom_field.happy}} and {{custom_field.sad}}\n"
+        )
+        sheet_dict = {
+            "nesteddata": nesteddata,
+            "my_template": my_template,
+        }
+
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader, "tests.datarowmodels.nestedmodel")
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        self.assertEqual(len(render_output["flows"]), 3)
+        names = {flow["name"] for flow in render_output["flows"]}
+        self.assertEqual(names, {
+            "bulk_renamed - row1",
+            "bulk_renamed - row2",
+            "row2_renamed - row2",
+        })
 
     def test_generate_flows(self):
         ci_sheet = (
@@ -812,6 +887,27 @@ class TestParseCampaigns(unittest.TestCase):
         event = render_output["campaigns"][0]["events"][0]
         self.assertEqual(event["delivery_hour"], 6)
 
+    def test_ignore_campaign(self):
+        ci_sheet = (
+            "type,sheet_name,new_name,group\n"
+            "create_campaign,my_campaign,,My Group\n"
+            "create_campaign,my_campaign,my_renamed_campaign,My Group\n"
+            "ignore_row,my_campaign,,\n"
+        )
+        my_campaign = (
+            "offset,unit,event_type,delivery_hour,message,relative_to,start_mode,flow\n"
+            "150,D,M,12,Messagetext,Created On,I,\n"
+        )
+        sheet_dict = {
+            "my_campaign": my_campaign,
+        }
+        sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader)
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        self.assertEqual(len(render_output["campaigns"]), 1)
+        self.assertEqual(render_output["campaigns"][0]["name"], "my_renamed_campaign")
+
 
 class TestParseTriggers(unittest.TestCase):
     def test_parse_triggers(self):
@@ -889,6 +985,28 @@ class TestParseTriggers(unittest.TestCase):
         container = ci_parser.parse_all()
         with self.assertRaises(RapidProTriggerError):
             render_output = container.render()
+
+    def test_ignore_triggers(self):
+        ci_sheet = (
+            "type,sheet_name\n"
+            "create_triggers,my_triggers\n"
+            "ignore_row,my_triggers\n"
+        )
+        my_triggers = (
+            "type,keywords,flow,groups,exclude_groups,match_type\n"
+            "K,the word,my_basic_flow,My Group,,\n"
+        )
+        my_basic_flow = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
+        )
+        sheet_reader = MockSheetReader(
+            ci_sheet, {"my_triggers": my_triggers, "my_basic_flow": my_basic_flow}
+        )
+        ci_parser = ContentIndexParser(sheet_reader)
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        self.assertEqual(len(render_output["triggers"]), 0)
 
 
 class TestParseFromFile(TestTemplate):
