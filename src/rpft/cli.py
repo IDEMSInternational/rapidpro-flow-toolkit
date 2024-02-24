@@ -1,7 +1,7 @@
 import argparse
 import json
 
-from rpft.converters import create_flows
+from rpft.converters import create_flows, save_data_sheets
 from rpft.logger.logger import initialize_main_logger
 
 LOGGER = initialize_main_logger()
@@ -9,16 +9,28 @@ LOGGER = initialize_main_logger()
 
 def main():
     args = create_parser().parse_args()
-    flows = create_flows(
-        args.input,
-        None,
-        args.format,
-        data_models=args.datamodels,
-        tags=args.tags,
-    )
+    if args.command == "create_flows":
+        output = create_flows(
+            args.input,
+            None,
+            args.format,
+            data_models=args.datamodels,
+            tags=args.tags,
+        )
+    elif args.command == "save_data_sheets":
+        output = save_data_sheets(
+            args.input,
+            None,
+            args.format,
+            data_models=args.datamodels,
+            tags=args.tags,
+        )
+    else:
+        print("Invalid command.")
+        exit(0)
 
     with open(args.output, "w") as export:
-        json.dump(flows, export, indent=4)
+        json.dump(output, export, indent=4)
 
 
 def create_parser():
@@ -34,9 +46,10 @@ def create_parser():
     )
     parser.add_argument(
         "command",
-        choices=["create_flows"],
+        choices=["create_flows", "save_data_sheets"],
         help=(
             "create_flows: create flows from spreadsheets\n"
+            "save_data_sheets: save data from spreadsheets as json\n"
             "flow_to_sheet: create spreadsheets from flows (not implemented)"
         ),
     )

@@ -24,11 +24,7 @@ def create_flows(input_files, output_file, sheet_format, data_models=None, tags=
     :returns: dict representing the RapidPro import/export format.
     """
 
-    reader = CompositeSheetReader()
-    for input_file in input_files:
-        sub_reader = create_sheet_reader(sheet_format, input_file)
-        reader.add_reader(sub_reader)
-    parser = ContentIndexParser(reader, data_models, TagMatcher(tags))
+    parser = get_content_index_parser(input_files, sheet_format, data_models, tags)
 
     flows = parser.parse_all().render()
 
@@ -37,6 +33,41 @@ def create_flows(input_files, output_file, sheet_format, data_models=None, tags=
             json.dump(flows, export, indent=4)
 
     return flows
+
+
+def save_data_sheets(input_files, output_file, sheet_format, data_models=None, tags=[]):
+    """
+    Save data sheets as JSON.
+
+    Collect the data sheets referenced in the source content index spreadsheet(s) and
+    save this collection in a single JSON file. Returns the output as a dict.
+
+    :param sources: list of source spreadsheets
+    :param output_files: (deprecated) path of file to export output to as JSON
+    :param sheet_format: format of the spreadsheets
+    :param data_models: name of module containing supporting Python data classes
+    :param tags: names of tags to be used to filter the source spreadsheets
+    :returns: dict representing the collection of data sheets.
+    """
+
+    parser = get_content_index_parser(input_files, sheet_format, data_models, tags)
+
+    output = parser.data_sheets_to_dict()
+
+    if output_file:
+        with open(output_file, "w") as export:
+            json.dump(output, export, indent=4)
+
+    return output
+
+
+def get_content_index_parser(input_files, sheet_format, data_models, tags):
+    reader = CompositeSheetReader()
+    for input_file in input_files:
+        sub_reader = create_sheet_reader(sheet_format, input_file)
+        reader.add_reader(sub_reader)
+    parser = ContentIndexParser(reader, data_models, TagMatcher(tags))
+    return parser
 
 
 def create_sheet_reader(sheet_format, input_file):

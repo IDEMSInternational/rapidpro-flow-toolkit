@@ -33,6 +33,15 @@ class DataSheet:
         self.rows = rows
         self.row_model = row_model
 
+    def to_dict(self):
+        rows = []
+        for content in self.rows.values():
+            rows.append(content.dict())
+        return {
+            "model" : self.row_model.__name__,
+            "rows" : rows
+        }
+
 
 class ParserError(Exception):
     pass
@@ -311,6 +320,18 @@ class ContentIndexParser:
                 "For insert_as_block, either both data_sheet and data_row_id "
                 "or neither have to be provided."
             )
+
+    def data_sheets_to_dict(self):
+        sheets = {}
+        for sheet_name, sheet in self.data_sheets.items():
+            sheets[sheet_name] = sheet.to_dict()
+        return {
+            "sheets" : sheets,
+            "meta" : {
+                "user_models_module" : self.user_models_module.__name__,
+                "version" : "0.1.0",
+            }
+        }
 
     def parse_all(self):
         rapidpro_container = RapidProContainer()
