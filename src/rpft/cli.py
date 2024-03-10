@@ -67,7 +67,8 @@ def create_parser():
         "input",
         nargs="+",
         help=(
-            "CSV/XLSX: path to files on local file system\n"
+            "XLSX/JSON: paths to files on local file system\n"
+            "CSV: paths to csv-containing folders on local file system\n"
             "Google Sheets: sheet ID i.e."
             " https://docs.google.com/spreadsheets/d/[ID]/edit"
         ),
@@ -77,7 +78,7 @@ def create_parser():
         "-f",
         "--format",
         required=True,
-        choices=["csv", "google_sheets", "xlsx"],
+        choices=["csv", "google_sheets", "json", "xlsx"],
         help="Input sheet format",
     )
     parser.add_argument(

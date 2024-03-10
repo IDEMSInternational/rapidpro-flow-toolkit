@@ -44,6 +44,17 @@ class CSVSheetReader(AbstractSheetReader):
         }
 
 
+class JSONSheetReader(AbstractSheetReader):
+    def __init__(self, filename):
+        self.name = filename
+        data = load_json(filename)
+        self._sheets = {}
+        for name, content in data["sheets"].items():
+            table = tablib.Dataset()
+            table.dict = content
+            self._sheets[name] = Sheet(reader=self, name=name, table=table)
+
+
 class XLSXSheetReader(AbstractSheetReader):
     def __init__(self, filename):
         self.name = filename
@@ -184,6 +195,12 @@ class CompositeSheetReader:
 def load_csv(path):
     with open(path, mode="r", encoding="utf-8") as csv:
         return tablib.import_set(csv, format="csv")
+
+
+def load_json(path):
+    with open(path, mode="r", encoding="utf-8") as fjson:
+        data = json.load(fjson)
+    return data
 
 
 def pad(row, n):

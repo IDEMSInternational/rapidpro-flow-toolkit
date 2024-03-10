@@ -8,6 +8,7 @@ from rpft.parsers.sheets import (
     AbstractSheetReader,
     CSVSheetReader,
     GoogleSheetReader,
+    JSONSheetReader,
     XLSXSheetReader,
     CompositeSheetReader,
 )
@@ -58,6 +59,8 @@ def create_sheet_reader(sheet_format, input_file):
         sheet_reader = CSVSheetReader(input_file)
     elif sheet_format == "xlsx":
         sheet_reader = XLSXSheetReader(input_file)
+    elif sheet_format == "json":
+        sheet_reader = JSONSheetReader(input_file)
     elif sheet_format == "google_sheets":
         sheet_reader = GoogleSheetReader(input_file)
     else:
@@ -95,7 +98,7 @@ def to_json(reader: AbstractSheetReader) -> str:
         "sheets": {name: sheet.table.dict for name, sheet in reader.sheets.items()},
     }
 
-    return json.dumps(book, ensure_ascii=False, indent=2, sort_keys=True)
+    return json.dumps(book, ensure_ascii=False, indent=2)
 
 
 def prepare_dir(path):
