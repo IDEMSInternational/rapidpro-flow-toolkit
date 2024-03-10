@@ -40,6 +40,19 @@ def create_flows(input_files, output_file, sheet_format, data_models=None, tags=
     return flows
 
 
+def convert_to_json(input_file, sheet_format):
+    """
+    Convert source spreadsheet(s) into json.
+
+    :param input_file: source spreadsheets to convert
+    :param sheet_format: format of the input spreadsheet
+    :returns: content of the input file converted to json.
+    """
+
+    reader = create_sheet_reader(sheet_format, input_file)
+    return to_json(reader)
+
+
 def create_sheet_reader(sheet_format, input_file):
     if sheet_format == "csv":
         sheet_reader = CSVSheetReader(input_file)
@@ -79,10 +92,7 @@ def to_json(reader: AbstractSheetReader) -> str:
         "meta": {
             "version": "0.1.0",
         },
-        "sheets": {
-            name: sheet.table.dict
-            for name, sheet in reader.sheets.items()
-        },
+        "sheets": {name: sheet.table.dict for name, sheet in reader.sheets.items()},
     }
 
     return json.dumps(book, ensure_ascii=False, indent=2, sort_keys=True)

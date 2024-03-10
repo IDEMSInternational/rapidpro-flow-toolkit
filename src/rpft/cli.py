@@ -1,7 +1,7 @@
 import argparse
 import json
 
-from rpft.converters import create_flows
+from rpft import converters
 from rpft.logger.logger import initialize_main_logger
 
 LOGGER = initialize_main_logger()
@@ -9,7 +9,18 @@ LOGGER = initialize_main_logger()
 
 def main():
     args = create_parser().parse_args()
-    flows = create_flows(
+    if args.command == "create_flows":
+        create_flows(args)
+    if args.command == "convert_to_json":
+        convert_to_json(args)
+
+
+def create_flows(args):
+    if len(args.output) != 1:
+        print("create_flows needs exactly one output filename.")
+        return
+
+    flows = converters.create_flows(
         args.input,
         None,
         args.format,
@@ -17,8 +28,19 @@ def main():
         tags=args.tags,
     )
 
-    with open(args.output, "w") as export:
+    with open(args.output[0], "w") as export:
         json.dump(flows, export, indent=4)
+
+
+def convert_to_json(args):
+    if len(args.input) != len(args.output):
+        print("convert_to_json needs exactly one output filename for each input.")
+        return
+
+    for infile, outfile in zip(args.input, args.output):
+        content = converters.convert_to_json(infile, args.format)
+        with open(outfile, "w") as export:
+            export.write(content)
 
 
 def create_parser():
@@ -34,9 +56,10 @@ def create_parser():
     )
     parser.add_argument(
         "command",
-        choices=["create_flows"],
+        choices=["create_flows", "convert_to_json"],
         help=(
             "create_flows: create flows from spreadsheets\n"
+            "convert_to_json: dump each input spreadsheet as json\n"
             "flow_to_sheet: create spreadsheets from flows (not implemented)"
         ),
     )
@@ -49,7 +72,7 @@ def create_parser():
             " https://docs.google.com/spreadsheets/d/[ID]/edit"
         ),
     )
-    parser.add_argument("-o", "--output", required=True, help="Output JSON filename")
+    parser.add_argument("-o", "--output", nargs="+", help="Output JSON filename(s)")
     parser.add_argument(
         "-f",
         "--format",
