@@ -45,13 +45,12 @@ def convert_to_json(input_file, sheet_format):
     """
     Convert source spreadsheet(s) into json.
 
-    :param input_file: source spreadsheets to convert
+    :param input_file: source spreadsheet to convert
     :param sheet_format: format of the input spreadsheet
     :returns: content of the input file converted to json.
     """
 
-    reader = create_sheet_reader(sheet_format, input_file)
-    return to_json(reader)
+    return to_json(create_sheet_reader(sheet_format, input_file))
 
 
 def create_sheet_reader(sheet_format, input_file):
