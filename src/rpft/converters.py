@@ -5,8 +5,10 @@ from pathlib import Path
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import (
+    AbstractSheetReader,
     CSVSheetReader,
     GoogleSheetReader,
+    JSONSheetReader,
     XLSXSheetReader,
     CompositeSheetReader,
 )
@@ -39,11 +41,25 @@ def create_flows(input_files, output_file, sheet_format, data_models=None, tags=
     return flows
 
 
+def convert_to_json(input_file, sheet_format):
+    """
+    Convert source spreadsheet(s) into json.
+
+    :param input_file: source spreadsheet to convert
+    :param sheet_format: format of the input spreadsheet
+    :returns: content of the input file converted to json.
+    """
+
+    return to_json(create_sheet_reader(sheet_format, input_file))
+
+
 def create_sheet_reader(sheet_format, input_file):
     if sheet_format == "csv":
         sheet_reader = CSVSheetReader(input_file)
     elif sheet_format == "xlsx":
         sheet_reader = XLSXSheetReader(input_file)
+    elif sheet_format == "json":
+        sheet_reader = JSONSheetReader(input_file)
     elif sheet_format == "google_sheets":
         sheet_reader = GoogleSheetReader(input_file)
     else:
@@ -71,6 +87,17 @@ def sheet_to_csv(path, sheet_id):
             encoding="utf-8",
         ) as csv_file:
             csv_file.write(sheet.table.export("csv"))
+
+
+def to_json(reader: AbstractSheetReader) -> str:
+    book = {
+        "meta": {
+            "version": "0.1.0",
+        },
+        "sheets": {name: sheet.table.dict for name, sheet in reader.sheets.items()},
+    }
+
+    return json.dumps(book, ensure_ascii=False, indent=2)
 
 
 def prepare_dir(path):
