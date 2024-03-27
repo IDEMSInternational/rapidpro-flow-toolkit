@@ -138,13 +138,14 @@ class ContentIndexParser:
             )
 
     def _process_ignore_row(self, sheet_name):
-        # Remove the flow/template definition row for the given name
+        # Remove the flow definition row for the given name
         self.flow_definition_rows = [
             (logging_prefix, row)
             for logging_prefix, row in self.flow_definition_rows
             if (row.new_name or row.sheet_name[0]) != sheet_name
         ]
-        self.template_sheets.pop(sheet_name, None)
+        # Template definitions are NOT removed, as their existence
+        # has no effect on the output flows.
         # Remove campaign/trigger definitions with the given name
         self.campaign_parsers.pop(sheet_name, None)
         self.trigger_parsers = [

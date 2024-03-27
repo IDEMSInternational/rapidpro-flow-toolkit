@@ -43,11 +43,11 @@ class TestParsing(TestTemplate):
         self.check_basic_template_definition(ci_sheet)
 
     def test_ignore_template_definition(self):
+        # Ensure that ignoring a template row does NOT remove the template
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
             "template_definition,my_template,,,,,\n"
-            "template_definition,my_template2,,,,,\n"
-            "ignore_row,my_template2,,,,,\n"
+            "ignore_row,my_template,,,,,\n"
         )
         self.check_basic_template_definition(ci_sheet)
 
