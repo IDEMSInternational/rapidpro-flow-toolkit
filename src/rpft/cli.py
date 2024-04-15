@@ -28,8 +28,8 @@ def create_flows(args):
 def convert_to_json(args):
     content = converters.convert_to_json(args.input, args.format)
 
-    with open(args.output, "w") as export:
-        export.write(content)
+    with open(args.output, "wb") as export:
+        export.write(bytes(content, "utf-8"))
 
 
 def create_parser():
