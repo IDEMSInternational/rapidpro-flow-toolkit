@@ -107,6 +107,7 @@ class FlowRowModel(ParserModel):
     image: str = ""
     audio: str = ""
     video: str = ""
+    attachments: List[str] = []  # These come after image/audio/video attachments
     obj_name: str = ""  # What is this used for?
     obj_id: str = ""  # This should be a list
     node_name: str = ""  # What is this used for?

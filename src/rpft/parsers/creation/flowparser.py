@@ -457,11 +457,7 @@ class FlowParser:
         if row.type == "send_message":
             templating = None
             if row.wa_template.name:
-                templating = WhatsAppMessageTemplating(
-                    name=row.wa_template.name,
-                    template_uuid=row.wa_template.uuid,
-                    variables=row.wa_template.variables,
-                )
+                templating = WhatsAppMessageTemplating.from_whats_app_templating_model(row.wa_template)
             send_message_action = SendMessageAction(
                 text=row.mainarg_message_text, templating=templating
             )
@@ -472,6 +468,8 @@ class FlowParser:
                 if attachment:
                     # TODO: Add depending on prefix.
                     send_message_action.add_attachment(f"{att_type}:{attachment}")
+            for attachment in row.attachments:
+                send_message_action.add_attachment(attachment)
 
             quick_replies = [qr for qr in row.choices if qr]
             if quick_replies:

@@ -9,6 +9,7 @@ from rpft.rapidpro.models.actions import (
     AddContactGroupAction,
     SetRunResultAction,
     SetContactFieldAction,
+    WhatsAppMessageTemplating,
 )
 from rpft.rapidpro.models.nodes import (
     BasicNode,
@@ -24,8 +25,11 @@ from rpft.parsers.creation.flowrowmodel import (
     Edge,
     Webhook
 )
-from tests.row_data import get_start_row, get_unconditional_node_from_1
-
+from tests.row_data import (
+    get_message_with_templating,
+    get_start_row,
+    get_unconditional_node_from_1,
+)
 
 class TestMangle(unittest.TestCase):
     def test_mangle(self):
@@ -53,6 +57,20 @@ class TestNodes(TestToRowModels):
         node = BasicNode()
         action = SendMessageAction(
             row_data.mainarg_message_text, quick_replies=row_data.choices
+        )
+        node.add_action(action)
+        node.initiate_row_models(1, Edge(from_="start"))
+        row_models = node.get_row_models()
+        self.compare_row_models_without_uuid(row_models, [row_data])
+
+    def test_templating_node(self):
+        row_data = get_message_with_templating()
+        templating = WhatsAppMessageTemplating.from_whats_app_templating_model(row_data.wa_template)
+        node = BasicNode()
+        action = SendMessageAction(
+            row_data.mainarg_message_text,
+            quick_replies=row_data.choices,
+            templating=templating,
         )
         node.add_action(action)
         node.initiate_row_models(1, Edge(from_="start"))

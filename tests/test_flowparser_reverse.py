@@ -26,7 +26,7 @@ class TestFlowParserReverse(unittest.TestCase):
         if model.obj_id and not model_exp.obj_id:
             # If no explicit object UUID was specified, don't compare
             model_dict["obj_id"] = ""
-        for field in ["image", "audio", "video", "obj_name", "node_name", "ui_type"]:
+        for field in ["obj_name", "node_name", "ui_type"]:
             # We ignore these. Attachments need to be rethought,
             # the other of these fields may be removed as well.
             model_dict.pop(field)

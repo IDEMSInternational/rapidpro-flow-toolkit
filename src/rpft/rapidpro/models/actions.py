@@ -78,6 +78,28 @@ class WhatsAppMessageTemplating:
         self.template_uuid = template_uuid
         self.variables = variables
 
+    def from_whats_app_templating_model(model):
+        return WhatsAppMessageTemplating(
+            name=model.name,
+            template_uuid=model.uuid,
+            variables=model.variables,
+        )
+
+    def from_rapid_pro_templating(templating):
+        return WhatsAppMessageTemplating(
+            templating["template"]["name"],
+            templating["template"]["uuid"],
+            templating["variables"],
+            templating["uuid"],
+        )
+
+    def to_whats_app_templating_dict(self):
+        return {
+            "name": self.name,
+            "uuid": self.template_uuid,
+            "variables": self.variables,
+        }
+
     def render(self):
         return {
             "template": {
@@ -108,12 +130,7 @@ class SendMessageAction(Action):
             templating = data_copy.pop("templating")
         super()._assign_fields_from_dict(data_copy)
         if "templating" in data:
-            self.templating = WhatsAppMessageTemplating(
-                templating["template"]["name"],
-                templating["template"]["uuid"],
-                templating["variables"],
-                templating["uuid"],
-            )
+            self.templating = WhatsAppMessageTemplating.from_rapid_pro_templating(templating)
 
     def add_attachment(self, attachment):
         self.attachments.append(attachment)
@@ -124,6 +141,9 @@ class SendMessageAction(Action):
     def main_value(self):
         return self.text
 
+    def _get_attachments(self):
+        return [attachment for attachment in self.attachments if attachment]
+
     def render(self):
         # Can we find a more compact way of invoking the superclass
         # to render the common fields?
@@ -131,9 +151,7 @@ class SendMessageAction(Action):
         render_dict.update(
             {
                 "text": self.text,
-                "attachments": [
-                    attachment for attachment in self.attachments if attachment
-                ],
+                "attachments": self._get_attachments(),
                 "quick_replies": self.quick_replies,
             }
         )
@@ -149,13 +167,35 @@ class SendMessageAction(Action):
         return render_dict
 
     def get_row_model_fields(self):
-        # TODO: image/audio/video. Have to consider: multiple attachments per type?
         # TODO: templating
-        return {
+        attachment_by_type = {}
+        attachments = self._get_attachments()
+        # If there are more than 1 attachment, we cannot encode their
+        # order if we use the image/audio/video column.
+        # Thus we only use these if there is exactly one attachment,
+        # and otherwise we use the general attachment list.
+        if len(attachments) == 1:
+            attachment = attachments[0]
+            for attachment_type in ["image", "audio", "video"]:
+                if attachment.startswith(f"{attachment_type}:"):
+                    attachment_by_type[attachment_type] = attachment[6:]
+                    attachments = []
+                    break
+
+        out_dict = {
             "type": "send_message",
             "mainarg_message_text": self.text,
             "choices": self.quick_replies,
+            "image": attachment_by_type.get("image", ""),
+            "audio": attachment_by_type.get("audio", ""),
+            "video": attachment_by_type.get("video", ""),
+            "attachments": attachments,
         }
+        if hasattr(self, "templating") and self.templating:
+            out_dict.update({
+                "wa_template": WhatsAppMessageTemplating.to_whats_app_templating_dict(self.templating)
+            })
+        return out_dict
 
 
 class SetContactFieldAction(Action):
