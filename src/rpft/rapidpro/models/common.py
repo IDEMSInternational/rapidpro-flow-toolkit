@@ -4,6 +4,12 @@ from rpft.rapidpro.utils import generate_new_uuid
 from rpft.rapidpro.models.exceptions import RapidProActionError
 
 
+def mangle_string(string):
+    string = re.sub(r'[. ]', '_', string)
+    string = re.sub(r'[^A-Za-z0-9\_\-]+', '', string)
+    return string[:15]
+
+
 class Exit:
     def __init__(self, destination_uuid=None, uuid=None):
         self.uuid = uuid if uuid else generate_new_uuid()

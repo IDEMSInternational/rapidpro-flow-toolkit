@@ -16,8 +16,15 @@ from rpft.rapidpro.models.nodes import (
     RandomRouterNode,
     EnterFlowNode,
 )
+from rpft.rapidpro.models.common import mangle_string
 from rpft.parsers.creation.flowrowmodel import FlowRowModel, Edge
 from tests.row_data import get_start_row, get_unconditional_node_from_1
+
+
+class TestMangle(unittest.TestCase):
+    def test_mangle(self):
+        mangled = mangle_string("ab@cd ef_gh-ij1234567")
+        self.assertEqual(mangled, "abcd_ef_gh-ij12")
 
 
 class TestToRowModels(unittest.TestCase):
@@ -99,7 +106,7 @@ class TestFlowContainer(TestToRowModels):
         node.add_action(action)
         container = FlowContainer("test_flow")
         container.add_node(node)
-        row_models = container.to_rows()
+        row_models = container.to_rows(numbered=True)
         self.compare_row_models_without_uuid(row_models, [row_data])
 
     def test_two_basic_nodes(self):
@@ -119,13 +126,13 @@ class TestFlowContainer(TestToRowModels):
         container = FlowContainer("test_flow")
         container.add_node(node1)
         container.add_node(node2)
-        row_models = container.to_rows()
+        row_models = container.to_rows(numbered=True)
         self.compare_row_models_without_uuid(row_models, [row_data1, row_data2])
 
     def test_conditional_edge(self):
         row_data1 = FlowRowModel(
             **{
-                "row_id": "1",
+                "row_id": "switch.fields_name",
                 "type": "split_by_value",
                 "edges": [{"from_": "start"}],
                 "mainarg_expression": "@fields.name",
@@ -133,11 +140,11 @@ class TestFlowContainer(TestToRowModels):
         )
         row_data2 = FlowRowModel(
             **{
-                "row_id": "2",
+                "row_id": "msg.Message_if_fiel",
                 "type": "send_message",
                 "edges": [
                     {
-                        "from_": "1",
+                        "from_": "switch.fields_name",
                         "condition": {
                             "value": "3",
                             "variable": "@fields.name",
@@ -170,7 +177,7 @@ class TestFlowContainer(TestToRowModels):
     def test_conditional_edge2(self):
         row_data1 = FlowRowModel(
             **{
-                "row_id": "1",
+                "row_id": "switch.contact_groups",
                 "type": "split_by_group",
                 "edges": [{"from_": "start"}],
                 "mainarg_groups": ["my group"],
@@ -179,11 +186,11 @@ class TestFlowContainer(TestToRowModels):
         )
         row_data2 = FlowRowModel(
             **{
-                "row_id": "2",
+                "row_id": "set_contact_field.my_variable",
                 "type": "save_value",
                 "edges": [
                     {
-                        "from_": "1",
+                        "from_": "switch.contact_groups",
                         "condition": {"value": "my group"},
                     }
                 ],
@@ -220,7 +227,7 @@ class TestFlowContainer(TestToRowModels):
 
         row_data1 = FlowRowModel(
             **{
-                "row_id": "1",
+                "row_id": "random",
                 "type": "split_random",
                 "edges": [{"from_": "start"}],
             }
@@ -228,15 +235,15 @@ class TestFlowContainer(TestToRowModels):
 
         row_data2 = FlowRowModel(
             **{
-                "row_id": "2",
+                "row_id": "msg.Second_node_mes",
                 "type": "send_message",
                 "edges": [
                     {
-                        "from_": "1",
+                        "from_": "random",
                         "condition": {"value": "1"},
                     },
                     {
-                        "from_": "1",
+                        "from_": "random",
                         "condition": {"value": "2"},
                     },
                 ],
@@ -265,7 +272,7 @@ class TestFlowContainer(TestToRowModels):
 
         row_data1 = FlowRowModel(
             **{
-                "row_id": "1",
+                "row_id": "wait_for.wait_result",
                 "type": "wait_for_response",
                 "save_name": "wait_result",
                 "no_response": "300",
@@ -275,11 +282,11 @@ class TestFlowContainer(TestToRowModels):
         # A proper case
         row_data2 = FlowRowModel(
             **{
-                "row_id": "2",
+                "row_id": "goto.wait_for.wait_result",
                 "type": "go_to",
                 "edges": [
                     {
-                        "from_": "1",
+                        "from_": "wait_for.wait_result",
                         "condition": {
                             "value": "word",
                             "variable": "@input.text",
@@ -288,34 +295,34 @@ class TestFlowContainer(TestToRowModels):
                         },
                     }
                 ],
-                "mainarg_destination_row_ids": ["1"],
+                "mainarg_destination_row_ids": ["wait_for.wait_result"],
             }
         )
         # The 'Other' category
         row_data3 = FlowRowModel(
             **{
-                "row_id": "3",
+                "row_id": "msg.Node_message_te",
                 "type": "send_message",
                 "edges": [
                     {
-                        "from_": "1",
+                        "from_": "wait_for.wait_result",
                     }
                 ],
-                "mainarg_message_text": "Second node message",
+                "mainarg_message_text": "Node message text number 2",
             }
         )
         # The no response category
         row_data4 = FlowRowModel(
             **{
-                "row_id": "4",
+                "row_id": "msg.Node_message_te.1",
                 "type": "send_message",
                 "edges": [
                     {
-                        "from_": "1",
+                        "from_": "wait_for.wait_result",
                         "condition": {"value": "No Response"},
                     }
                 ],
-                "mainarg_message_text": "Third node message",
+                "mainarg_message_text": "Node message text number 3",
             }
         )
 
@@ -353,7 +360,7 @@ class TestFlowContainer(TestToRowModels):
 
         row_data1 = FlowRowModel(
             **{
-                "row_id": "1",
+                "row_id": "flow.sample_flow",
                 "type": "start_new_flow",
                 "mainarg_flow_name": "sample_flow",
                 "obj_id": "8224bfe2-acec-434f-bc7c-14c584fc4bc8",
@@ -363,11 +370,11 @@ class TestFlowContainer(TestToRowModels):
 
         row_data2 = FlowRowModel(
             **{
-                "row_id": "2",
+                "row_id": "set_run_result.my_result",
                 "type": "save_flow_result",
                 "edges": [
                     {
-                        "from_": "1",
+                        "from_": "flow.sample_flow",
                         "condition": {"value": "expired"},
                     }
                 ],

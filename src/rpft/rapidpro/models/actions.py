@@ -1,6 +1,6 @@
 from rpft.rapidpro.utils import generate_new_uuid
 from rpft.rapidpro.models.exceptions import RapidProActionError
-from rpft.rapidpro.models.common import Group, FlowReference, ContactFieldReference
+from rpft.rapidpro.models.common import Group, FlowReference, ContactFieldReference, mangle_string
 
 import copy
 
@@ -49,10 +49,18 @@ class Action:
             "type": self.type,
         }
 
+    def short_name(self):
+        short_type = short_types.get(self.type, self.type)
+        short_value = mangle_string(self.main_value())
+        return f"{short_type}.{short_value}"
+
+    def main_value(self):
+        raise NotImplementedError
+
     def get_row_model_fields(self):
         # This should probably be an abstract method returning a partially
         # instantiated row model.
-        return NotImplementedError
+        raise NotImplementedError
 
 
 class UnclassifiedAction(Action):
@@ -113,6 +121,9 @@ class SendMessageAction(Action):
     def add_quick_reply(self, quick_reply):
         self.quick_replies.append(quick_reply)
 
+    def main_value(self):
+        return self.text
+
     def render(self):
         # Can we find a more compact way of invoking the superclass
         # to render the common fields?
@@ -164,6 +175,9 @@ class SetContactFieldAction(Action):
         data_copy["field"] = ContactFieldReference(**data_copy["field"])
         super()._assign_fields_from_dict(data_copy)
 
+    def main_value(self):
+        return self.field.name
+
     def render(self):
         return {
             "uuid": self.uuid,
@@ -208,6 +222,9 @@ class SetContactPropertyAction(Action):
         self.property = property
         self.value = data_copy.pop(property)
 
+    def main_value(self):
+        return self.property
+
     def render(self):
         return {"uuid": self.uuid, "type": self.type, self.property: self.value}
 
@@ -239,6 +256,9 @@ class GenericGroupAction(Action):
     def assign_global_uuids(self, uuid_dict):
         for group in self.groups:
             group.assign_uuid(uuid_dict)
+
+    def main_value(self):
+        return self.groups[0].name
 
     def render(self):
         return NotImplementedError
@@ -305,6 +325,9 @@ class SetRunResultAction(Action):
                 f" {len(value)}"
             )
 
+    def main_value(self):
+        return self.name
+
     def render(self):
         render_dict = {
             "type": self.type,
@@ -346,6 +369,9 @@ class EnterFlowAction(Action):
     def assign_global_uuids(self, uuid_dict):
         self.flow.assign_uuid(uuid_dict)
 
+    def main_value(self):
+        return self.flow.name
+
     def render(self):
         return {"type": self.type, "uuid": self.uuid, "flow": self.flow.render()}
 
@@ -381,4 +407,10 @@ action_map = {
     "set_run_result": SetRunResultAction,
     "start_session": UnclassifiedAction,
     "transfer_airtime": UnclassifiedAction,
+}
+
+short_types = {
+    "call_webhook": "webhook",
+    "enter_flow": "flow",
+    "send_msg": "msg",
 }

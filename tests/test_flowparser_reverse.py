@@ -44,7 +44,7 @@ class TestFlowParserReverse(unittest.TestCase):
         parser = FlowParser(container, flow_name, table)
         flow = parser.parse()
         container.validate()
-        row_models = flow.to_rows()
+        row_models = flow.to_rows(numbered=True)
         data_rows = parser.sheet_parser.parse_all()
         self.assertEqual(len(row_models), len(data_rows))
         for model, model_exp in zip(row_models, data_rows):
