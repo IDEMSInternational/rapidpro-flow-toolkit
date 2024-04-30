@@ -12,12 +12,18 @@ from rpft.rapidpro.models.actions import (
 )
 from rpft.rapidpro.models.nodes import (
     BasicNode,
+    CallWebhookNode,
     SwitchRouterNode,
     RandomRouterNode,
     EnterFlowNode,
 )
 from rpft.rapidpro.models.common import mangle_string
-from rpft.parsers.creation.flowrowmodel import FlowRowModel, Edge
+from rpft.parsers.creation.flowrowmodel import (
+    convert_webhook_headers,
+    FlowRowModel,
+    Edge,
+    Webhook
+)
 from tests.row_data import get_start_row, get_unconditional_node_from_1
 
 
@@ -107,6 +113,31 @@ class TestFlowContainer(TestToRowModels):
         container = FlowContainer("test_flow")
         container.add_node(node)
         row_models = container.to_rows(numbered=True)
+        self.compare_row_models_without_uuid(row_models, [row_data])
+
+    def test_webhook_node(self):
+        webhook_data = {
+            "url": "the_url",
+            "method": "POST",
+            "body": "payload",
+        }
+        headers = [["header1", "value1"], ["header2", "value2"]]
+        headers_dict = convert_webhook_headers(headers)
+        row_data = FlowRowModel(
+            row_id="webhook.the_url",
+            edges=[{"from_": "start"}],
+            type="call_webhook",
+            webhook=Webhook(headers=headers, **webhook_data),
+        )
+        node = CallWebhookNode(
+            result_name="result name",
+            headers=headers_dict,
+            **webhook_data
+        )
+
+        container = FlowContainer("test_flow")
+        container.add_node(node)
+        row_models = container.to_rows()
         self.compare_row_models_without_uuid(row_models, [row_data])
 
     def test_two_basic_nodes(self):

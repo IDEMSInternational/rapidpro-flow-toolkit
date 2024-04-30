@@ -26,7 +26,9 @@ from rpft.parsers.common.rowparser import RowParser
 from rpft.parsers.creation.flowrowmodel import (
     FlowRowModel,
     Condition,
+    convert_webhook_headers,
     Edge,
+    WebhookError,
 )
 
 from rpft.logger.logger import get_logger, logging_context
@@ -519,21 +521,6 @@ class FlowParser:
             uuid = None
         return Group(name=name, uuid=uuid)
 
-    def _validate_webhook_headers(self, headers):
-        # Dict is not yet supported in the row parser,
-        # so we need to convert a list of pairs into dict.
-        if type(headers) is dict:
-            return headers
-        elif type(headers) is list:
-            if headers == [""]:
-                # Future row parser should return [] instead of [""]
-                return {}
-            if not all(map(lambda x: type(x) is list and len(x) == 2, headers)):
-                LOGGER.critical("Webhook headers must be a list of pairs.")
-            return {k: v for k, v in headers}
-        else:
-            LOGGER.critical("Webhook headers must be a dict.")
-
     def _get_row_node(self, row):
         if (
             row.type in ["add_to_group", "remove_from_group", "split_by_group"]
@@ -575,7 +562,10 @@ class FlowParser:
                 )
             return EnterFlowNode(row.mainarg_flow_name, uuid=node_uuid, ui_pos=ui_pos)
         elif row.type in ["call_webhook"]:
-            headers = self._validate_webhook_headers(row.webhook.headers)
+            try:
+                headers = convert_webhook_headers(row.webhook.headers)
+            except WebhookError as e:
+                LOGGER.critical(str(e))
             return CallWebhookNode(
                 result_name=row.save_name,
                 url=row.webhook.url,

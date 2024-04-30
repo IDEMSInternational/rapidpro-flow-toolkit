@@ -13,10 +13,46 @@ class Condition(ParserModel):
 
 
 class Webhook(ParserModel):
+    # Headers should ideally be a dict, once that is supported
     url: str = ""
     method: str = ""
     headers: list = []
     body: str = ""
+
+
+class WebhookError(Exception):
+    pass
+
+
+def convert_webhook_headers(headers):
+    # Dict is not yet supported in the row parser,
+    # so we need to convert a list of pairs into dict.
+    # This function can be removed once dict support is implemented.
+    if type(headers) is dict:
+        return headers
+    elif type(headers) is list:
+        if headers == [""]:
+            # Future row parser should return [] instead of [""]
+            return {}
+        if not all(map(lambda x: type(x) is list and len(x) == 2, headers)):
+            raise WebhookError("Webhook headers must be a list of pairs.")
+        return {k: v for k, v in headers}
+    else:
+        raise WebhookError("Webhook headers must be a dict.")
+
+
+def unconvert_webhook_headers(headers):
+    # Reverse convert_webhook_headers
+    # This function can be removed once dict support is implemented.
+    if type(headers) is list:
+        return headers
+    elif type(headers) is dict:
+        converted = []
+        for k,v in headers.items():
+            converted.append([k, v])
+        return converted
+    else:
+        raise WebhookError("Webhook headers must be a list/dict.")
 
 
 class WhatsAppTemplating(ParserModel):

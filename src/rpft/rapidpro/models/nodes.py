@@ -1,7 +1,12 @@
 import re
 from abc import ABC, abstractmethod
 
-from rpft.parsers.creation.flowrowmodel import FlowRowModel, Edge
+from rpft.parsers.creation.flowrowmodel import (
+    FlowRowModel,
+    Edge,
+    unconvert_webhook_headers,
+    Webhook
+)
 from rpft.rapidpro.models.actions import Action, EnterFlowAction
 from rpft.rapidpro.models.common import Exit, mangle_string
 from rpft.rapidpro.models.routers import SwitchRouter, RandomRouter
@@ -617,7 +622,8 @@ class CallWebhookNode(BaseNode):
         self.update_default_exit(destination_uuid)
 
     def short_name(self):
-        return self.actions[0].short_name()
+        short_value = mangle_string(self.router.result_name or self.actions[0].url)
+        return f"webhook.{short_value}"
 
     def validate(self):
         pass
@@ -634,8 +640,22 @@ class CallWebhookNode(BaseNode):
         return ui_entry
 
     def initiate_row_models(self, current_row_id, parent_edge):
-        # Webhook is not yet part of the sheet specification
-        raise NotImplementedError
+        self.row_models = [
+            FlowRowModel(
+                row_id=current_row_id,
+                edges=[parent_edge],
+                node_uuid=self.uuid,
+                ui_position=self.ui_pos or [],
+                type="call_webhook",
+                webhook=Webhook(
+                    url=self.actions[0].url,
+                    method=self.actions[0].method,
+                    headers=unconvert_webhook_headers(self.actions[0].headers),
+                    body=self.actions[0].body,
+                ),
+                result_name=self.router.result_name
+            )
+        ]
 
     def get_exit_edge_pairs(self):
         return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)
