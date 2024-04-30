@@ -468,6 +468,7 @@ class FlowParser:
             for att_type, attachment in zip(
                 ["image", "audio", "video"], [row.image, row.audio, row.video]
             ):
+                attachment = attachment.strip()
                 if attachment:
                     # TODO: Add depending on prefix.
                     send_message_action.add_attachment(f"{att_type}:{attachment}")
