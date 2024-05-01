@@ -6,13 +6,24 @@ from rpft.logger.logger import get_logger
 LOGGER = get_logger()
 
 
+class CellParserError(Exception):
+    pass
+
 class CellParser:
     class BooleanWrapper:
         def __init__(self, val=False):
             self.boolean = val
 
+    # Separators by level
+    # Note: split_into_lists currently assumes there are exactly two separators.
+    SEPARATORS = ["|", ";"]
+    ESCAPE_CHARACTER = "\\"
+
     def escape_string(string):
-        return string.replace("\\", "\\\\").replace("|", "\\|").replace(";", "\\;")
+        string = string.replace(CellParser.ESCAPE_CHARACTER, CellParser.ESCAPE_CHARACTER*2)
+        for sep in CellParser.SEPARATORS:
+            string = string.replace(sep, CellParser.ESCAPE_CHARACTER+sep)
+        return string
 
     @contextfilter
     def evaluate_string(context, string):
@@ -29,23 +40,23 @@ class CellParser:
         self.native_env.filters["eval"] = CellParser.evaluate_string
 
     def split_into_lists(self, string):
-        l1 = self.split_by_separator(string, "|")
+        l1 = self.split_by_separator(string, CellParser.SEPARATORS[0])
         if type(l1) is str:
-            output = self.split_by_separator(string, ";")
+            output = self.split_by_separator(string, CellParser.SEPARATORS[1])
         else:
-            output = [self.split_by_separator(s, ";") for s in l1]
+            output = [self.split_by_separator(s, CellParser.SEPARATORS[1]) for s in l1]
         return self.cleanse(output)
 
     def cleanse(self, nested_list):
-        # Unescape escaped characters (\, |, ;)
+        # Unescape escaped characters
+        TEMP_CHARACTER = "\1"
         if type(nested_list) is str:
-            return (
-                nested_list.strip()
-                .replace("\\\\", "\1")
-                .replace("\\|", "|")
-                .replace("\\;", ";")
-                .replace("\1", "\\")
-            )
+            string = nested_list.strip()
+            string = string.replace(CellParser.ESCAPE_CHARACTER*2, TEMP_CHARACTER)
+            for sep in CellParser.SEPARATORS:
+                string = string.replace(CellParser.ESCAPE_CHARACTER+sep, sep)
+            string = string.replace(TEMP_CHARACTER, CellParser.ESCAPE_CHARACTER)
+            return string
         else:
             return [self.cleanse(item) for item in nested_list]
 
@@ -54,7 +65,7 @@ class CellParser:
         sep_locations = []
         while pos < len(string):
             c = string[pos]
-            if c == "\\":
+            if c == CellParser.ESCAPE_CHARACTER:
                 pos += 1
             elif c == sep:
                 sep_locations.append(pos)
@@ -118,3 +129,18 @@ class CellParser:
                 f'Error while parsing cell "{stripped_value}" with context "{context}":'
                 f" {str(e)}"
             )
+
+    def join_from_lists(self, value, depth=0):
+        if type(value) is str:
+            return CellParser.escape_string(value)
+        elif type(value) in [int, bool, float]:
+            return str(value)
+        elif type(value) is list:
+            if depth > len(CellParser.SEPARATORS):
+                raise CellParserError("Error while converting nested list into string: Input list is nested too deeply.")
+            if len(value) == 1:
+                # Trailing separator to distinguish 1-element lists from basic types
+                return self.join_from_lists(value[0], depth=depth+1) + CellParser.SEPARATORS[depth]
+            return CellParser.SEPARATORS[depth].join([self.join_from_lists(e, depth=depth+1) for e in value])
+        else:
+            raise CellParserError("Error while converting nested list into string: Invalid type of list element.")

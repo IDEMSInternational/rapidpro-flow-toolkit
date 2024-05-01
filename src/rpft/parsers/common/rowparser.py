@@ -342,28 +342,55 @@ class RowParser:
         self.output = {k: v for k, v in self.output.items() if v is not None}
         return self.model(**self.output)
 
-    def unparse_row(self, model_instance):
+    def unparse_row(self, model_instance, target_headers=set()):
+        # Config:
+        # List of fields to bottom out at
+        # dict of remapping of headers
         # No nesting/mapping settings here yet. It simply creates a flat dict.
         self.output_dict = OrderedDict()
-        self.unparse_row_recurse(model_instance, "")
+        self.unparse_row_recurse(model_instance, "", target_headers)
         return self.output_dict
 
-    def unparse_row_recurse(self, value, prefix):
+    def unparse_row_recurse(self, value, prefix, target_headers=set()):
         if value is None:
+            # If it is a default instance, also return?
             return
+        if prefix[1:] in target_headers:
+            # If the prefix is one of the target_headers,
+            # return a string representation of the value.
+            value_list = self.to_nested_list(value)
+            value_str = self.cell_parser.join_from_lists(value_list)
+            self.output_dict[prefix[1:]] = value_str
         elif is_basic_instance(value):
-            # We have to remove the leading ':' from the prefix
+            # We have to remove the leading '.' from the prefix
             self.output_dict[prefix[1:]] = value
         elif is_list_instance(value):
             for i, entry in enumerate(value):
                 self.unparse_row_recurse(
-                    entry, f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{i+1}"
+                    entry,
+                    f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{i+1}",
+                    target_headers,
                 )
         elif is_parser_model_instance(value):
             for field, entry in value:
                 mapped_field = type(value).field_name_to_header_name(field)
                 self.unparse_row_recurse(
-                    entry, f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{mapped_field}"
+                    entry,
+                    f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{mapped_field}",
+                    target_headers,
                 )
         else:
             raise ValueError(f"Unsupported field type {type(value)} of {value}.")
+
+    def to_nested_list(self, value):
+        if is_basic_instance(value):
+            return value
+        elif is_list_instance(value):
+            return [to_nested_list(e) for e in value]
+        elif is_parser_model_instance(value):
+            # We're encoding key-value pairs here, which takes a nesting depth of 2.
+            # We could also consider encoding as positional arguments, however,
+            # this is not reversible in the case where there are exactly two values,
+            # and first value coincides with the name of a model attribute.
+            value_dict = value.dict()
+            return [[k, to_nested_list(v)] for k, v in value_dict.items()]

@@ -30,6 +30,10 @@ class TestStringSplitter(unittest.TestCase):
         out = self.parser.split_into_lists(string)
         self.assertEqual(out, exp)
 
+    def compare_join_from_lists(self, string, exp):
+        out = self.parser.join_from_lists(string)
+        self.assertEqual(out, exp)
+
     def test_split_by_separator(self):
         self.compare_split_by_separator("a", "a")
         self.compare_split_by_separator("a|b", ["a", "b"])
@@ -46,30 +50,59 @@ class TestStringSplitter(unittest.TestCase):
         self.compare_cleanse([[["a\\;"]]], [[["a;"]]])
         self.compare_cleanse(["\\\\", "\\;"], ["\\", ";"])
 
+    SPLIT_TESTS = {
+        # Not part of rejoin tests because of non-toplevel separator
+        # or unneccesary trailing separator
+        "1;": ["1"],
+        "1;2": ["1", "2"],
+        "1;2;": ["1", "2"],
+        "1;2;;": ["1", "2", ""],
+        "a|b|": ["a", "b"],
+        "1;2|3;4;": [["1", "2"], ["3", "4"]],
+    }
+
+    REJOIN_TESTS = {
+        # Not part of splitter tests because of non-string types
+        "0": 0,
+        "True": True,
+        "1.0": 1.0,
+        "0|True|1.0": [0, True, 1.0],
+    }
+
+    SPLIT_REJOIN_TESTS = {
+        "1": "1",
+        "a\\|": "a|",
+        "a\\;": "a;",
+        "abc": "abc",
+        "a|b|c": ["a", "b", "c"],
+        "a|b;c": ["a", ["b", "c"]],
+        "a|": ["a"],
+        "a;|": [["a"]],
+        "1;2|": [["1", "2"]],
+        "1;|2;": [["1"], ["2"]],
+        "1;|2": [["1"], "2"],
+        "|a": ["", "a"],
+        "a|b": ["a", "b"],
+        "a|": ["a"],
+        "a|\\;": ["a", ";"],
+        "a|;": ["a", [""]],
+        "1;2|3;4": [["1", "2"], ["3", "4"]],
+        "1;2|3;4\\;": [["1", "2"], ["3", "4;"]],
+        "1;2|3;4\\|": [["1", "2"], ["3", "4|"]],
+        CellParser.escape_string("|;;|\\;\\\\\\|"): "|;;|\\;\\\\\\|",
+    }
+
     def test_split_into_lists(self):
-        self.compare_split_into_lists("1", "1")
-        self.compare_split_into_lists("1;", ["1"])
-        self.compare_split_into_lists("1;2", ["1", "2"])
-        self.compare_split_into_lists("1;2;", ["1", "2"])
-        self.compare_split_into_lists("1;2;;", ["1", "2", ""])
-        self.compare_split_into_lists("1;2|", [["1", "2"]])
-        self.compare_split_into_lists("1;|2;", [["1"], ["2"]])
-        self.compare_split_into_lists("1;|2", [["1"], "2"])
-        self.compare_split_into_lists("|a", ["", "a"])
-        self.compare_split_into_lists("a|b", ["a", "b"])
-        self.compare_split_into_lists("a|b|", ["a", "b"])
-        self.compare_split_into_lists("a|", ["a"])
-        self.compare_split_into_lists("a\\|", "a|")
-        self.compare_split_into_lists("a\\;", "a;")
-        self.compare_split_into_lists("a|\\;", ["a", ";"])
-        self.compare_split_into_lists("a|;", ["a", [""]])
-        self.compare_split_into_lists("1;2|3;4", [["1", "2"], ["3", "4"]])
-        self.compare_split_into_lists("1;2|3;4;", [["1", "2"], ["3", "4"]])
-        self.compare_split_into_lists("1;2|3;4\\;", [["1", "2"], ["3", "4;"]])
-        self.compare_split_into_lists("1;2|3;4\\|", [["1", "2"], ["3", "4|"]])
-        self.compare_split_into_lists(
-            CellParser.escape_string("|;;|\\;\\\\\\|"), "|;;|\\;\\\\\\|"
-        )
+        for inp, outp in TestStringSplitter.SPLIT_TESTS.items():
+            self.compare_split_into_lists(inp, outp)
+        for inp, outp in TestStringSplitter.SPLIT_REJOIN_TESTS.items():
+            self.compare_split_into_lists(inp, outp)
+
+    def test_join_from_lists(self):
+        for outp, inp in TestStringSplitter.REJOIN_TESTS.items():
+            self.compare_join_from_lists(inp, outp)
+        for outp, inp in TestStringSplitter.SPLIT_REJOIN_TESTS.items():
+            self.compare_join_from_lists(inp, outp)
 
     def test_string_stripping(self):
         self.compare_cleanse(" a;\n", "a;")
