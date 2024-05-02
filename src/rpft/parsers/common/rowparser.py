@@ -1,4 +1,4 @@
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 from typing import List
 from pydantic import BaseModel
 from collections.abc import Iterable
@@ -343,11 +343,29 @@ class RowParser:
         return self.model(**self.output)
 
     def unparse_row(self, model_instance, target_headers=set()):
-        # Config:
-        # List of fields to bottom out at
-        # dict of remapping of headers
-        # No nesting/mapping settings here yet. It simply creates a flat dict.
-        self.output_dict = OrderedDict()
+        '''
+        Turn a model instance into spreadsheet row.
+
+        Args:
+            model_instance (ParserModel): model instance to convert
+            target_headers (set[str]): Complex type fields (ParserModels, lists, dicts)
+                whose content should be represented in the output dict as a single
+                entry. A trailing asterisk may be used to specify multiple fields at once,
+                such as `list.*` and `field.*`.
+
+        Returns:
+            A flat dict[str,str] where the keys reference fields of the model
+            and the values string representations of the values of the fields.
+            Keys can also reference subfields, for example, if the model has a
+            field `field` whose type is another model which has a field `subfield`,
+            then `field.subfield` would be a valid key referencing this subfield.
+            Similarly, `list.1` can reference to the first element of a list.
+            By default, all model content is unravelled until the referenced fields
+            are basic types. However, `target_headers` can be used to specify
+            complex type fields (ParserModels, lists, dicts) whose content should be
+            represented as a single string.
+        '''
+        self.output_dict = {}
         self.unparse_row_recurse(model_instance, "", target_headers)
         return self.output_dict
 
@@ -355,15 +373,16 @@ class RowParser:
         if value is None:
             # If it is a default instance, also return?
             return
-        if prefix[1:] in target_headers:
+        # We have to remove the leading '.' from the prefix
+        prefix_sans_dot = prefix[1:]
+        if is_basic_instance(value):
+            self.output_dict[prefix_sans_dot] = value
+        elif prefix and self.matches_target_headers(prefix_sans_dot, target_headers):
             # If the prefix is one of the target_headers,
             # return a string representation of the value.
             value_list = self.to_nested_list(value)
             value_str = self.cell_parser.join_from_lists(value_list)
-            self.output_dict[prefix[1:]] = value_str
-        elif is_basic_instance(value):
-            # We have to remove the leading '.' from the prefix
-            self.output_dict[prefix[1:]] = value
+            self.output_dict[prefix_sans_dot] = value_str
         elif is_list_instance(value):
             for i, entry in enumerate(value):
                 self.unparse_row_recurse(
@@ -382,15 +401,31 @@ class RowParser:
         else:
             raise ValueError(f"Unsupported field type {type(value)} of {value}.")
 
+    def matches_target_headers(self, prefix, target_headers):
+        # We assume that if there is an asterisk, it is at the end of the header.
+        # Examples:
+        #     a.b.field matches a.b.field
+        #     list.1 matches list.1
+        #     list.1 matches list.*
+        #     dict.field matches dict.*
+        # Technically, x.field.subfield matches x.field; however, such a comparison
+        # will never occur in unparse_row_recurse because once x.field is encountered,
+        # the recursion bottoms out (because x.field matches x.field) and does not
+        # proceed to process the x.field.subfield prefix.
+        for header in target_headers:
+            if prefix.startswith(header.replace('*', '')):
+                return True
+        return False
+
     def to_nested_list(self, value):
         if is_basic_instance(value):
             return value
         elif is_list_instance(value):
-            return [to_nested_list(e) for e in value]
+            return [self.to_nested_list(e) for e in value]
         elif is_parser_model_instance(value):
             # We're encoding key-value pairs here, which takes a nesting depth of 2.
             # We could also consider encoding as positional arguments, however,
             # this is not reversible in the case where there are exactly two values,
             # and first value coincides with the name of a model attribute.
-            value_dict = value.dict()
-            return [[k, to_nested_list(v)] for k, v in value_dict.items()]
+            value_dict = dict(value)
+            return [[k, self.to_nested_list(v)] for k, v in value_dict.items()]
