@@ -17,7 +17,7 @@ class MockRowParser:
     def __init__(self):
         self.context = {}
 
-    def unparse_row(self, row):
+    def unparse_row(self, row, target_headers=set(), excluded_headers=set()):
         return row
 
     def parse_row(self, row, template_context):

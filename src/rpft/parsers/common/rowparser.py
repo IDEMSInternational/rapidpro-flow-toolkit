@@ -342,7 +342,7 @@ class RowParser:
         self.output = {k: v for k, v in self.output.items() if v is not None}
         return self.model(**self.output)
 
-    def unparse_row(self, model_instance, target_headers=set()):
+    def unparse_row(self, model_instance, target_headers=set(), excluded_headers=set()):
         '''
         Turn a model instance into spreadsheet row.
 
@@ -350,8 +350,10 @@ class RowParser:
             model_instance (ParserModel): model instance to convert
             target_headers (set[str]): Complex type fields (ParserModels, lists, dicts)
                 whose content should be represented in the output dict as a single
-                entry. A trailing asterisk may be used to specify multiple fields at once,
-                such as `list.*` and `field.*`.
+                entry. A trailing asterisk may be used to specify multiple fields
+                at once, such as `list.*` and `field.*`.
+            excluded_headers (set[str]): Fields to exclude from the output. Same format
+                as target_headers.
 
         Returns:
             A flat dict[str,str] where the keys reference fields of the model
@@ -366,29 +368,37 @@ class RowParser:
             represented as a single string.
         '''
         self.output_dict = {}
-        self.unparse_row_recurse(model_instance, "", target_headers)
+        self.unparse_row_recurse(model_instance, "", target_headers, excluded_headers)
         return self.output_dict
 
-    def unparse_row_recurse(self, value, prefix, target_headers=set()):
+    def unparse_row_recurse(self, value, prefix, target_headers=set(), excluded_headers=set()):
         if value is None:
             # If it is a default instance, also return?
             return
-        # We have to remove the leading '.' from the prefix
-        prefix_sans_dot = prefix[1:]
-        if is_basic_instance(value):
-            self.output_dict[prefix_sans_dot] = value
-        elif prefix and self.matches_target_headers(prefix_sans_dot, target_headers):
-            # If the prefix is one of the target_headers,
-            # return a string representation of the value.
-            value_list = self.to_nested_list(value)
-            value_str = self.cell_parser.join_from_lists(value_list)
-            self.output_dict[prefix_sans_dot] = value_str
-        elif is_list_instance(value):
+
+        if prefix:
+            # We have to remove the leading '.' from the prefix
+            prefix_sans_dot = prefix[1:]
+            if self.matches_headers(prefix_sans_dot, excluded_headers):
+                return
+            if is_basic_instance(value):
+                self.output_dict[prefix_sans_dot] = value
+                return
+            if self.matches_headers(prefix_sans_dot, target_headers):
+                # If the prefix is one of the target_headers,
+                # return a string representation of the value.
+                value_list = self.to_nested_list(value)
+                value_str = self.cell_parser.join_from_lists(value_list)
+                self.output_dict[prefix_sans_dot] = value_str
+                return
+
+        if is_list_instance(value):
             for i, entry in enumerate(value):
                 self.unparse_row_recurse(
                     entry,
                     f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{i+1}",
                     target_headers,
+                    excluded_headers,
                 )
         elif is_parser_model_instance(value):
             for field, entry in value:
@@ -397,11 +407,12 @@ class RowParser:
                     entry,
                     f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{mapped_field}",
                     target_headers,
+                    excluded_headers,
                 )
         else:
             raise ValueError(f"Unsupported field type {type(value)} of {value}.")
 
-    def matches_target_headers(self, prefix, target_headers):
+    def matches_headers(self, prefix, target_headers):
         # We assume that if there is an asterisk, it is at the end of the header.
         # Examples:
         #     a.b.field matches a.b.field

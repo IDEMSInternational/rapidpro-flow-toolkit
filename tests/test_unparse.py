@@ -328,6 +328,18 @@ class TestUnparseToStringDict(unittest.TestCase):
         }
         self.assertEqual(output2, exp2)
 
+    def test_exclude(self):
+        output1 = self.parser.unparse_row(self.metalistinstance, excluded_headers={"model_with_stuff.int_field", "basic_model_list.1"})
+        exp1 = {
+            'basic_model_list.2.int_field': 14,
+            'basic_model_list.2.str_field': 'draw',
+            'model_with_stuff.list_str.1': 'a',
+            'model_with_stuff.list_str.2': 'b',
+            'model_with_stuff.list_str.3': 'c',
+            'model_with_stuff.str_field': 'string',
+        }
+        self.assertEqual(output1, exp1)
+
 
 if __name__ == "__main__":
     unittest.main()
