@@ -2,7 +2,7 @@ import unittest
 from typing import List, Optional
 from collections import OrderedDict
 
-from rpft.parsers.common.rowparser import RowParser, ParserModel
+from rpft.parsers.common.rowparser import RowParser, RowParserError, ParserModel
 from rpft.parsers.common.cellparser import CellParser
 from tests.mocks import MockCellParser
 
@@ -21,14 +21,7 @@ class MainModel(ParserModel):
 
 
 input1 = MainModel()
-
-output1_exp = OrderedDict(
-    [
-        ("str_field", ""),
-        ("model_default.int_field", 0),
-        ("model_default.str_field", ""),
-    ]
-)
+output1_exp = {}
 
 submodel_2_dict = {
     "list_str": ["a", "b", "c"],
@@ -65,7 +58,6 @@ output3_exp = OrderedDict(
     [
         ("str_field", "main model string"),
         ("model_default.int_field", 15),
-        ("model_default.str_field", ""),
     ]
 )
 
@@ -108,10 +100,8 @@ output4_exp = OrderedDict(
         ("model_list.1.list_str.1", "A"),
         ("model_list.1.list_str.2", "B"),
         ("model_list.1.list_str.3", "C"),
-        ("model_list.1.int_field", 0),
         ("model_list.1.str_field", "string from first model in list"),
         ("model_list.2.int_field", 15),
-        ("model_list.2.str_field", ""),
     ]
 )
 
@@ -127,7 +117,7 @@ class ChildModel(ParserModel):
         return field_map.get(field, field)
 
 
-class ModelWithRemap(ParserModel):
+class ModelWithBasicRemap(ParserModel):
     str_field: str = ""
     new_str_field: str = ""
     list_field: List[str] = []
@@ -141,7 +131,7 @@ class ModelWithRemap(ParserModel):
         return field_map.get(field, field)
 
 
-input_remap = ModelWithRemap(
+input_remap = ModelWithBasicRemap(
     **{
         "str_field": "main model string",
         "new_str_field": "new string",
@@ -149,6 +139,7 @@ input_remap = ModelWithRemap(
         "child_field": {"some_field": "some value"},
     }
 )
+
 
 output_remap_exp = OrderedDict(
     [
@@ -161,8 +152,49 @@ output_remap_exp = OrderedDict(
 )
 
 
+class ModelWithClashingRemap(ParserModel):
+    str_field: str = ""
+    list_field: List[str] = []
+
+    def field_name_to_header_name(field):
+        field_map = {
+            "str_field": "new_field",
+            "list_field": "new_field",
+        }
+        return field_map.get(field, field)
+
+
+input_clashing_remap1 = ModelWithClashingRemap(
+    **{
+        "str_field": "string",
+        "list_field": [],
+    }
+)
+
+
+input_clashing_remap2 = ModelWithClashingRemap(
+    **{
+        "str_field": "",
+        "list_field": ["cool", "list"],
+    }
+)
+
+
+input_clashing_remap3 = ModelWithClashingRemap(
+    **{
+        "str_field": "string",
+        "list_field": ["cool", "list"],
+    }
+)
+
+
+output_clashing_remap_exp1 = {"new_field": "string"}
+output_clashing_remap_exp2 = {"new_field": ["cool", "list"]}
+
+
 class TestUnparseWithMockIntoBasicTypes(unittest.TestCase):
     def setUp(self):
+        self.maxDiff = None
         self.parser = RowParser(MainModel, MockCellParser())
 
     def test_input_1(self):
@@ -185,6 +217,18 @@ class TestUnparseWithMockIntoBasicTypes(unittest.TestCase):
         output_remap = self.parser.unparse_row(input_remap)
         self.assertEqual(output_remap, output_remap_exp)
 
+    def test_clashingremap1(self):
+        output_remap = self.parser.unparse_row(input_clashing_remap1)
+        self.assertEqual(output_remap, output_clashing_remap_exp1)
+
+    def test_clashingremap2(self):
+        output_remap = self.parser.unparse_row(input_clashing_remap2, target_headers={"new_field"})
+        self.assertEqual(output_remap, output_clashing_remap_exp2)
+
+    def test_clashingremap3(self):
+        with self.assertRaises(RowParserError):
+            self.parser.unparse_row(input_clashing_remap3, target_headers={"new_field"})
+
 
 class TestToNestedList(unittest.TestCase):
     def setUp(self):
@@ -205,9 +249,7 @@ class TestToNestedList(unittest.TestCase):
         self.compare_to_nested_list([in1], [out1])
         output2 = [
             ["str_field", "main model string"],
-            ['model_optional', None],
             ["model_default", out1],
-            ['model_list', []],
         ]
         self.compare_to_nested_list(input2, output2)
 

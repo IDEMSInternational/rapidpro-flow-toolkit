@@ -12,6 +12,9 @@ class MockCellParser:
     def parse_as_string(self, value, context={}):
         return value
 
+    def join_from_lists(self, nested_list):
+        return nested_list
+
 
 class MockRowParser:
     def __init__(self):

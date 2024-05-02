@@ -4,6 +4,10 @@ from pydantic import BaseModel
 from collections.abc import Iterable
 
 
+class RowParserError(Exception):
+    pass
+
+
 class ParserModel(BaseModel):
     def header_name_to_field_name(header):
         # Given a human-friendly column header name, map it to the
@@ -67,6 +71,12 @@ def is_basic_type(model):
 
 def is_basic_instance(value):
     return isinstance(value, (str, int, float, bool))
+
+
+def is_default_value(model_instance, field, field_value):
+    # Note: In pydantic V2, __fields__ will become model_fields
+    if field_value == type(model_instance).__fields__[field].get_default():
+        return True
 
 
 class RowParser:
@@ -371,6 +381,15 @@ class RowParser:
         self.unparse_row_recurse(model_instance, "", target_headers, excluded_headers)
         return self.output_dict
 
+    def write_to_output_dict(self, prefix, value):
+        if prefix in self.output_dict:
+            old_value = self.output_dict[prefix]
+            raise RowParserError(
+                f'Unparse: Multiple entries ("{old_value}" and "{value}") '
+                f'with same key "{prefix}."'
+            )
+        self.output_dict[prefix] = value
+
     def unparse_row_recurse(self, value, prefix, target_headers=set(), excluded_headers=set()):
         if value is None:
             # If it is a default instance, also return?
@@ -382,14 +401,14 @@ class RowParser:
             if self.matches_headers(prefix_sans_dot, excluded_headers):
                 return
             if is_basic_instance(value):
-                self.output_dict[prefix_sans_dot] = value
+                self.write_to_output_dict(prefix_sans_dot, value)
                 return
             if self.matches_headers(prefix_sans_dot, target_headers):
                 # If the prefix is one of the target_headers,
                 # return a string representation of the value.
                 value_list = self.to_nested_list(value)
                 value_str = self.cell_parser.join_from_lists(value_list)
-                self.output_dict[prefix_sans_dot] = value_str
+                self.write_to_output_dict(prefix_sans_dot, value_str)
                 return
 
         if is_list_instance(value):
@@ -401,10 +420,12 @@ class RowParser:
                     excluded_headers,
                 )
         elif is_parser_model_instance(value):
-            for field, entry in value:
+            for field, field_value in value:
+                if is_default_value(value, field, field_value):
+                    continue
                 mapped_field = type(value).field_name_to_header_name(field)
                 self.unparse_row_recurse(
-                    entry,
+                    field_value,
                     f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{mapped_field}",
                     target_headers,
                     excluded_headers,

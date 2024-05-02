@@ -5,7 +5,11 @@ import tablib
 class RowDataSheet:
     def __init__(self, row_parser, rows, target_headers=set(), excluded_headers=set()):
         """
-        Class to export list of models to spreadsheets.
+        Class to export list of models to spreadsheet.
+
+        Note: If the model supports remapping where multiple fields of different
+        types are mapped to the same column header, that column header needs to
+        be specified in target_headers.
 
         Args:
             rows (list[ParserModel]): a list of RowModel instances
