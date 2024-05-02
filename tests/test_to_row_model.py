@@ -2,6 +2,7 @@ import unittest
 
 from rpft.parsers.common.rowdatasheet import RowDataSheet
 from rpft.parsers.common.rowparser import RowParser
+from rpft.parsers.common.cellparser import CellParser
 from rpft.rapidpro.models.containers import FlowContainer
 from rpft.rapidpro.models.actions import (
     Group,
@@ -480,8 +481,7 @@ class TestRowModelExport(unittest.TestCase):
             "choices.2",
             "choices.3",
             "_nodeId",
-            "_ui_position.1",
-            "_ui_position.2",
+            "_ui_position",
         ]
         expected_content = (
             "1",
@@ -492,11 +492,10 @@ class TestRowModelExport(unittest.TestCase):
             "QR2",
             "QR3",
             "224f6caa-fd25-47d3-96a9-3d43506b7878",
-            "123",
-            "456",
+            "123|456",
         )
 
-        sheet = RowDataSheet(RowParser(FlowRowModel, None), [row_data])
+        sheet = RowDataSheet(RowParser(FlowRowModel, CellParser()), [row_data])
         tablib_sheet = sheet.convert_to_tablib()
         self.assertEqual(tablib_sheet.headers, expected_headers)
         self.assertEqual(tablib_sheet[0], expected_content)

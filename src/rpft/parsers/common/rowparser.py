@@ -381,7 +381,19 @@ class RowParser:
         self.unparse_row_recurse(model_instance, "", target_headers, excluded_headers)
         return self.output_dict
 
+    def trim_prefix(self, prefix):
+        # We have to remove the leading '.' from the prefix, if necessary
+        if prefix.startswith('.'):
+            return prefix[1:]
+        return prefix
+
+    def write_complex_value_to_output_dict(self, prefix, value):
+        value_list = self.to_nested_list(value)
+        value_str = self.cell_parser.join_from_lists(value_list)
+        self.write_to_output_dict(prefix, value_str)
+
     def write_to_output_dict(self, prefix, value):
+        prefix = self.trim_prefix(prefix)
         if prefix in self.output_dict:
             old_value = self.output_dict[prefix]
             raise RowParserError(
@@ -391,27 +403,18 @@ class RowParser:
         self.output_dict[prefix] = value
 
     def unparse_row_recurse(self, value, prefix, target_headers=set(), excluded_headers=set()):
-        if value is None:
-            # If it is a default instance, also return?
+        if value is None or self.matches_headers(prefix, excluded_headers):
             return
 
-        if prefix:
-            # We have to remove the leading '.' from the prefix
-            prefix_sans_dot = prefix[1:]
-            if self.matches_headers(prefix_sans_dot, excluded_headers):
-                return
-            if is_basic_instance(value):
-                self.write_to_output_dict(prefix_sans_dot, value)
-                return
-            if self.matches_headers(prefix_sans_dot, target_headers):
-                # If the prefix is one of the target_headers,
-                # return a string representation of the value.
-                value_list = self.to_nested_list(value)
-                value_str = self.cell_parser.join_from_lists(value_list)
-                self.write_to_output_dict(prefix_sans_dot, value_str)
-                return
-
-        if is_list_instance(value):
+        if is_basic_instance(value):
+            # We do this before matching target headers to ensure
+            # int/float/bool is output as such and not as string.
+            self.write_to_output_dict(prefix, value)
+        elif self.matches_headers(prefix, target_headers):
+            # If the prefix is one of the target_headers,
+            # return a string representation of the value.
+            self.write_complex_value_to_output_dict(prefix, value)
+        elif is_list_instance(value):
             for i, entry in enumerate(value):
                 self.unparse_row_recurse(
                     entry,
@@ -424,9 +427,18 @@ class RowParser:
                 if is_default_value(value, field, field_value):
                     continue
                 mapped_field = type(value).field_name_to_header_name(field)
+                field_prefix = f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{mapped_field}"
+                if field != mapped_field:
+                    # If a remapping occurs, we allow no further recursion.
+                    # We would get inconsistencies where e.g. if we map a list
+                    # and a string to the same key `mapped_field`, the string
+                    # might generate a column `mapped_field` while the list may
+                    # generated columns `mapped_field.1` and `mapped_field.2`.
+                    self.write_complex_value_to_output_dict(field_prefix, field_value)
+                    continue
                 self.unparse_row_recurse(
                     field_value,
-                    f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{mapped_field}",
+                    field_prefix,
                     target_headers,
                     excluded_headers,
                 )
@@ -434,6 +446,9 @@ class RowParser:
             raise ValueError(f"Unsupported field type {type(value)} of {value}.")
 
     def matches_headers(self, prefix, target_headers):
+        if not prefix:
+            return False
+        prefix = self.trim_prefix(prefix)
         # We assume that if there is an asterisk, it is at the end of the header.
         # Examples:
         #     a.b.field matches a.b.field

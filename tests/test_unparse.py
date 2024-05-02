@@ -145,8 +145,7 @@ output_remap_exp = OrderedDict(
     [
         ("str_field", "main model string"),
         ("str_field_2", "new string"),
-        ("cool_list.1", "cool"),
-        ("cool_list.2", "list"),
+        ("cool_list", ["cool", "list"]),
         ("child_field.my_field", "some value"),
     ]
 )
@@ -222,12 +221,12 @@ class TestUnparseWithMockIntoBasicTypes(unittest.TestCase):
         self.assertEqual(output_remap, output_clashing_remap_exp1)
 
     def test_clashingremap2(self):
-        output_remap = self.parser.unparse_row(input_clashing_remap2, target_headers={"new_field"})
+        output_remap = self.parser.unparse_row(input_clashing_remap2)
         self.assertEqual(output_remap, output_clashing_remap_exp2)
 
     def test_clashingremap3(self):
         with self.assertRaises(RowParserError):
-            self.parser.unparse_row(input_clashing_remap3, target_headers={"new_field"})
+            self.parser.unparse_row(input_clashing_remap3)
 
 
 class TestToNestedList(unittest.TestCase):
