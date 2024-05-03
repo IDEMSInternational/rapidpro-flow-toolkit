@@ -11,13 +11,21 @@ rpft --help
 
 # Command Line Interface (CLI)
 
-The CLI allows spreadsheets in various formats to be converted to RapidPro flows in JSON format. Full details of the available options can be found via the help feature:
+The CLI supports three subcommands:
+
+- `create_flows`: create RapidPro flows (in JSON format) from spreadsheets
+- `flows_to_sheets`: convert RapidPro flows (in JSON format) into spreadsheets
+- `convert`: save input spreadsheets as JSON
+
+Full details of the available options for each can be found via the help feature:
 
 ```sh
-rpft --help
+rpft <subcommand> --help
 ```
 
-Below is a concrete example of a valid execution of the command line tool. The line breaks are merely for improving readability; the command would also be valid on a single line.
+## Examples
+
+Below is a concrete example of a valid execution of the command line tool using `create_flows` to convert a set of spreadsheets into RapidPro flows. The line breaks are merely for improving readability; the command would also be valid on a single line.
 
 ```sh
 cd tests/input/example1
@@ -26,6 +34,13 @@ PYTHONPATH=. rpft create_flows \
   --datamodels=nestedmodel \
   --format=csv \
   csv_workbook
+```
+
+The following is an example of the `flows_to_sheets` operation, essentially the reverse of `create_flows`.
+
+```sh
+mkdir output
+rpft flows_to_sheets tests/output/all_test_flows.json output --strip_uuids
 ```
 
 # Using the toolkit in other Python projects
