@@ -1,5 +1,8 @@
 import copy
 
+from rpft.parsers.common.cellparser import CellParser
+from rpft.parsers.common.rowdatasheet import RowDataSheet
+from rpft.parsers.common.rowparser import RowParser
 from rpft.parsers.creation.flowrowmodel import Edge, FlowRowModel
 from rpft.rapidpro.models.actions import Group
 from rpft.rapidpro.models.campaigns import Campaign
@@ -289,6 +292,13 @@ class FlowContainer:
             for edge in row.edges:
                 edge.from_ = temp_row_id_to_row_id[edge.from_]
         return self.rows
+
+    def to_row_data_sheet(self, strip_uuids=False, numbered=False):
+        target_headers = {"edges.*.condition"}
+        excluded_headers = {"obj_id", "_nodeId"} if strip_uuids else {}
+        rows = self.to_rows(numbered)
+        row_parser = RowParser(FlowRowModel, CellParser())
+        return RowDataSheet(row_parser, rows, target_headers, excluded_headers)
 
 
 class UUIDDict:

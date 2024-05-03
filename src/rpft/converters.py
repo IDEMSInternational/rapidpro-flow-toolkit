@@ -1,6 +1,7 @@
 import json
 import shutil
 from pathlib import Path
+import os
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
@@ -12,13 +13,14 @@ from rpft.parsers.sheets import (
     XLSXSheetReader,
     CompositeSheetReader,
 )
+from rpft.rapidpro.models.containers import RapidProContainer
 
 
 def create_flows(input_files, output_file, sheet_format, data_models=None, tags=[]):
     """
     Convert source spreadsheet(s) into RapidPro flows.
 
-    :param sources: list of source spreadsheets to convert
+    :param input_files: list of source spreadsheets to convert
     :param output_files: (deprecated) path of file to export flows to as JSON
     :param sheet_format: format of the spreadsheets
     :param data_models: name of module containing supporting Python data classes
@@ -51,6 +53,29 @@ def convert_to_json(input_file, sheet_format):
     """
 
     return to_json(create_sheet_reader(sheet_format, input_file))
+
+
+def flows_to_sheets(input_file, output_folder, format="csv", strip_uuids=False, numbered=False):
+    """
+    Convert source RapidPro JSON to spreadsheet(s).
+
+    Each flow in the JSON will become a separate output file.
+
+    :param input_file: source JSON file to convert
+    :param output_folder: destination folder for output files
+    :param format: Output file format.
+    :param strip_uuids: Strip all UUIDs from output to allow for comparing outputs.
+    :param numbered: Use sequential numbers instead of short reps for row IDs.
+    :returns: None.
+    """
+    target_headers={}
+    excluded_headers={}
+    with open(input_file, 'r') as f:
+        data = json.load(f)
+    container = RapidProContainer.from_dict(data)
+    for flow in container.flows:
+        rds = flow.to_row_data_sheet(strip_uuids, numbered)
+        rds.export(os.path.join(output_folder, f"{flow.name}.{format}"), format)
 
 
 def create_sheet_reader(sheet_format, input_file):

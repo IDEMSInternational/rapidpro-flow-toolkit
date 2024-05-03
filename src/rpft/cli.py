@@ -32,6 +32,16 @@ def convert_to_json(args):
         export.write(bytes(content, "utf-8"))
 
 
+def flows_to_sheets(args):
+    converters.flows_to_sheets(
+        args.input,
+        args.output,
+        args.format,
+        args.strip_uuids,
+        args.numbered
+    )
+
+
 def create_parser():
     parser = argparse.ArgumentParser(
         description=("create RapidPro flows JSON from spreadsheets"),
@@ -44,6 +54,7 @@ def create_parser():
 
     _add_create_command(sub)
     _add_convert_command(sub)
+    _add_flows_to_sheets_command(sub)
 
     return parser
 
@@ -119,6 +130,39 @@ def _add_convert_command(sub):
     parser.add_argument(
         "output",
         help=("path to output JSON file"),
+    )
+
+
+def _add_flows_to_sheets_command(sub):
+    parser = sub.add_parser("flows_to_sheets", help="convert RapidPro JSON into spreadsheets")
+
+    parser.set_defaults(func=flows_to_sheets)
+    parser.add_argument(
+        '--strip_uuids',
+        action='store_true',
+        help="strip all UUIDs from output to allow for comparing outputs",
+    )
+    parser.add_argument(
+        '--numbered',
+        action='store_true',
+        help="Use sequential numbers instead of short representations for row IDs",
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        choices=["csv", "xlsx"],
+        help="desired sheet format (default: csv)",
+        default="csv"
+    )
+    parser.add_argument(
+        "input",
+        help=(
+            "path to input RapidPro JSON file"
+        ),
+    )
+    parser.add_argument(
+        "output",
+        help=("output folder"),
     )
 
 

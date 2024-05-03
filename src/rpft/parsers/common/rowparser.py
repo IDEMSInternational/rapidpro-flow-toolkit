@@ -1,8 +1,8 @@
+import re
 from collections import defaultdict
 from typing import List
 from pydantic import BaseModel
 from collections.abc import Iterable
-
 
 class RowParserError(Exception):
     pass
@@ -387,12 +387,10 @@ class RowParser:
             return prefix[1:]
         return prefix
 
-    def write_complex_value_to_output_dict(self, prefix, value):
-        value_list = self.to_nested_list(value)
-        value_str = self.cell_parser.join_from_lists(value_list)
-        self.write_to_output_dict(prefix, value_str)
-
     def write_to_output_dict(self, prefix, value):
+        if not is_basic_instance(value):
+            value_list = self.to_nested_list(value)
+            value = self.cell_parser.join_from_lists(value_list)
         prefix = self.trim_prefix(prefix)
         if prefix in self.output_dict:
             old_value = self.output_dict[prefix]
@@ -406,14 +404,8 @@ class RowParser:
         if value is None or self.matches_headers(prefix, excluded_headers):
             return
 
-        if is_basic_instance(value):
-            # We do this before matching target headers to ensure
-            # int/float/bool is output as such and not as string.
+        if is_basic_instance(value) or self.matches_headers(prefix, target_headers):
             self.write_to_output_dict(prefix, value)
-        elif self.matches_headers(prefix, target_headers):
-            # If the prefix is one of the target_headers,
-            # return a string representation of the value.
-            self.write_complex_value_to_output_dict(prefix, value)
         elif is_list_instance(value):
             for i, entry in enumerate(value):
                 self.unparse_row_recurse(
@@ -428,20 +420,22 @@ class RowParser:
                     continue
                 mapped_field = type(value).field_name_to_header_name(field)
                 field_prefix = f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{mapped_field}"
-                if field != mapped_field:
+                if field == mapped_field:
+                    # No remapping happened
+                    self.unparse_row_recurse(
+                        field_value,
+                        field_prefix,
+                        target_headers,
+                        excluded_headers,
+                    )
+                else:
                     # If a remapping occurs, we allow no further recursion.
                     # We would get inconsistencies where e.g. if we map a list
                     # and a string to the same key `mapped_field`, the string
                     # might generate a column `mapped_field` while the list may
                     # generated columns `mapped_field.1` and `mapped_field.2`.
-                    self.write_complex_value_to_output_dict(field_prefix, field_value)
-                    continue
-                self.unparse_row_recurse(
-                    field_value,
-                    field_prefix,
-                    target_headers,
-                    excluded_headers,
-                )
+                    if not self.matches_headers(field_prefix, excluded_headers):
+                        self.write_to_output_dict(field_prefix, field_value)
         else:
             raise ValueError(f"Unsupported field type {type(value)} of {value}.")
 
@@ -449,18 +443,20 @@ class RowParser:
         if not prefix:
             return False
         prefix = self.trim_prefix(prefix)
-        # We assume that if there is an asterisk, it is at the end of the header.
         # Examples:
         #     a.b.field matches a.b.field
         #     list.1 matches list.1
         #     list.1 matches list.*
+        #     list.1.field matches list.*.field
         #     dict.field matches dict.*
         # Technically, x.field.subfield matches x.field; however, such a comparison
         # will never occur in unparse_row_recurse because once x.field is encountered,
         # the recursion bottoms out (because x.field matches x.field) and does not
         # proceed to process the x.field.subfield prefix.
         for header in target_headers:
-            if prefix.startswith(header.replace('*', '')):
+            header_regex = '^' + header.replace('.', '\\.').replace('*', '[^.]+')
+            pattern = re.compile(header_regex)
+            if pattern.match(prefix):
                 return True
         return False
 
@@ -475,4 +471,10 @@ class RowParser:
             # this is not reversible in the case where there are exactly two values,
             # and first value coincides with the name of a model attribute.
             value_dict = dict(value)
+            # Remove default values
+            value_dict = {
+                field: field_value
+                for field, field_value in value_dict.items()
+                if not is_default_value(value, field, field_value)
+            }
             return [[k, self.to_nested_list(v)] for k, v in value_dict.items()]

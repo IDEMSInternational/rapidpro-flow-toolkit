@@ -203,7 +203,10 @@ class RowNodeGroup:
             # For BasicNode, this updates the default exit.
             # For SwitchRouterNode, this updates the exit of the default category.
             # For EnterFlowNode, this should throw an error.
-            exit_node.update_default_exit(destination_uuid)
+            try:
+                exit_node.update_default_exit(destination_uuid)
+            except ValueError as e:
+                LOGGER.critical(str(e))
             return
 
         # Completed/Expired edge from start_new_flow
