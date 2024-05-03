@@ -1,8 +1,10 @@
 import re
 from collections import defaultdict
-from typing import List
-from pydantic import BaseModel
 from collections.abc import Iterable
+from typing import List
+
+from pydantic import BaseModel
+
 
 class RowParserError(Exception):
     pass
@@ -353,7 +355,7 @@ class RowParser:
         return self.model(**self.output)
 
     def unparse_row(self, model_instance, target_headers=set(), excluded_headers=set()):
-        '''
+        """
         Turn a model instance into spreadsheet row.
 
         Args:
@@ -376,14 +378,14 @@ class RowParser:
             are basic types. However, `target_headers` can be used to specify
             complex type fields (ParserModels, lists, dicts) whose content should be
             represented as a single string.
-        '''
+        """
         self.output_dict = {}
         self.unparse_row_recurse(model_instance, "", target_headers, excluded_headers)
         return self.output_dict
 
     def trim_prefix(self, prefix):
         # We have to remove the leading '.' from the prefix, if necessary
-        if prefix.startswith('.'):
+        if prefix.startswith("."):
             return prefix[1:]
         return prefix
 
@@ -400,7 +402,9 @@ class RowParser:
             )
         self.output_dict[prefix] = value
 
-    def unparse_row_recurse(self, value, prefix, target_headers=set(), excluded_headers=set()):
+    def unparse_row_recurse(
+        self, value, prefix, target_headers=set(), excluded_headers=set()
+    ):
         if value is None or self.matches_headers(prefix, excluded_headers):
             return
 
@@ -419,7 +423,9 @@ class RowParser:
                 if is_default_value(value, field, field_value):
                     continue
                 mapped_field = type(value).field_name_to_header_name(field)
-                field_prefix = f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{mapped_field}"
+                field_prefix = (
+                    f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{mapped_field}"
+                )
                 if field == mapped_field:
                     # No remapping happened
                     self.unparse_row_recurse(
@@ -454,7 +460,7 @@ class RowParser:
         # the recursion bottoms out (because x.field matches x.field) and does not
         # proceed to process the x.field.subfield prefix.
         for header in target_headers:
-            header_regex = '^' + header.replace('.', '\\.').replace('*', '[^.]+')
+            header_regex = "^" + header.replace(".", "\\.").replace("*", "[^.]+")
             pattern = re.compile(header_regex)
             if pattern.match(prefix):
                 return True

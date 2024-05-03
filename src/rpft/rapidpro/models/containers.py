@@ -269,7 +269,7 @@ class FlowContainer:
         temp_row_id_to_row_id = {"start": "start"}
         for idx, row in enumerate(self.rows):
             if numbered:
-                new_id = str(idx+1)
+                new_id = str(idx + 1)
             else:
                 # split off the preceding UUID
                 new_base_id = row.row_id.split("|")[1]

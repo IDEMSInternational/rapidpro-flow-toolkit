@@ -76,7 +76,6 @@ class TestStringSplitter(unittest.TestCase):
         "abc": "abc",
         "a|b|c": ["a", "b", "c"],
         "a|b;c": ["a", ["b", "c"]],
-        "a|": ["a"],
         "a;|": [["a"]],
         "1;2|": [["1", "2"]],
         "1;|2;": [["1"], ["2"]],

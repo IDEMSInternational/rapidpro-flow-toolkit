@@ -1,37 +1,36 @@
 from collections import defaultdict
 
+from rpft.logger.logger import get_logger, logging_context
+from rpft.parsers.common.cellparser import CellParser
+from rpft.parsers.common.rowparser import RowParser
+from rpft.parsers.common.sheetparser import SheetParser
+from rpft.parsers.creation.flowrowmodel import (
+    Condition,
+    Edge,
+    FlowRowModel,
+    WebhookError,
+    convert_webhook_headers,
+)
 from rpft.rapidpro.models.actions import (
+    AddContactGroupAction,
+    Group,
+    RemoveContactGroupAction,
     SendMessageAction,
     SetContactFieldAction,
-    AddContactGroupAction,
-    RemoveContactGroupAction,
-    SetRunResultAction,
     SetContactPropertyAction,
-    Group,
+    SetRunResultAction,
     WhatsAppMessageTemplating,
 )
 from rpft.rapidpro.models.containers import FlowContainer
 from rpft.rapidpro.models.exceptions import RapidProActionError
 from rpft.rapidpro.models.nodes import (
     BasicNode,
-    SwitchRouterNode,
-    RandomRouterNode,
-    EnterFlowNode,
     CallWebhookNode,
-)
+    EnterFlowNode,
+    RandomRouterNode,
+    SwitchRouterNode,
+    )
 from rpft.rapidpro.models.routers import SwitchRouter
-from rpft.parsers.common.cellparser import CellParser
-from rpft.parsers.common.sheetparser import SheetParser
-from rpft.parsers.common.rowparser import RowParser
-from rpft.parsers.creation.flowrowmodel import (
-    FlowRowModel,
-    Condition,
-    convert_webhook_headers,
-    Edge,
-    WebhookError,
-)
-
-from rpft.logger.logger import get_logger, logging_context
 
 LOGGER = get_logger()
 
@@ -460,7 +459,9 @@ class FlowParser:
         if row.type == "send_message":
             templating = None
             if row.wa_template.name:
-                templating = WhatsAppMessageTemplating.from_whats_app_templating_model(row.wa_template)
+                templating = WhatsAppMessageTemplating.from_whats_app_templating_model(
+                    row.wa_template
+                )
             send_message_action = SendMessageAction(
                 text=row.mainarg_message_text, templating=templating
             )

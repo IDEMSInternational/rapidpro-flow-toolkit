@@ -1,8 +1,13 @@
-from rpft.rapidpro.utils import generate_new_uuid
-from rpft.rapidpro.models.exceptions import RapidProActionError
-from rpft.rapidpro.models.common import Group, FlowReference, ContactFieldReference, mangle_string
-
 import copy
+
+from rpft.rapidpro.models.common import (
+    ContactFieldReference,
+    FlowReference,
+    Group,
+    mangle_string,
+)
+from rpft.rapidpro.models.exceptions import RapidProActionError
+from rpft.rapidpro.utils import generate_new_uuid
 
 # TODO: Check enter flow
 # Node classification:
@@ -130,7 +135,9 @@ class SendMessageAction(Action):
             templating = data_copy.pop("templating")
         super()._assign_fields_from_dict(data_copy)
         if "templating" in data:
-            self.templating = WhatsAppMessageTemplating.from_rapid_pro_templating(templating)
+            self.templating = WhatsAppMessageTemplating.from_rapid_pro_templating(
+                templating
+            )
 
     def add_attachment(self, attachment):
         self.attachments.append(attachment)
@@ -193,7 +200,9 @@ class SendMessageAction(Action):
         }
         if hasattr(self, "templating") and self.templating:
             out_dict.update({
-                "wa_template": WhatsAppMessageTemplating.to_whats_app_templating_dict(self.templating)
+                "wa_template": WhatsAppMessageTemplating.to_whats_app_templating_dict(
+                    self.templating
+                )
             })
         return out_dict
 

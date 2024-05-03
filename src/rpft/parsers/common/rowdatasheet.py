@@ -53,7 +53,9 @@ class RowDataSheet:
         data = tablib.Dataset()
         data.headers = self._get_headers()
         for row in self.rows:
-            row_dict = self.row_parser.unparse_row(row, self.target_headers, self.excluded_headers)
+            row_dict = self.row_parser.unparse_row(
+                row, self.target_headers, self.excluded_headers
+            )
             data.append([row_dict.get(header, "") for header in data.headers])
         return data
 
@@ -75,7 +77,9 @@ class RowDataSheet:
         # column header B.
         header_graph = nx.DiGraph()
         for row in self.rows:
-            row_dict = self.row_parser.unparse_row(row, self.target_headers, self.excluded_headers)
+            row_dict = self.row_parser.unparse_row(
+                row, self.target_headers, self.excluded_headers
+            )
             k_prev = None
             # For each pair of consecutive headers in this row, add an edge.
             for k, _ in row_dict.items():

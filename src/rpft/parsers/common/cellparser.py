@@ -1,6 +1,6 @@
-from jinja2 import Environment
+from jinja2 import Environment, contextfilter
 from jinja2.nativetypes import NativeEnvironment
-from jinja2 import contextfilter
+
 from rpft.logger.logger import get_logger
 
 LOGGER = get_logger()
@@ -8,6 +8,7 @@ LOGGER = get_logger()
 
 class CellParserError(Exception):
     pass
+
 
 class CellParser:
     class BooleanWrapper:
@@ -20,9 +21,11 @@ class CellParser:
     ESCAPE_CHARACTER = "\\"
 
     def escape_string(string):
-        string = string.replace(CellParser.ESCAPE_CHARACTER, CellParser.ESCAPE_CHARACTER*2)
+        string = string.replace(
+            CellParser.ESCAPE_CHARACTER, CellParser.ESCAPE_CHARACTER * 2
+        )
         for sep in CellParser.SEPARATORS:
-            string = string.replace(sep, CellParser.ESCAPE_CHARACTER+sep)
+            string = string.replace(sep, CellParser.ESCAPE_CHARACTER + sep)
         return string
 
     @contextfilter
@@ -52,9 +55,9 @@ class CellParser:
         TEMP_CHARACTER = "\1"
         if type(nested_list) is str:
             string = nested_list.strip()
-            string = string.replace(CellParser.ESCAPE_CHARACTER*2, TEMP_CHARACTER)
+            string = string.replace(CellParser.ESCAPE_CHARACTER * 2, TEMP_CHARACTER)
             for sep in CellParser.SEPARATORS:
-                string = string.replace(CellParser.ESCAPE_CHARACTER+sep, sep)
+                string = string.replace(CellParser.ESCAPE_CHARACTER + sep, sep)
             string = string.replace(TEMP_CHARACTER, CellParser.ESCAPE_CHARACTER)
             return string
         else:
@@ -81,7 +84,7 @@ class CellParser:
             else:
                 locations = [-1] + sep_locations + [len(string)]
             return [
-                string[locations[i] + 1 : locations[i + 1]]
+                string[locations[i] + 1: locations[i + 1]]
                 for i in range(len(locations) - 1)
             ]
 
@@ -137,10 +140,21 @@ class CellParser:
             return str(value)
         elif type(value) is list:
             if depth > len(CellParser.SEPARATORS):
-                raise CellParserError("Error while converting nested list into string: Input list is nested too deeply.")
+                raise CellParserError(
+                    "Error while converting nested list into string: "
+                    "Input list is nested too deeply."
+                )
             if len(value) == 1:
                 # Trailing separator to distinguish 1-element lists from basic types
-                return self.join_from_lists(value[0], depth=depth+1) + CellParser.SEPARATORS[depth]
-            return CellParser.SEPARATORS[depth].join([self.join_from_lists(e, depth=depth+1) for e in value])
+                return (
+                    self.join_from_lists(value[0], depth=depth + 1)
+                    + CellParser.SEPARATORS[depth]
+                )
+            return CellParser.SEPARATORS[depth].join(
+                [self.join_from_lists(e, depth=depth + 1) for e in value]
+            )
         else:
-            raise CellParserError("Error while converting nested list into string: Invalid type of list element.")
+            raise CellParserError(
+                "Error while converting nested list into string: "
+                "Invalid type of list element."
+            )

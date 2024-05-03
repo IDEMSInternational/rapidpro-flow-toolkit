@@ -1,36 +1,37 @@
 import unittest
 
+from rpft.parsers.common.cellparser import CellParser
 from rpft.parsers.common.rowdatasheet import RowDataSheet
 from rpft.parsers.common.rowparser import RowParser
-from rpft.parsers.common.cellparser import CellParser
-from rpft.rapidpro.models.containers import FlowContainer
+from rpft.parsers.creation.flowrowmodel import (
+    Edge,
+    FlowRowModel,
+    Webhook,
+    convert_webhook_headers
+)
 from rpft.rapidpro.models.actions import (
+    AddContactGroupAction,
     Group,
     SendMessageAction,
-    AddContactGroupAction,
-    SetRunResultAction,
     SetContactFieldAction,
-    WhatsAppMessageTemplating,
+    SetRunResultAction,
+    WhatsAppMessageTemplating
 )
+from rpft.rapidpro.models.common import mangle_string
+from rpft.rapidpro.models.containers import FlowContainer
 from rpft.rapidpro.models.nodes import (
     BasicNode,
     CallWebhookNode,
-    SwitchRouterNode,
-    RandomRouterNode,
     EnterFlowNode,
-)
-from rpft.rapidpro.models.common import mangle_string
-from rpft.parsers.creation.flowrowmodel import (
-    convert_webhook_headers,
-    FlowRowModel,
-    Edge,
-    Webhook
+    RandomRouterNode,
+    SwitchRouterNode
 )
 from tests.row_data import (
     get_message_with_templating,
     get_start_row,
-    get_unconditional_node_from_1,
+    get_unconditional_node_from_1
 )
+
 
 class TestMangle(unittest.TestCase):
     def test_mangle(self):
@@ -66,7 +67,9 @@ class TestNodes(TestToRowModels):
 
     def test_templating_node(self):
         row_data = get_message_with_templating()
-        templating = WhatsAppMessageTemplating.from_whats_app_templating_model(row_data.wa_template)
+        templating = WhatsAppMessageTemplating.from_whats_app_templating_model(
+            row_data.wa_template
+        )
         node = BasicNode()
         action = SendMessageAction(
             row_data.mainarg_message_text,
@@ -149,9 +152,7 @@ class TestFlowContainer(TestToRowModels):
             webhook=Webhook(headers=headers, **webhook_data),
         )
         node = CallWebhookNode(
-            result_name="result name",
-            headers=headers_dict,
-            **webhook_data
+            result_name="result name", headers=headers_dict, **webhook_data
         )
 
         container = FlowContainer("test_flow")

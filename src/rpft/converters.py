@@ -1,17 +1,17 @@
 import json
+import os
 import shutil
 from pathlib import Path
-import os
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import (
     AbstractSheetReader,
+    CompositeSheetReader,
     CSVSheetReader,
     GoogleSheetReader,
     JSONSheetReader,
     XLSXSheetReader,
-    CompositeSheetReader,
 )
 from rpft.rapidpro.models.containers import RapidProContainer
 
@@ -55,7 +55,9 @@ def convert_to_json(input_file, sheet_format):
     return to_json(create_sheet_reader(sheet_format, input_file))
 
 
-def flows_to_sheets(input_file, output_folder, format="csv", strip_uuids=False, numbered=False):
+def flows_to_sheets(
+    input_file, output_folder, format="csv", strip_uuids=False, numbered=False
+):
     """
     Convert source RapidPro JSON to spreadsheet(s).
 
@@ -68,9 +70,7 @@ def flows_to_sheets(input_file, output_folder, format="csv", strip_uuids=False, 
     :param numbered: Use sequential numbers instead of short reps for row IDs.
     :returns: None.
     """
-    target_headers={}
-    excluded_headers={}
-    with open(input_file, 'r') as f:
+    with open(input_file, "r") as f:
         data = json.load(f)
     container = RapidProContainer.from_dict(data)
     for flow in container.flows:

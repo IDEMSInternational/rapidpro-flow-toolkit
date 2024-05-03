@@ -1,12 +1,12 @@
 import re
 
-from rpft.rapidpro.utils import generate_new_uuid
 from rpft.rapidpro.models.exceptions import RapidProActionError
+from rpft.rapidpro.utils import generate_new_uuid
 
 
 def mangle_string(string):
-    string = re.sub(r'[. ]', '_', string)
-    string = re.sub(r'[^A-Za-z0-9\_\-]+', '', string)
+    string = re.sub(r"[. ]", "_", string)
+    string = re.sub(r"[^A-Za-z0-9\_\-]+", "", string)
     return string[:15]
 
 

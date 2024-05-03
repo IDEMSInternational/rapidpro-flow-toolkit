@@ -1,4 +1,5 @@
 from typing import List
+
 from rpft.parsers.common.rowparser import ParserModel
 
 
@@ -48,7 +49,7 @@ def unconvert_webhook_headers(headers):
         return headers
     elif type(headers) is dict:
         converted = []
-        for k,v in headers.items():
+        for k, v in headers.items():
             converted.append([k, v])
         return converted
     else:

@@ -1,9 +1,9 @@
 import unittest
-from typing import List, Optional
 from collections import OrderedDict
+from typing import List, Optional
 
-from rpft.parsers.common.rowparser import RowParser, RowParserError, ParserModel
 from rpft.parsers.common.cellparser import CellParser
+from rpft.parsers.common.rowparser import ParserModel, RowParser, RowParserError
 from tests.mocks import MockCellParser
 
 
@@ -243,7 +243,11 @@ class TestToNestedList(unittest.TestCase):
         self.compare_to_nested_list(["a", "c"], ["a", "c"])
         self.compare_to_nested_list(["a", ["c"]], ["a", ["c"]])
         in1 = ModelWithStuff(**submodel_2_dict)
-        out1 = [["list_str", ["a", "b", "c"]], ["int_field", 5], ["str_field", "string"]]
+        out1 = [
+            ["list_str", ["a", "b", "c"]],
+            ["int_field", 5],
+            ["str_field", "string"],
+        ]
         self.compare_to_nested_list(in1, out1)
         self.compare_to_nested_list([in1], [out1])
         output2 = [
@@ -277,7 +281,7 @@ class TestUnparseToStringDict(unittest.TestCase):
 
         self.metainstance = MetaModel(
             basic_model=ModelWithBasicFields(int_field=42, str_field="word"),
-            string="metaword"
+            string="metaword",
         )
 
         self.metalistinstance = MetaModelList(
@@ -291,93 +295,96 @@ class TestUnparseToStringDict(unittest.TestCase):
     def test_submodel(self):
         output1 = self.parser.unparse_row(self.mws)
         exp1 = {
-            'list_str.1': 'a',
-            'list_str.2': 'b',
-            'list_str.3': 'c',
-            'int_field': 5,
-            'str_field': 'string'
+            "list_str.1": "a",
+            "list_str.2": "b",
+            "list_str.3": "c",
+            "int_field": 5,
+            "str_field": "string",
         }
         self.assertEqual(output1, exp1)
 
         output2 = self.parser.unparse_row(self.mws, target_headers={"list_str"})
-        exp2 = {
-            'list_str': 'a|b|c',
-            'int_field': 5,
-            'str_field': 'string'
-        }
+        exp2 = {"list_str": "a|b|c", "int_field": 5, "str_field": "string"}
         self.assertEqual(output2, exp2)
 
     def test_metamodel(self):
         output1 = self.parser.unparse_row(self.metainstance)
         exp1 = {
-            'basic_model.int_field': 42,
-            'basic_model.str_field': 'word',
-            'string': 'metaword',
+            "basic_model.int_field": 42,
+            "basic_model.str_field": "word",
+            "string": "metaword",
         }
         self.assertEqual(output1, exp1)
-        
-        output2 = self.parser.unparse_row(self.metainstance, target_headers={"basic_model"})
+
+        output2 = self.parser.unparse_row(
+            self.metainstance, target_headers={"basic_model"}
+        )
         exp2 = {
-            'basic_model': 'int_field;42|str_field;word',
-            'string': 'metaword',
+            "basic_model": "int_field;42|str_field;word",
+            "string": "metaword",
         }
         self.assertEqual(output2, exp2)
 
     def test_metamodellist(self):
         output1 = self.parser.unparse_row(self.metalistinstance)
         exp1 = {
-            'basic_model_list.1.int_field': 42,
-            'basic_model_list.1.str_field': 'word',
-            'basic_model_list.2.int_field': 14,
-            'basic_model_list.2.str_field': 'draw',
-            'model_with_stuff.list_str.1': 'a',
-            'model_with_stuff.list_str.2': 'b',
-            'model_with_stuff.list_str.3': 'c',
-            'model_with_stuff.int_field': 5,
-            'model_with_stuff.str_field': 'string',
+            "basic_model_list.1.int_field": 42,
+            "basic_model_list.1.str_field": "word",
+            "basic_model_list.2.int_field": 14,
+            "basic_model_list.2.str_field": "draw",
+            "model_with_stuff.list_str.1": "a",
+            "model_with_stuff.list_str.2": "b",
+            "model_with_stuff.list_str.3": "c",
+            "model_with_stuff.int_field": 5,
+            "model_with_stuff.str_field": "string",
         }
         self.assertEqual(output1, exp1)
-        
-        output2 = self.parser.unparse_row(self.metalistinstance, target_headers={"model_with_stuff.list_str", "basic_model_list.1"})
+
+        output2 = self.parser.unparse_row(
+            self.metalistinstance,
+            target_headers={"model_with_stuff.list_str", "basic_model_list.1"},
+        )
         exp2 = {
-            'basic_model_list.1': 'int_field;42|str_field;word',
-            'basic_model_list.2.int_field': 14,
-            'basic_model_list.2.str_field': 'draw',
-            'model_with_stuff.list_str': 'a|b|c',
-            'model_with_stuff.int_field': 5,
-            'model_with_stuff.str_field': 'string',
+            "basic_model_list.1": "int_field;42|str_field;word",
+            "basic_model_list.2.int_field": 14,
+            "basic_model_list.2.str_field": "draw",
+            "model_with_stuff.list_str": "a|b|c",
+            "model_with_stuff.int_field": 5,
+            "model_with_stuff.str_field": "string",
         }
         self.assertEqual(output2, exp2)
 
     def test_asterisk1(self):
         output2 = self.parser.unparse_row(self.mws, target_headers={"*"})
-        exp2 = {
-            'list_str': 'a|b|c',
-            'int_field': 5,
-            'str_field': 'string'
-        }
+        exp2 = {"list_str": "a|b|c", "int_field": 5, "str_field": "string"}
         self.assertEqual(output2, exp2)
 
-    def test_asterisk2(self):        
-        output2 = self.parser.unparse_row(self.metalistinstance, target_headers={"model_with_stuff.*", "basic_model_list.*"})
+    def test_asterisk2(self):
+        output2 = self.parser.unparse_row(
+            self.metalistinstance,
+            target_headers={"model_with_stuff.*", "basic_model_list.*"},
+        )
         exp2 = {
-            'basic_model_list.1': 'int_field;42|str_field;word',
-            'basic_model_list.2': 'int_field;14|str_field;draw',
-            'model_with_stuff.list_str': 'a|b|c',
-            'model_with_stuff.int_field': 5,
-            'model_with_stuff.str_field': 'string',
+            "basic_model_list.1": "int_field;42|str_field;word",
+            "basic_model_list.2": "int_field;14|str_field;draw",
+            "model_with_stuff.list_str": "a|b|c",
+            "model_with_stuff.int_field": 5,
+            "model_with_stuff.str_field": "string",
         }
         self.assertEqual(output2, exp2)
 
     def test_exclude(self):
-        output1 = self.parser.unparse_row(self.metalistinstance, excluded_headers={"model_with_stuff.int_field", "basic_model_list.1"})
+        output1 = self.parser.unparse_row(
+            self.metalistinstance,
+            excluded_headers={"model_with_stuff.int_field", "basic_model_list.1"},
+        )
         exp1 = {
-            'basic_model_list.2.int_field': 14,
-            'basic_model_list.2.str_field': 'draw',
-            'model_with_stuff.list_str.1': 'a',
-            'model_with_stuff.list_str.2': 'b',
-            'model_with_stuff.list_str.3': 'c',
-            'model_with_stuff.str_field': 'string',
+            "basic_model_list.2.int_field": 14,
+            "basic_model_list.2.str_field": "draw",
+            "model_with_stuff.list_str.1": "a",
+            "model_with_stuff.list_str.2": "b",
+            "model_with_stuff.list_str.3": "c",
+            "model_with_stuff.str_field": "string",
         }
         self.assertEqual(output1, exp1)
 

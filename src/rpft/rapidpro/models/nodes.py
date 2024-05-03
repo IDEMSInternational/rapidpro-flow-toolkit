@@ -2,14 +2,14 @@ import re
 from abc import ABC, abstractmethod
 
 from rpft.parsers.creation.flowrowmodel import (
-    FlowRowModel,
     Edge,
+    FlowRowModel,
+    Webhook,
     unconvert_webhook_headers,
-    Webhook
 )
 from rpft.rapidpro.models.actions import Action, EnterFlowAction
 from rpft.rapidpro.models.common import Exit, mangle_string
-from rpft.rapidpro.models.routers import SwitchRouter, RandomRouter
+from rpft.rapidpro.models.routers import RandomRouter, SwitchRouter
 from rpft.rapidpro.utils import generate_new_uuid
 
 # TODO: EnterFlowNode and WebhookNode are currently children of BaseNode.
@@ -653,7 +653,7 @@ class CallWebhookNode(BaseNode):
                     headers=unconvert_webhook_headers(self.actions[0].headers),
                     body=self.actions[0].body,
                 ),
-                result_name=self.router.result_name
+                result_name=self.router.result_name,
             )
         ]
 
