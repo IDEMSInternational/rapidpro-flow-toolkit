@@ -23,8 +23,11 @@ from rpft.rapidpro.models.routers import SwitchRouter
 from rpft.parsers.common.cellparser import CellParser
 from rpft.parsers.common.sheetparser import SheetParser
 from rpft.parsers.common.rowparser import RowParser
-from rpft.parsers.creation.flowrowmodel import FlowRowModel
-from rpft.parsers.creation.flowrowmodel import Condition
+from rpft.parsers.creation.flowrowmodel import (
+    FlowRowModel,
+    Condition,
+    Edge,
+)
 
 from rpft.logger.logger import get_logger, logging_context
 
@@ -727,8 +730,12 @@ class FlowParser:
         if row_action:
             new_node.add_action(row_action)
 
-        for edge in row.edges:
-            self._add_row_edge(edge, new_node.uuid)
+        for i, edge in enumerate(row.edges):
+            if edge != Edge() or i == 0:
+                # Omit trivial edges (i.e. from is blank so implicitly goes
+                # (from the previous row, and no condition either)
+                # unless it is the first edge in the list.
+                self._add_row_edge(edge, new_node.uuid)
 
         new_node_group = RowNodeGroup(new_node, row.type)
         self.append_node_group(new_node_group, row.row_id)
