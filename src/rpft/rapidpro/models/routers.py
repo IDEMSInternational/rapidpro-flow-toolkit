@@ -335,8 +335,11 @@ class SwitchRouter(BaseRouter):
                         # For groups and expired/complete, var/type/name are implicit
                         condition = Condition(value=case.arguments[arg_idx])
                     else:
+                        value = ""
+                        if case.type not in RouterCase.NO_ARGS_TESTS:
+                            value = case.arguments[arg_idx]
                         condition = Condition(
-                            value=case.arguments[arg_idx],
+                            value=value,
                             variable=self.operand,
                             type=case.type,
                             name=category.name,

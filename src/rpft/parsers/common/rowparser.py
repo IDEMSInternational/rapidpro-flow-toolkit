@@ -1,7 +1,13 @@
-from collections import defaultdict, OrderedDict
-from typing import List
-from pydantic import BaseModel
+import re
+from collections import defaultdict
 from collections.abc import Iterable
+from typing import List
+
+from pydantic import BaseModel
+
+
+class RowParserError(Exception):
+    pass
 
 
 class ParserModel(BaseModel):
@@ -67,6 +73,12 @@ def is_basic_type(model):
 
 def is_basic_instance(value):
     return isinstance(value, (str, int, float, bool))
+
+
+def is_default_value(model_instance, field, field_value):
+    # Note: In pydantic V2, __fields__ will become model_fields
+    if field_value == type(model_instance).__fields__[field].get_default():
+        return True
 
 
 class RowParser:
@@ -342,28 +354,133 @@ class RowParser:
         self.output = {k: v for k, v in self.output.items() if v is not None}
         return self.model(**self.output)
 
-    def unparse_row(self, model_instance):
-        # No nesting/mapping settings here yet. It simply creates a flat dict.
-        self.output_dict = OrderedDict()
-        self.unparse_row_recurse(model_instance, "")
+    def unparse_row(self, model_instance, target_headers=set(), excluded_headers=set()):
+        """
+        Turn a model instance into spreadsheet row.
+
+        Args:
+            model_instance (ParserModel): model instance to convert
+            target_headers (set[str]): Complex type fields (ParserModels, lists, dicts)
+                whose content should be represented in the output dict as a single
+                entry. A trailing asterisk may be used to specify multiple fields
+                at once, such as `list.*` and `field.*`.
+            excluded_headers (set[str]): Fields to exclude from the output. Same format
+                as target_headers.
+
+        Returns:
+            A flat dict[str,str] where the keys reference fields of the model
+            and the values string representations of the values of the fields.
+            Keys can also reference subfields, for example, if the model has a
+            field `field` whose type is another model which has a field `subfield`,
+            then `field.subfield` would be a valid key referencing this subfield.
+            Similarly, `list.1` can reference to the first element of a list.
+            By default, all model content is unravelled until the referenced fields
+            are basic types. However, `target_headers` can be used to specify
+            complex type fields (ParserModels, lists, dicts) whose content should be
+            represented as a single string.
+        """
+        self.output_dict = {}
+        self.unparse_row_recurse(model_instance, "", target_headers, excluded_headers)
         return self.output_dict
 
-    def unparse_row_recurse(self, value, prefix):
-        if value is None:
+    def trim_prefix(self, prefix):
+        # We have to remove the leading '.' from the prefix, if necessary
+        if prefix.startswith("."):
+            return prefix[1:]
+        return prefix
+
+    def write_to_output_dict(self, prefix, value):
+        if not is_basic_instance(value):
+            value_list = self.to_nested_list(value)
+            value = self.cell_parser.join_from_lists(value_list)
+        prefix = self.trim_prefix(prefix)
+        if prefix in self.output_dict:
+            old_value = self.output_dict[prefix]
+            raise RowParserError(
+                f'Unparse: Multiple entries ("{old_value}" and "{value}") '
+                f'with same key "{prefix}."'
+            )
+        self.output_dict[prefix] = value
+
+    def unparse_row_recurse(
+        self, value, prefix, target_headers=set(), excluded_headers=set()
+    ):
+        if value is None or self.matches_headers(prefix, excluded_headers):
             return
-        elif is_basic_instance(value):
-            # We have to remove the leading ':' from the prefix
-            self.output_dict[prefix[1:]] = value
+
+        if is_basic_instance(value) or self.matches_headers(prefix, target_headers):
+            self.write_to_output_dict(prefix, value)
         elif is_list_instance(value):
             for i, entry in enumerate(value):
                 self.unparse_row_recurse(
-                    entry, f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{i+1}"
+                    entry,
+                    f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{i+1}",
+                    target_headers,
+                    excluded_headers,
                 )
         elif is_parser_model_instance(value):
-            for field, entry in value:
+            for field, field_value in value:
+                if is_default_value(value, field, field_value):
+                    continue
                 mapped_field = type(value).field_name_to_header_name(field)
-                self.unparse_row_recurse(
-                    entry, f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{mapped_field}"
+                field_prefix = (
+                    f"{prefix}{RowParser.HEADER_FIELD_SEPARATOR}{mapped_field}"
                 )
+                if field == mapped_field:
+                    # No remapping happened
+                    self.unparse_row_recurse(
+                        field_value,
+                        field_prefix,
+                        target_headers,
+                        excluded_headers,
+                    )
+                else:
+                    # If a remapping occurs, we allow no further recursion.
+                    # We would get inconsistencies where e.g. if we map a list
+                    # and a string to the same key `mapped_field`, the string
+                    # might generate a column `mapped_field` while the list may
+                    # generated columns `mapped_field.1` and `mapped_field.2`.
+                    if not self.matches_headers(field_prefix, excluded_headers):
+                        self.write_to_output_dict(field_prefix, field_value)
         else:
             raise ValueError(f"Unsupported field type {type(value)} of {value}.")
+
+    def matches_headers(self, prefix, target_headers):
+        if not prefix:
+            return False
+        prefix = self.trim_prefix(prefix)
+        # Examples:
+        #     a.b.field matches a.b.field
+        #     list.1 matches list.1
+        #     list.1 matches list.*
+        #     list.1.field matches list.*.field
+        #     dict.field matches dict.*
+        # Technically, x.field.subfield matches x.field; however, such a comparison
+        # will never occur in unparse_row_recurse because once x.field is encountered,
+        # the recursion bottoms out (because x.field matches x.field) and does not
+        # proceed to process the x.field.subfield prefix.
+        for header in target_headers:
+            header_regex = "^" + header.replace(".", "\\.").replace("*", "[^.]+")
+            pattern = re.compile(header_regex)
+            if pattern.match(prefix):
+                return True
+        return False
+
+    def to_nested_list(self, value):
+        if is_basic_instance(value):
+            return value
+        elif is_list_instance(value):
+            return [self.to_nested_list(e) for e in value]
+        elif is_parser_model_instance(value):
+            # We're encoding key-value pairs here, which takes a nesting depth of 2.
+            # We could also consider encoding as positional arguments, however,
+            # this is not reversible in the case where there are exactly two values,
+            # and first value coincides with the name of a model attribute.
+            value_dict = dict(value)
+            # Remove default values
+            value_dict = {
+                field: field_value
+                for field, field_value in value_dict.items()
+                if not is_default_value(value, field, field_value)
+            }
+            return [[k, self.to_nested_list(v)] for k, v in value_dict.items()]

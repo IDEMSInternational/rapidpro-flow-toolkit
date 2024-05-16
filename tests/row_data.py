@@ -13,7 +13,8 @@ def get_start_row():
 
 def get_message_with_templating():
     return FlowRowModel(
-        edges=[{"from_": ""}],
+        row_id="1",
+        edges=[{"from_": "start"}],
         type="send_message",
         mainarg_message_text="Default text of message",
         wa_template={

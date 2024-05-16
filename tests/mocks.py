@@ -1,4 +1,5 @@
 import copy
+
 import tablib
 
 from rpft.parsers.common.sheetparser import SheetParser
@@ -12,12 +13,15 @@ class MockCellParser:
     def parse_as_string(self, value, context={}):
         return value
 
+    def join_from_lists(self, nested_list):
+        return nested_list
+
 
 class MockRowParser:
     def __init__(self):
         self.context = {}
 
-    def unparse_row(self, row):
+    def unparse_row(self, row, target_headers=set(), excluded_headers=set()):
         return row
 
     def parse_row(self, row, template_context):

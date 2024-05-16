@@ -1,10 +1,15 @@
 import re
 from abc import ABC, abstractmethod
 
-from rpft.parsers.creation.flowrowmodel import FlowRowModel, Edge
+from rpft.parsers.creation.flowrowmodel import (
+    Edge,
+    FlowRowModel,
+    Webhook,
+    unconvert_webhook_headers,
+)
 from rpft.rapidpro.models.actions import Action, EnterFlowAction
-from rpft.rapidpro.models.common import Exit
-from rpft.rapidpro.models.routers import SwitchRouter, RandomRouter
+from rpft.rapidpro.models.common import Exit, mangle_string
+from rpft.rapidpro.models.routers import RandomRouter, SwitchRouter
 from rpft.rapidpro.utils import generate_new_uuid
 
 # TODO: EnterFlowNode and WebhookNode are currently children of BaseNode.
@@ -140,6 +145,10 @@ class BaseNode(ABC):
         self.row_models[0].edges.insert(0, edge)
 
     @abstractmethod
+    def short_name(self):
+        pass
+
+    @abstractmethod
     def initiate_row_models(self, node_row_id, parent_edge, **kwargs):
         self.row_models = []
         if self.actions:
@@ -184,6 +193,9 @@ class BasicNode(BaseNode):
     def _add_exit(self, exit):
         raise NotImplementedError
 
+    def short_name(self):
+        return self.actions[0].short_name()
+
     def validate(self):
         if not self.has_basic_exit:
             raise ValueError("has_basic_exit must be True for BasicNode")
@@ -224,6 +236,13 @@ class SwitchRouterNode(BaseNode):
         exits = [Exit.from_dict(exit_data) for exit_data in data["exits"]]
         router = SwitchRouter.from_dict(data["router"], exits)
         return SwitchRouterNode(uuid=data["uuid"], router=router)
+
+    def short_name(self):
+        short_value = mangle_string(self.router.result_name or self.router.operand)
+        if self.router.wait_timeout:
+            return f"wait_for.{short_value}"
+        else:
+            return f"switch.{short_value}"
 
     def add_choice(self, *args, **kwargs):
         self.router.add_choice(*args, **kwargs)
@@ -371,6 +390,13 @@ class RandomRouterNode(BaseNode):
         router = RandomRouter.from_dict(data["router"], exits)
         return RandomRouterNode(uuid=data["uuid"], router=router)
 
+    def short_name(self):
+        if self.router.result_name:
+            short_value = mangle_string(self.router.result_name)
+            return f"random.{short_value}"
+        else:
+            return "random"
+
     def add_choice(self, *args, **kwargs):
         self.router.add_choice(*args, **kwargs)
 
@@ -461,6 +487,9 @@ class EnterFlowNode(BaseNode):
         if len(actions) != 1:
             raise ValueError("EnterFlowNode node must have exactly one action")
         return EnterFlowNode(uuid=data["uuid"], router=router, action=actions[0])
+
+    def short_name(self):
+        return self.actions[0].short_name()
 
     def add_choice(self, *args, **kwargs):
         # TODO: validate the input
@@ -592,6 +621,10 @@ class CallWebhookNode(BaseNode):
     def update_failure_exit(self, destination_uuid):
         self.update_default_exit(destination_uuid)
 
+    def short_name(self):
+        short_value = mangle_string(self.router.result_name or self.actions[0].url)
+        return f"webhook.{short_value}"
+
     def validate(self):
         pass
 
@@ -607,8 +640,22 @@ class CallWebhookNode(BaseNode):
         return ui_entry
 
     def initiate_row_models(self, current_row_id, parent_edge):
-        # Webhook is not yet part of the sheet specification
-        raise NotImplementedError
+        self.row_models = [
+            FlowRowModel(
+                row_id=current_row_id,
+                edges=[parent_edge],
+                node_uuid=self.uuid,
+                ui_position=self.ui_pos or [],
+                type="call_webhook",
+                webhook=Webhook(
+                    url=self.actions[0].url,
+                    method=self.actions[0].method,
+                    headers=unconvert_webhook_headers(self.actions[0].headers),
+                    body=self.actions[0].body,
+                ),
+                result_name=self.router.result_name,
+            )
+        ]
 
     def get_exit_edge_pairs(self):
         return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)
