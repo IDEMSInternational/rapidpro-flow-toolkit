@@ -253,6 +253,8 @@ class FlowContainer:
         self.rows = node.get_row_models() + self.rows
 
     def to_rows(self, numbered=False):
+        if not self.nodes:
+            return []
         # TODO: We might want to have a dedicated model for a list of rows
         # that can also contain metadata, used for generating a sheet.
         # TODO: These attributes pollute the namespace of the class,

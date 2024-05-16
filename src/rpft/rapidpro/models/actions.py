@@ -36,7 +36,7 @@ class Action:
         return action
 
     def _assign_fields_from_dict(self, data):
-        self.__dict__ = data
+        self.__dict__ = copy.deepcopy(data)
 
     def __init__(self, type):
         self.uuid = generate_new_uuid()
@@ -377,6 +377,13 @@ class SetRunResultAction(Action):
     def main_value(self):
         return self.name
 
+    def _assign_fields_from_dict(self, data):
+        assert "name" in data
+        assert "value" in data
+        super()._assign_fields_from_dict(data)
+        if not "category" in data:
+            self.category = ""
+
     def render(self):
         render_dict = {
             "type": self.type,
@@ -393,12 +400,18 @@ class SetRunResultAction(Action):
         return render_dict
 
     def get_row_model_fields(self):
-        return {
+        output_dict = {
             "type": "save_flow_result",
             "mainarg_value": self.value,
             "save_name": self.name,
-            "result_category": self.category,
         }
+        if self.category:
+            output_dict.update(
+                {
+                    "result_category": self.category,
+                }
+            )
+        return output_dict
 
 
 class EnterFlowAction(Action):
