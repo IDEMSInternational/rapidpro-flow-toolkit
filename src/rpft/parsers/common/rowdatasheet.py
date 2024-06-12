@@ -39,7 +39,7 @@ class RowDataSheet:
         data = self.convert_to_tablib()
         exported_data = data.export(file_format)
         write_type = "w" if type(exported_data) is str else "wb"
-        with open(filename, write_type, encoding='utf-8') as f:
+        with open(filename, write_type, encoding='utf-8') if write_type == "w" else open(filename, write_type) as f:
             f.write(exported_data)
 
     def convert_to_tablib(self):
