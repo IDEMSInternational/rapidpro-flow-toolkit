@@ -70,7 +70,7 @@ def flows_to_sheets(
     :param numbered: Use sequential numbers instead of short reps for row IDs.
     :returns: None.
     """
-    with open(input_file, "r") as f:
+    with open(input_file, "r",encoding='utf-8') as f:
         data = json.load(f)
     container = RapidProContainer.from_dict(data)
     for flow in container.flows:
