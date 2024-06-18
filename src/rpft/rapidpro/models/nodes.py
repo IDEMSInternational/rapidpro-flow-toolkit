@@ -8,7 +8,7 @@ from rpft.parsers.creation.flowrowmodel import (
     dict_to_list_of_pairs,
 )
 from rpft.rapidpro.models.actions import Action, EnterFlowAction, TransferAirtimeAction
-from rpft.rapidpro.models.common import Exit, mangle_string
+from rpft.rapidpro.models.common import Exit, generate_field_key, mangle_string
 from rpft.rapidpro.models.routers import RandomRouter, SwitchRouter
 from rpft.rapidpro.utils import generate_new_uuid
 
@@ -678,13 +678,14 @@ class TransferAirtimeNode(RouterNode):
         if router:
             self.router = router
         else:
+            result_field = generate_field_key(result_name)
             self.router = SwitchRouter(
-                operand=f"@results.{result_name}",
+                operand=f"@results.{result_field}",
             )
             self.router.default_category.update_name("Failure")
 
             self.add_choice(
-                comparison_variable=f"@results.{result_name}",
+                comparison_variable=f"@results.{result_field}",
                 comparison_type="has_category",
                 comparison_arguments=["Success"],
                 category_name="Success",
