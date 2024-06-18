@@ -13,6 +13,7 @@ from rpft.parsers.creation.flowrowmodel import (
 )
 from rpft.rapidpro.models.actions import (
     AddContactGroupAction,
+    AddContactURNAction,
     Group,
     RemoveContactGroupAction,
     SendMessageAction,
@@ -489,6 +490,11 @@ class FlowParser:
             group = self._get_or_create_group(row.mainarg_groups[0], row.obj_id)
             add_group_action = AddContactGroupAction(groups=[group])
             return add_group_action
+        elif row.type == "add_contact_urn":
+            return AddContactURNAction(
+                path=row.mainarg_value,
+                scheme=row.urn_scheme or 'tel',
+            )
         elif row.type == "remove_from_group":
             group = self._get_or_create_group(row.mainarg_groups[0], row.obj_id)
             remove_group_action = RemoveContactGroupAction(groups=[group])

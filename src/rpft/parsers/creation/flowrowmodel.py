@@ -109,6 +109,7 @@ class FlowRowModel(ParserModel):
     audio: str = ""
     video: str = ""
     attachments: List[str] = []  # These come after image/audio/video attachments
+    urn_scheme: str = ""
     obj_name: str = ""  # What is this used for?
     obj_id: str = ""  # This should be a list
     node_name: str = ""  # What is this used for?
@@ -164,6 +165,7 @@ class FlowRowModel(ParserModel):
             "remove_from_group": "mainarg_groups",
             "save_flow_result": "mainarg_value",
             "wait_for_response": "mainarg_none",
+            "add_contact_urn": "mainarg_value",
             "set_contact_language": "mainarg_value",
             "set_contact_name": "mainarg_value",
             "set_contact_status": "mainarg_value",

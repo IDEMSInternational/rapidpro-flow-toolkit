@@ -155,6 +155,23 @@
           "exits": [
             {
               "uuid": "6d7c4c09-366c-41cf-a0ef-ce0ec45c8f4a",
+              "destination_uuid": "768afc12-93e8-4cf8-9cdc-c92cce36c365"
+            }
+          ]
+        },
+        {
+          "uuid": "768afc12-93e8-4cf8-9cdc-c92cce36c365",
+          "actions": [
+            {
+                "type": "add_contact_urn",
+                "uuid": "5ae58ed1-e130-4841-a459-0cc7aa76b5be",
+                "scheme": "tel",
+                "path": "@results.internation_phone_number"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "51548997-3f36-487d-9498-b48e33907b49",
               "destination_uuid": null
             }
           ]

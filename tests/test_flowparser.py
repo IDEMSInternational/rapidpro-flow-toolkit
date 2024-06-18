@@ -163,16 +163,16 @@ class TestParsing(unittest.TestCase):
         # Check that node UUIDs are maintained
         nodes = render_output["nodes"]
         actual_node_uuids = [node["uuid"] for node in nodes]
-        expected_node_uuids = [row.node_uuid for row in self.rows][
-            3:-1
-        ]  # The first 4 and last 2 rows are actions joined into a single node.
+        all_node_uuids = [row.node_uuid for row in self.rows]
+        # Rows 0,1,2,3 and rows -3,-2 are actions joined into a single node.
+        expected_node_uuids = all_node_uuids[3:-2] + all_node_uuids[-1:]
         self.assertEqual(expected_node_uuids, actual_node_uuids)
 
         self.assertEqual(render_output["name"], "no_switch_node")
         self.assertEqual(render_output["type"], "messaging")
         self.assertEqual(render_output["language"], "eng")
 
-        self.assertEqual(len(render_output["nodes"]), 6)
+        self.assertEqual(len(render_output["nodes"]), 7)
 
         node_0 = render_output["nodes"][0]
         node_0_actions = node_0["actions"]
@@ -251,13 +251,16 @@ class TestParsing(unittest.TestCase):
 
         node_5 = render_output["nodes"][5]
         self.assertEqual(node_4["exits"][0]["destination_uuid"], node_5["uuid"])
-        self.assertIsNone(node_5["exits"][0]["destination_uuid"])
         node_5_actions = node_5["actions"]
         self.assertEqual(len(node_5_actions), 2)
         self.assertEqual(node_5_actions[0]["type"], "set_contact_language")
         self.assertEqual(node_5_actions[0]["language"], "eng")
         self.assertEqual(node_5_actions[1]["type"], "set_contact_name")
         self.assertEqual(node_5_actions[1]["name"], "John Doe")
+
+        node_6 = render_output["nodes"][6]
+        self.assertEqual(node_5["exits"][0]["destination_uuid"], node_6["uuid"])
+        self.assertIsNone(node_6["exits"][0]["destination_uuid"])
 
         # Check UI positions/types of the first two nodes
         render_ui = render_output["_ui"]["nodes"]
