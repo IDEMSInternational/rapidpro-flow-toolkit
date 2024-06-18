@@ -285,7 +285,7 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(expected_node_uuids, actual_node_uuids)
 
         # Check that No Response category is created even if not connected
-        last_wait_node = nodes[-2]
+        last_wait_node = nodes[12]
         self.assertEqual(
             "No Response", last_wait_node["router"]["categories"][-1]["name"]
         )
@@ -312,8 +312,8 @@ class TestParsing(unittest.TestCase):
         self.assertIn(f_uuid(0), render_ui)
         self.assertEqual((340, 0), f_uipos(0))
         self.assertEqual((360, 180), f_uipos(1))
-        self.assertEqual((840, 1200), f_uipos(-2))
-        self.assertEqual((740, 300), f_uipos(-1))
+        self.assertEqual((840, 1200), f_uipos(12))
+        self.assertEqual((740, 300), f_uipos(13))
         self.assertEqual("wait_for_response", f_uitype(0))
         self.assertEqual("split_by_subflow", f_uitype(1))
         self.assertEqual("split_by_expression", f_uitype(2))
@@ -324,7 +324,7 @@ class TestParsing(unittest.TestCase):
         self.assertEqual("split_by_random", f_uitype(7))
         self.assertEqual("execute_actions", f_uitype(8))
         self.assertEqual("execute_actions", f_uitype(9))
-        self.assertEqual("wait_for_response", f_uitype(-2))
+        self.assertEqual("wait_for_response", f_uitype(12))
 
         # Ensure that wait_for_response cases are working as intended
         node6 = render_output["nodes"][6]

@@ -8,6 +8,7 @@ from rpft.rapidpro.models.common import (
 )
 from rpft.rapidpro.models.exceptions import RapidProActionError
 from rpft.rapidpro.utils import generate_new_uuid
+from rpft.parsers.creation.flowrowmodel import dict_to_list_of_pairs
 
 # TODO: Check enter flow
 # Node classification:
@@ -90,6 +91,24 @@ class AddContactURNAction(DefaultRenderedAction):
             "type": self.type,
             "mainarg_value": self.path,
             "urn_scheme": self.scheme if self.scheme != "tel" else "",
+        }
+
+
+class TransferAirtimeAction(DefaultRenderedAction):
+    def __init__(self, **kwargs):
+        assert "amounts" in kwargs
+        super().__init__("transfer_airtime", **kwargs)
+
+    def main_value(self):
+        return self.amounts
+
+    def get_row_model_fields(self):
+        amounts = {k : str(v) for k, v in self.amounts.items()}
+        amounts = dict_to_list_of_pairs(amounts)
+        return {
+            "type": self.type,
+            "mainarg_dict": amounts,
+            "save_name": self.result_name,
         }
 
 
@@ -485,7 +504,7 @@ action_map = {
     "set_contact_timezone": SetContactPropertyAction,
     "set_run_result": SetRunResultAction,
     "start_session": DefaultRenderedAction,
-    "transfer_airtime": DefaultRenderedAction,
+    "transfer_airtime": TransferAirtimeAction,
 }
 
 short_types = {

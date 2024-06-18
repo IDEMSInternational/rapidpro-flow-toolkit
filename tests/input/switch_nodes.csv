@@ -13,3 +13,6 @@
 12,"send_message","7","No Response",,,,,"no response message",,,,,,,,,,,,,,,"ba443bbb-00a7-4bdd-8de1-d783ade863d5",,"execute_actions","840;1060"
 13,"wait_for_response","12",,,,,,,,,,,,,,,,,,,,,"e0a3e4e8-66bf-41b6-9a4e-a9d473e6d3b7",84600,"wait_for_response","840;1200"
 14,"send_message","2","expired",,,,,"expired flow",,,,,,,,,,,,,,,"5beeda91-eeca-4287-a48e-7eebf5f3a7e7",,"execute_actions","740;300"
+15,"transfer_airtime","14",,,,,"transaction_id","RWF;500|USD;0.5",,,,,,,,,,,,,,,"fe6e3a99-4e38-47eb-94e9-e63ecf45750b",,,
+16,"send_message","15","Success","@results.transaction_id","has_category","Success",,"Transaction Success",,,,,,,,,,,,,,,"123eda91-eeca-4287-a48e-7eebf5f3a7e7",,,
+17,"send_message","15",,,,,,"Transaction Failure",,,,,,,,,,,,,,,"f411da91-eeca-4287-a48e-7eebf5f3a7e7",,,

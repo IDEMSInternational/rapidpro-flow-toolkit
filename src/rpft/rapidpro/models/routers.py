@@ -66,6 +66,12 @@ class BaseRouter:
     def get_exits(self):
         return [c.get_exit() for c in self.get_categories()]
 
+    def record_global_uuids(self, uuid_dict):
+        pass
+
+    def assign_global_uuids(self, uuid_dict):
+        pass
+
     def get_categories(self):
         # TODO: Remove this and have the default category included in the list for the
         # SwitchRouter

@@ -932,6 +932,93 @@
           "exits": [
             {
               "uuid": "93885cbc-0131-4ea1-82d7-0cd5f57ddb63",
+              "destination_uuid": "fe6e3a99-4e38-47eb-94e9-e63ecf45750b"
+            }
+          ]
+        },
+        {
+          "uuid": "fe6e3a99-4e38-47eb-94e9-e63ecf45750b",
+          "actions": [
+            {
+              "uuid": "373e6372-870b-4612-a006-c8d33f57c04d",
+              "type": "transfer_airtime",
+              "amounts": {
+                "RWF": 500,
+                "USD": 0.5
+              },
+              "result_name": "transaction id"
+            }
+          ],
+          "router": {
+            "type": "switch",
+            "operand": "@results.transaction_id",
+            "cases": [
+              {
+                "uuid": "87cea0a5-f3ab-4c8f-b475-44c9a711d92e",
+                "type": "has_category",
+                "arguments": [
+                  "Success"
+                ],
+                "category_uuid": "6bf4209a-7f74-4ebc-a4b3-e87b00d88e99"
+              }
+            ],
+            "categories": [
+              {
+                "uuid": "6bf4209a-7f74-4ebc-a4b3-e87b00d88e99",
+                "name": "Success",
+                "exit_uuid": "603e1ac4-4930-4820-8883-a34e34c0ea0e"
+              },
+              {
+                "uuid": "b3675266-b7cb-44e8-af4c-4527ec84f6f1",
+                "name": "Failure",
+                "exit_uuid": "2a724cc1-6e92-44b7-b8d7-cd42cf96b9af"
+              }
+            ],
+            "default_category_uuid": "b3675266-b7cb-44e8-af4c-4527ec84f6f1"
+          },
+          "exits": [
+            {
+              "uuid": "603e1ac4-4930-4820-8883-a34e34c0ea0e",
+              "destination_uuid": "123eda91-eeca-4287-a48e-7eebf5f3a7e7"
+            },
+            {
+              "uuid": "2a724cc1-6e92-44b7-b8d7-cd42cf96b9af",
+              "destination_uuid": "f411da91-eeca-4287-a48e-7eebf5f3a7e7"
+            }
+          ]
+        },
+        {
+          "uuid": "123eda91-eeca-4287-a48e-7eebf5f3a7e7",
+          "actions": [
+            {
+              "attachments": [],
+              "text": "Transaction Success",
+              "type": "send_msg",
+              "quick_replies": [],
+              "uuid": "c1347bff-9307-4c95-a0b2-9d4dbd290069"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "93885cbc-0131-4ea1-82d7-0cd5f57ddb63",
+              "destination_uuid": null
+            }
+          ]
+        },
+        {
+          "uuid": "f411da91-eeca-4287-a48e-7eebf5f3a7e7",
+          "actions": [
+            {
+              "attachments": [],
+              "text": "Transaction Failure",
+              "type": "send_msg",
+              "quick_replies": [],
+              "uuid": "c1347bff-9307-4c95-a0b2-9d4dbd290069"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "93885cbc-0131-4ea1-82d7-0cd5f57ddb63",
               "destination_uuid": null
             }
           ]
