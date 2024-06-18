@@ -438,7 +438,7 @@ class SetRunResultAction(Action):
         assert "name" in data
         assert "value" in data
         super()._assign_fields_from_dict(data)
-        if not "category" in data:
+        if "category" not in data:
             self.category = ""
 
     def render(self):

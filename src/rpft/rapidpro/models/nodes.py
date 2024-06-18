@@ -4,8 +4,6 @@ from abc import ABC, abstractmethod
 from rpft.parsers.creation.flowrowmodel import (
     Edge,
     FlowRowModel,
-    Webhook,
-    dict_to_list_of_pairs,
 )
 from rpft.rapidpro.models.actions import (
     Action,

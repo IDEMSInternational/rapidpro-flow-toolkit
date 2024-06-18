@@ -92,7 +92,9 @@ class Group:
     def from_dict(data):
         return Group(**data)
 
-    def __init__(self, name, uuid=None, query=None, status=None, system=None, count=None):
+    def __init__(
+        self, name, uuid=None, query=None, status=None, system=None, count=None
+    ):
         self.name = name
         self.uuid = uuid
         self.query = query

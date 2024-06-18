@@ -230,7 +230,9 @@ class RowNodeGroup:
             return
 
         # Completed/Expired edge from start_new_flow
-        if isinstance(exit_node, CallWebhookNode) or isinstance(exit_node, TransferAirtimeNode):
+        if isinstance(exit_node, CallWebhookNode) or isinstance(
+            exit_node, TransferAirtimeNode
+        ):
             if condition.value.lower() == "success":
                 exit_node.update_success_exit(destination_uuid)
                 self.has_loose_exit = False
