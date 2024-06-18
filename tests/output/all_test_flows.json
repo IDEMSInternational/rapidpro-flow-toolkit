@@ -1019,6 +1019,93 @@
           "exits": [
             {
               "uuid": "93885cbc-0131-4ea1-82d7-0cd5f57ddb63",
+              "destination_uuid": "2aa3a76b-b884-4748-aa5e-c691e25f51de"
+            }
+          ]
+        },
+        {
+          "uuid": "2aa3a76b-b884-4748-aa5e-c691e25f51de",
+          "actions": [
+            {
+              "type": "call_webhook",
+              "body": "Webhook Body",
+              "method": "GET",
+              "url": "http://localhost:49998/?cmd=success",
+              "headers": {"Authorization": "Token AAFFZZHH"},
+              "result_name": "webhook_result",
+              "uuid": "c9e5be7d-f9eb-4992-aadb-7f82463e2037"
+            }
+          ],
+          "router": {
+            "type": "switch",
+            "operand": "@results.webhook_result.category",
+            "cases": [
+              {
+                "uuid": "257696c8-b22a-4633-8cca-b25e7c5390c8",
+                "type": "has_only_text",
+                "category_uuid": "4c646421-28b4-43af-a8d9-3c9bd7d5a4ad",
+                "arguments": [
+                  "Success"
+                ]
+              }
+            ],
+            "categories": [
+              {
+                "uuid": "4c646421-28b4-43af-a8d9-3c9bd7d5a4ad",
+                "name": "Success",
+                "exit_uuid": "f02d34ec-1d3e-4ca2-8528-18188079e343"
+              },
+              {
+                "uuid": "a8c51fc8-f893-44ba-95e3-59c2f0db6778",
+                "name": "Failure",
+                "exit_uuid": "97fd85ab-8c21-4532-bc3b-d51fdd08e7cc"
+              }
+            ],
+            "default_category_uuid": "a8c51fc8-f893-44ba-95e3-59c2f0db6778"
+          },
+          "exits": [
+            {
+              "destination_uuid": "3b001231-eeca-4287-a48e-7eebf5f3a7e7",
+              "uuid": "f02d34ec-1d3e-4ca2-8528-18188079e343"
+            },
+            {
+              "destination_uuid": "3b00f411-eeca-4287-a48e-7eebf5f3a7e7",
+              "uuid": "97fd85ab-8c21-4532-bc3b-d51fdd08e7cc"
+            }
+          ]
+        },
+        {
+          "uuid": "3b001231-eeca-4287-a48e-7eebf5f3a7e7",
+          "actions": [
+            {
+              "attachments": [],
+              "text": "Webhook Success",
+              "type": "send_msg",
+              "quick_replies": [],
+              "uuid": "c1347bff-9307-4c95-a0b2-9d4dbd290069"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "93885cbc-0131-4ea1-82d7-0cd5f57ddb63",
+              "destination_uuid": null
+            }
+          ]
+        },
+        {
+          "uuid": "3b00f411-eeca-4287-a48e-7eebf5f3a7e7",
+          "actions": [
+            {
+              "attachments": [],
+              "text": "Webhook Failure",
+              "type": "send_msg",
+              "quick_replies": [],
+              "uuid": "c1347bff-9307-4c95-a0b2-9d4dbd290069"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "93885cbc-0131-4ea1-82d7-0cd5f57ddb63",
               "destination_uuid": null
             }
           ]

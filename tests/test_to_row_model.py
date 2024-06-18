@@ -150,6 +150,7 @@ class TestFlowContainer(TestToRowModels):
             edges=[{"from_": "start"}],
             type="call_webhook",
             webhook=Webhook(headers=headers, **webhook_data),
+            save_name="result name",
         )
         node = CallWebhookNode(
             result_name="result name", headers=headers_dict, **webhook_data

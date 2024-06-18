@@ -1131,7 +1131,10 @@ class TestFlowParser(unittest.TestCase):
         )
 
     def test_switch_nodes(self):
-        context = Context(inputs=["b", "expired"])
+        context = Context(inputs=["b", "expired", "Success"])
+        self.run_example("input/switch_nodes.csv", "switch_nodes", context)
+
+        context = Context(inputs=["b", "expired", "Failure", "Success"])
         self.run_example("input/switch_nodes.csv", "switch_nodes", context)
 
         context = Context(

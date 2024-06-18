@@ -91,9 +91,8 @@ def find_destination_uuid(current_node, context):
             # Get value of the operand
             if router["operand"] == "@contact.groups":
                 operand = context.group_names
-            elif router["operand"] in ["@input.text", "@child.run.status"] or re.match(
-                r"@results\..*\.category", router["operand"]
-            ):
+            elif router["operand"] == "@input.text" or current_node["actions"]:
+                # Actions implies CallWebhook, TransferAirtime or EnterFlow
                 operand = context.inputs.pop(0)
             elif router["operand"] in context.variables:
                 operand = context.variables[router["operand"]]
@@ -127,7 +126,11 @@ def find_destination_uuid(current_node, context):
                         if case["arguments"][0].lower() in operand.lower():
                             category_uuid = case["category_uuid"]
                             break
-                    elif case["type"] == "has_only_text":  # case sensitive
+                    elif (
+                        case["type"] == "has_only_text"
+                        or case["type"] == "has_category"
+                    ):
+                        # These are case sensitive
                         if case["arguments"][0] == operand:
                             category_uuid = case["category_uuid"]
                             break

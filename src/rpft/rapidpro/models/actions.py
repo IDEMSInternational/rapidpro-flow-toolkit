@@ -94,6 +94,27 @@ class AddContactURNAction(DefaultRenderedAction):
         }
 
 
+class CallWebhookAction(DefaultRenderedAction):
+    def __init__(self, **kwargs):
+        super().__init__("call_webhook", **kwargs)
+
+    def main_value(self):
+        return self.body
+
+    def get_row_model_fields(self):
+        headers = dict_to_list_of_pairs(self.headers)
+        return {
+            "type": self.type,
+            "webhook": {
+                "body": self.body,
+                "url": self.url,
+                "headers": headers,
+                "method": self.method,
+            },
+            "save_name": self.result_name,
+        }
+
+
 class TransferAirtimeAction(DefaultRenderedAction):
     def __init__(self, **kwargs):
         assert "amounts" in kwargs
@@ -487,7 +508,7 @@ action_map = {
     "add_input_labels": DefaultRenderedAction,
     "call_classifier": DefaultRenderedAction,
     "call_resthook": DefaultRenderedAction,
-    "call_webhook": DefaultRenderedAction,
+    "call_webhook": CallWebhookAction,
     "enter_flow": EnterFlowAction,
     "open_ticket": DefaultRenderedAction,
     "play_audio": DefaultRenderedAction,

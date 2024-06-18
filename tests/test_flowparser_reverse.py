@@ -31,10 +31,13 @@ class TestFlowParserReverse(unittest.TestCase):
             # the other of these fields may be removed as well.
             model_dict.pop(field)
             model_exp_dict.pop(field)
-        # TODO: We have trailing '' quick replies here.
+        # TODO: We have trailing '' quick replies and webhook.headers here.
         # They get removed in the conversion process, but probably the RowParser
         # should already take care of them
         model_exp_dict["choices"] = [qr for qr in model_exp_dict["choices"] if qr]
+        model_exp_dict["webhook"]["headers"] = [
+            header for header in model_exp_dict["webhook"]["headers"] if header
+        ]
         self.assertEqual(model_dict, model_exp_dict)
 
     def run_example(self, filename, flow_name):

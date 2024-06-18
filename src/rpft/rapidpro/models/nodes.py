@@ -7,7 +7,12 @@ from rpft.parsers.creation.flowrowmodel import (
     Webhook,
     dict_to_list_of_pairs,
 )
-from rpft.rapidpro.models.actions import Action, EnterFlowAction, TransferAirtimeAction
+from rpft.rapidpro.models.actions import (
+    Action,
+    CallWebhookAction,
+    EnterFlowAction,
+    TransferAirtimeAction,
+)
 from rpft.rapidpro.models.common import Exit, generate_field_key, mangle_string
 from rpft.rapidpro.models.routers import RandomRouter, SwitchRouter
 from rpft.rapidpro.utils import generate_new_uuid
@@ -556,32 +561,28 @@ class CallWebhookNode(RouterNode):
                 raise ValueError(
                     "Either an action or a url/result_name have to be provided."
                 )
-            # This is kinda lazy, we might want a dedicated Webhook action.
-            action = Action.from_dict(
-                {
-                    "type": "call_webhook",
-                    "result_name": result_name,
-                    "url": url,
-                    "method": method,
-                    "body": body,
-                    "headers": headers,
-                    "uuid": generate_new_uuid(),
-                }
+            action = CallWebhookAction(
+                result_name=result_name,
+                url=url,
+                method=method,
+                body=body,
+                headers=headers,
             )
             self.add_action(action)
 
         if router:
             self.router = router
         else:
+            result_field = generate_field_key(result_name)
             self.router = SwitchRouter(
-                operand=f"@results.{result_name}.category",
+                operand=f"@results.{result_field}.category",
                 result_name=None,
                 wait_timeout=None,
             )
             self.router.default_category.update_name("Failure")
 
             self.add_choice(
-                comparison_variable=f"@results.{result_name}.category",
+                comparison_variable=f"@results.{result_field}.category",
                 comparison_type="has_only_text",
                 comparison_arguments=["Success"],
                 category_name="Success",
@@ -622,22 +623,7 @@ class CallWebhookNode(RouterNode):
         return ui_entry
 
     def initiate_row_models(self, current_row_id, parent_edge):
-        self.row_models = [
-            FlowRowModel(
-                row_id=current_row_id,
-                edges=[parent_edge],
-                node_uuid=self.uuid,
-                ui_position=self.ui_pos or [],
-                type="call_webhook",
-                webhook=Webhook(
-                    url=self.actions[0].url,
-                    method=self.actions[0].method,
-                    headers=dict_to_list_of_pairs(self.actions[0].headers),
-                    body=self.actions[0].body,
-                ),
-                result_name=self.router.result_name,
-            )
-        ]
+        super().initiate_row_models(current_row_id, parent_edge)
 
 
 class TransferAirtimeNode(RouterNode):
