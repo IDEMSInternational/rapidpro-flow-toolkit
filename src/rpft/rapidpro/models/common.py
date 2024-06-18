@@ -92,10 +92,13 @@ class Group:
     def from_dict(data):
         return Group(**data)
 
-    def __init__(self, name, uuid=None, query=None):
+    def __init__(self, name, uuid=None, query=None, status=None, system=None, count=None):
         self.name = name
         self.uuid = uuid
         self.query = query
+        self.status = status
+        self.system = system
+        self.count = count
 
     def record_uuid(self, uuid_dict):
         uuid_dict.record_group_uuid(self.name, self.uuid)
@@ -105,6 +108,8 @@ class Group:
 
     def render(self):
         render_dict = {"name": self.name, "uuid": self.uuid}
-        if self.query:
-            render_dict["query"] = self.query
+        for attribute in ["query", "status", "system", "count"]:
+            value = getattr(self, attribute)
+            if value is not None:
+                render_dict[attribute] = value
         return render_dict
