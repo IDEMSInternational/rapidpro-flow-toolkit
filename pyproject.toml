@@ -7,7 +7,7 @@ name = "rpft"
 version = "1.2.0"
 description = "Toolkit for using spreadsheets to create and modify RapidPro flows"
 authors = [
-    {name = "IDEMS International", email = "communications@idems.international"},
+    {name = "IDEMS International", email = "contact@idems.international"},
 ]
 readme = "README.md"
 requires-python = ">=3.8"
