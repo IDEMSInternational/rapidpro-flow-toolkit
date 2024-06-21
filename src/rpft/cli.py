@@ -21,7 +21,7 @@ def create_flows(args):
         tags=args.tags,
     )
 
-    with open(args.output, "w") as export:
+    with open(args.output, "w", encoding="utf-8") as export:
         json.dump(flows, export, indent=4)
 
 

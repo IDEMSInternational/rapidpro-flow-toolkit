@@ -38,8 +38,12 @@ class RowDataSheet:
         """
         data = self.convert_to_tablib()
         exported_data = data.export(file_format)
-        write_type = "w" if type(exported_data) is str else "wb"
-        with open(filename, write_type) as f:
+        if type(exported_data) is str:
+            # There is a strange bug where on Windows, csv files would get
+            # exported with \r\r\n linebreaks. The below fixes this.
+            exported_data = exported_data.replace("\r", "")
+            exported_data = exported_data.encode("utf-8")
+        with open(filename, "wb") as f:
             f.write(exported_data)
 
     def convert_to_tablib(self):
