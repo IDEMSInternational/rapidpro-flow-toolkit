@@ -7,7 +7,7 @@ from rpft.parsers.creation.flowrowmodel import (
     Edge,
     FlowRowModel,
     Webhook,
-    convert_webhook_headers
+    list_of_pairs_to_dict
 )
 from rpft.rapidpro.models.actions import (
     AddContactGroupAction,
@@ -144,12 +144,13 @@ class TestFlowContainer(TestToRowModels):
             "body": "payload",
         }
         headers = [["header1", "value1"], ["header2", "value2"]]
-        headers_dict = convert_webhook_headers(headers)
+        headers_dict = list_of_pairs_to_dict(headers)
         row_data = FlowRowModel(
             row_id="webhook.the_url",
             edges=[{"from_": "start"}],
             type="call_webhook",
             webhook=Webhook(headers=headers, **webhook_data),
+            save_name="result name",
         )
         node = CallWebhookNode(
             result_name="result name", headers=headers_dict, **webhook_data

@@ -9,3 +9,4 @@
 8,"save_flow_result",7,,,,,"result name","result value","my_result_cat",,,,,,,,,,,,,,,,"E","88c593b0-22ba-4a36-8f6a-ffe4e41818d1",,"execute_actions","280;900"
 9,"set_contact_language",8,,,,,,"eng",,,,,,,,,,,,,,,,,,"711ea340-dc20-4471-a0e4-6af2c4a278b9",,"execute_actions","280;1020"
 10,"set_contact_name",9,,,,,,"John Doe",,,,,,,,,,,,,,,,,,"711ea340-dc20-4471-a0e4-6af2c4a278b9",,"execute_actions","280;1020"
+11,"add_contact_urn",10,,,,,,"@results.internation_phone_number",,,,,,,,,,,,,,,,,,"768afc12-93e8-4cf8-9cdc-c92cce36c365",,,

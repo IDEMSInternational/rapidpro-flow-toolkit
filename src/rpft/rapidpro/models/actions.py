@@ -8,6 +8,7 @@ from rpft.rapidpro.models.common import (
 )
 from rpft.rapidpro.models.exceptions import RapidProActionError
 from rpft.rapidpro.utils import generate_new_uuid
+from rpft.parsers.creation.flowrowmodel import dict_to_list_of_pairs
 
 # TODO: Check enter flow
 # Node classification:
@@ -38,9 +39,11 @@ class Action:
     def _assign_fields_from_dict(self, data):
         self.__dict__ = copy.deepcopy(data)
 
-    def __init__(self, type):
+    def __init__(self, type, **kwargs):
         self.uuid = generate_new_uuid()
         self.type = type
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def record_global_uuids(self, uuid_dict):
         pass
@@ -68,12 +71,66 @@ class Action:
         raise NotImplementedError
 
 
-class UnclassifiedAction(Action):
+class DefaultRenderedAction(Action):
     def render(self):
         return self.__dict__
 
     def get_row_model_fields(self):
         return NotImplementedError
+
+
+class AddContactURNAction(DefaultRenderedAction):
+    def __init__(self, **kwargs):
+        super().__init__("add_contact_urn", **kwargs)
+
+    def main_value(self):
+        return self.path
+
+    def get_row_model_fields(self):
+        return {
+            "type": self.type,
+            "mainarg_value": self.path,
+            "urn_scheme": self.scheme if self.scheme != "tel" else "",
+        }
+
+
+class CallWebhookAction(DefaultRenderedAction):
+    def __init__(self, **kwargs):
+        super().__init__("call_webhook", **kwargs)
+
+    def main_value(self):
+        return self.body
+
+    def get_row_model_fields(self):
+        headers = dict_to_list_of_pairs(self.headers)
+        return {
+            "type": self.type,
+            "webhook": {
+                "body": self.body,
+                "url": self.url,
+                "headers": headers,
+                "method": self.method,
+            },
+            "save_name": self.result_name,
+        }
+
+
+class TransferAirtimeAction(DefaultRenderedAction):
+    def __init__(self, **kwargs):
+        assert "amounts" in kwargs
+        super().__init__("transfer_airtime", **kwargs)
+
+    def main_value(self):
+        return self.amounts
+
+    def get_row_model_fields(self):
+        amounts = {k : str(v) for k, v in self.amounts.items()}
+        amounts = dict_to_list_of_pairs(amounts)
+        return {
+            "type": self.type,
+            "mainarg_dict": amounts,
+            "save_name": self.result_name,
+        }
 
 
 class WhatsAppMessageTemplating:
@@ -381,7 +438,7 @@ class SetRunResultAction(Action):
         assert "name" in data
         assert "value" in data
         super()._assign_fields_from_dict(data)
-        if not "category" in data:
+        if "category" not in data:
             self.category = ""
 
     def render(self):
@@ -447,18 +504,18 @@ class EnterFlowAction(Action):
 
 action_map = {
     "add_contact_groups": AddContactGroupAction,
-    "add_contact_urn": UnclassifiedAction,
-    "add_input_labels": UnclassifiedAction,
-    "call_classifier": UnclassifiedAction,
-    "call_resthook": UnclassifiedAction,
-    "call_webhook": UnclassifiedAction,
+    "add_contact_urn": AddContactURNAction,
+    "add_input_labels": DefaultRenderedAction,
+    "call_classifier": DefaultRenderedAction,
+    "call_resthook": DefaultRenderedAction,
+    "call_webhook": CallWebhookAction,
     "enter_flow": EnterFlowAction,
-    "open_ticket": UnclassifiedAction,
-    "play_audio": UnclassifiedAction,
+    "open_ticket": DefaultRenderedAction,
+    "play_audio": DefaultRenderedAction,
     "remove_contact_groups": RemoveContactGroupAction,
-    "say_msg": UnclassifiedAction,
-    "send_broadcast": UnclassifiedAction,
-    "send_email": UnclassifiedAction,
+    "say_msg": DefaultRenderedAction,
+    "send_broadcast": DefaultRenderedAction,
+    "send_email": DefaultRenderedAction,
     "send_msg": SendMessageAction,
     "set_contact_channel": SetContactPropertyAction,
     "set_contact_field": SetContactFieldAction,
@@ -467,8 +524,8 @@ action_map = {
     "set_contact_status": SetContactPropertyAction,
     "set_contact_timezone": SetContactPropertyAction,
     "set_run_result": SetRunResultAction,
-    "start_session": UnclassifiedAction,
-    "transfer_airtime": UnclassifiedAction,
+    "start_session": DefaultRenderedAction,
+    "transfer_airtime": TransferAirtimeAction,
 }
 
 short_types = {

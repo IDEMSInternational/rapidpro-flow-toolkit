@@ -8,11 +8,11 @@ from rpft.parsers.creation.flowrowmodel import (
     Condition,
     Edge,
     FlowRowModel,
-    WebhookError,
-    convert_webhook_headers,
+    list_of_pairs_to_dict,
 )
 from rpft.rapidpro.models.actions import (
     AddContactGroupAction,
+    AddContactURNAction,
     Group,
     RemoveContactGroupAction,
     SendMessageAction,
@@ -29,10 +29,18 @@ from rpft.rapidpro.models.nodes import (
     EnterFlowNode,
     RandomRouterNode,
     SwitchRouterNode,
+    TransferAirtimeNode,
     )
 from rpft.rapidpro.models.routers import SwitchRouter
 
 LOGGER = get_logger()
+
+
+def string_to_int_or_float(s):
+    try:
+        return int(s)
+    except ValueError:
+        return float(s)
 
 
 class NodeGroup:
@@ -222,7 +230,9 @@ class RowNodeGroup:
             return
 
         # Completed/Expired edge from start_new_flow
-        if isinstance(exit_node, CallWebhookNode):
+        if isinstance(exit_node, CallWebhookNode) or isinstance(
+            exit_node, TransferAirtimeNode
+        ):
             if condition.value.lower() == "success":
                 exit_node.update_success_exit(destination_uuid)
                 self.has_loose_exit = False
@@ -230,7 +240,8 @@ class RowNodeGroup:
                 exit_node.update_failure_exit(destination_uuid)
             else:
                 LOGGER.error(
-                    "Condition from call_webhook must be 'Success' or 'Failure'."
+                    "Condition from call_webhook/transfer_airtime must be "
+                    "'Success' or 'Failure'."
                 )
             return
 
@@ -489,6 +500,11 @@ class FlowParser:
             group = self._get_or_create_group(row.mainarg_groups[0], row.obj_id)
             add_group_action = AddContactGroupAction(groups=[group])
             return add_group_action
+        elif row.type == "add_contact_urn":
+            return AddContactURNAction(
+                path=row.mainarg_value,
+                scheme=row.urn_scheme or 'tel',
+            )
         elif row.type == "remove_from_group":
             group = self._get_or_create_group(row.mainarg_groups[0], row.obj_id)
             remove_group_action = RemoveContactGroupAction(groups=[group])
@@ -511,6 +527,7 @@ class FlowParser:
             "split_random",
             "start_new_flow",
             "call_webhook",
+            "transfer_airtime",
         ]:
             return None
         else:
@@ -566,15 +583,33 @@ class FlowParser:
             return EnterFlowNode(row.mainarg_flow_name, uuid=node_uuid, ui_pos=ui_pos)
         elif row.type in ["call_webhook"]:
             try:
-                headers = convert_webhook_headers(row.webhook.headers)
-            except WebhookError as e:
-                LOGGER.critical(str(e))
+                headers = list_of_pairs_to_dict(row.webhook.headers)
+            except ValueError as e:
+                LOGGER.critical("webhook.headers: " + str(e))
             return CallWebhookNode(
                 result_name=row.save_name,
                 url=row.webhook.url,
                 method=row.webhook.method,
                 body=row.webhook.body,
                 headers=headers,
+                uuid=node_uuid,
+                ui_pos=ui_pos,
+            )
+        elif row.type in ["transfer_airtime"]:
+            try:
+                airtime_amounts = list_of_pairs_to_dict(row.mainarg_dict)
+            except ValueError as e:
+                LOGGER.critical("airtime_amounts: " + str(e))
+            try:
+                airtime_amounts = {
+                    k : string_to_int_or_float(v)
+                    for k, v in airtime_amounts.items()
+                }
+            except ValueError:
+                LOGGER.critical("airtime_amounts: Current values must be numerical")
+            return TransferAirtimeNode(
+                result_name=row.save_name,
+                amounts=airtime_amounts,
                 uuid=node_uuid,
                 ui_pos=ui_pos,
             )
