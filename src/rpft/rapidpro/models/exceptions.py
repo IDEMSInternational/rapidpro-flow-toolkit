@@ -1,3 +1,8 @@
 class RapidProActionError(Exception):
-    "Raise if some parameter of a RapidProAction is invalid."
+    "Raised if some parameter of a RapidProAction is invalid."
+    pass
+
+
+class RapidProRouterError(Exception):
+    "Raised if some parameter of a RapidProRouter is invalid."
     pass
