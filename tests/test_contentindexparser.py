@@ -802,6 +802,62 @@ class TestOperation(unittest.TestCase):
         self.check_filtersort(ci_sheet, exp_keys)
 
 
+class TestModelInference(TestTemplate):
+    def setUp(self):
+        self.ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,status\n"  # noqa: E501
+            "template_definition,my_template,,,\n"
+            "create_flow,my_template,mydata,,\n"
+            "data_sheet,mydata,,,\n"
+        )
+        self.my_template = (
+            "row_id,type,from,message_text\n"
+            ",send_message,start,Lst {{lst.0}} {{lst.1}}\n"
+            ",send_message,,{{custom_field.happy}} and {{custom_field.sad}}\n"
+        )
+
+
+    def check_example(self, sheet_dict):
+        sheet_reader = MockSheetReader(self.ci_sheet, sheet_dict)
+        ci_parser = ContentIndexParser(sheet_reader)
+        container = ci_parser.parse_all()
+        render_output = container.render()
+        self.compare_messages(
+            render_output,
+            "my_template - row1",
+            ["Lst 0 4", "Happy1 and Sad1"],
+        )
+        self.compare_messages(
+            render_output,
+            "my_template - row2",
+            ["Lst 1 5", "Happy2 and Sad2"],
+        )
+
+    def test_model_inference(self):
+        mydata = (
+            "ID,lst.1:int,lst.2:int,custom_field.happy,custom_field.sad\n"
+            "row1,0,4,Happy1,Sad1\n"
+            "row2,1,5,Happy2,Sad2\n"
+        )
+        sheet_dict = {
+            "mydata": mydata,
+            "my_template": self.my_template,
+        }
+        self.check_example(sheet_dict)
+
+    def test_model_inference_alt(self):
+        mydata = (
+            "ID,lst:List[int],custom_field.happy,custom_field.sad\n"
+            "row1,0;4,Happy1,Sad1\n"
+            "row2,1;5,Happy2,Sad2\n"
+        )
+        sheet_dict = {
+            "mydata": mydata,
+            "my_template": self.my_template,
+        }
+        self.check_example(sheet_dict)
+
+
 class TestParseCampaigns(unittest.TestCase):
     def test_parse_flow_campaign(self):
         ci_sheet = (

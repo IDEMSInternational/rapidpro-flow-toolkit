@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 from rpft.logger.logger import get_logger, logging_context
 from rpft.parsers.common.cellparser import CellParser
+from rpft.parsers.common.model_inference import model_from_headers
 from rpft.parsers.common.rowparser import RowParser
 from rpft.parsers.common.sheetparser import SheetParser
 from rpft.parsers.creation.campaigneventrowmodel import CampaignEventRowModel
@@ -62,6 +63,7 @@ class ContentIndexParser:
         self.campaign_parsers = {}  # name-indexed dict of CampaignParser
         self.trigger_parsers = []
 
+        self.user_models_module = None
         if user_data_model_module_name:
             self.user_models_module = importlib.import_module(
                 user_data_model_module_name
@@ -195,11 +197,6 @@ class ContentIndexParser:
         return active
 
     def _process_data_sheet(self, row):
-        if not hasattr(self, "user_models_module"):
-            LOGGER.critical(
-                "If there are data sheets, a user_data_model_module_name "
-                "has to be provided"
-            )
         sheet_names = row.sheet_name
         if row.operation.type in ["filter", "sort"] and len(sheet_names) > 1:
             LOGGER.warning(
@@ -245,19 +242,22 @@ class ContentIndexParser:
         else:
             return self._get_new_data_sheet(sheet_name, data_model_name)
 
-    def _get_new_data_sheet(self, sheet_name, data_model_name):
-        if not data_model_name:
-            LOGGER.critical("No data_model_name provided for data sheet.")
-        try:
-            user_model = getattr(self.user_models_module, data_model_name)
-        except AttributeError:
-            LOGGER.critical(
-                f'Undefined data_model_name "{data_model_name}" '
-                f"in {self.user_models_module}."
-            )
+    def _get_new_data_sheet(self, sheet_name, data_model_name=None):
+        user_model = None
+        if self.user_models_module and data_model_name:
+            try:
+                user_model = getattr(self.user_models_module, data_model_name)
+            except AttributeError:
+                LOGGER.critical(
+                    f'Undefined data_model_name "{data_model_name}" '
+                    f"in {self.user_models_module}."
+                )
         data_table = self._get_sheet_or_die(sheet_name)
         with logging_context(sheet_name):
             data_table = self._get_sheet_or_die(sheet_name).table
+            if not user_model:
+                LOGGER.info("Inferring RowModel automatically")
+                user_model = model_from_headers(sheet_name, data_table.headers)
             row_parser = RowParser(user_model, CellParser())
             sheet_parser = SheetParser(row_parser, data_table)
             data_rows = sheet_parser.parse_all()
