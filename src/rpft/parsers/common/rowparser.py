@@ -10,10 +10,6 @@ class RowParserError(Exception):
     pass
 
 
-class RowParserError(Exception):
-    pass
-
-
 class ParserModel(BaseModel):
     def header_name_to_field_name(header):
         # Given a human-friendly column header name, map it to the
@@ -41,7 +37,7 @@ def get_list_child_model(model):
         # If not specified, list elements may be anything.
         # Without additional information, we assume strings.
         child_model = str
-    else:            
+    else:
         # Get the type that's inside the list
         assert len(model.__args__) == 1
         child_model = model.__args__[0]
@@ -55,7 +51,11 @@ def is_list_type(model):
     # model.__dict__.get('__origin__') returns different things in different Python
     # version.
     # This function tries to accommodate both 3.6 and 3.8 (at least)
-    return is_basic_list_type(model) or model is List or model.__dict__.get("__origin__") in [list, List]
+    return (
+        is_basic_list_type(model)
+        or model is List
+        or model.__dict__.get("__origin__") in [list, List]
+    )
 
 
 def is_basic_list_type(model):
@@ -104,10 +104,15 @@ def str_to_bool(string):
     elif string.lower() == "true" or string == "1":
         return True
     else:
-        raise RowParserError(
-            'Boolean must be true/1 or false/0 '
-            f'but is "{string}"'
-        )
+        raise RowParserError("Boolean must be true/1 or false/0 " f'but is "{string}"')
+
+
+def get_field_name(string):
+    return (
+        string.split(RowParser.TYPE_ANNOTATION_SEPARATOR)[0]
+        .split(RowParser.DEFAULT_VALUE_SEPARATOR)[0]
+        .strip()
+    )
 
 
 class RowParser:
@@ -116,6 +121,8 @@ class RowParser:
     # Turns this into an instance of the provided model.
 
     HEADER_FIELD_SEPARATOR = "."
+    TYPE_ANNOTATION_SEPARATOR = ":"
+    DEFAULT_VALUE_SEPARATOR = "="
 
     def __init__(self, model, cell_parser):
         self.model = model
@@ -284,6 +291,7 @@ class RowParser:
     ):
         # This creates/populates a field in self.output
         # The field is determined by column_name, its value by value
+        column_name = get_field_name(column_name)
         field_path = column_name.split(RowParser.HEADER_FIELD_SEPARATOR)
         # Find the destination subfield in self.output that corresponds to field_path
         field, key, model = self.find_entry(self.model, self.output, field_path)
@@ -295,10 +303,7 @@ class RowParser:
         # The model of field[key] is model, and thus value should also be interpreted
         # as being of type model.
         if not value_is_parsed:
-            if (
-                is_list_type(model)
-                or is_parser_model_type(model)
-            ):
+            if is_list_type(model) or is_parser_model_type(model):
                 # If the expected type of the value is list/object,
                 # parse the cell content as such.
                 # Otherwise leave it as a string

@@ -55,7 +55,7 @@ class TestRowParserBoolean(unittest.TestCase):
     def test_convert_invalid(self):
         inp = {"bool_field": "something"}
         with self.assertRaises(RowParserError):
-            out = self.parser.parse_row(inp)
+            _ = self.parser.parse_row(inp)
 
     def test_convert_default(self):
         inp = {}
@@ -89,7 +89,6 @@ class TestRowParserInt(unittest.TestCase):
         inp = {}
         out = self.parser.parse_row(inp)
         self.assertEqual(out, self.zeroModel)
-
 
 
 class ListStrModel(ParserModel):
