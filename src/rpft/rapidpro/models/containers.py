@@ -1,5 +1,8 @@
 import copy
 
+from rpft.parsers.common.cellparser import CellParser
+from rpft.parsers.common.rowdatasheet import RowDataSheet
+from rpft.parsers.common.rowparser import RowParser
 from rpft.parsers.creation.flowrowmodel import Edge, FlowRowModel
 from rpft.rapidpro.models.actions import Group
 from rpft.rapidpro.models.campaigns import Campaign
@@ -201,7 +204,7 @@ class FlowContainer:
         # We use temporary row_ids here (derived from node uuids) that get converted to
         # sequential ids later.
         self.visited_nodes.add(node.uuid)
-        temp_row_id = node.uuid
+        temp_row_id = f"{node.uuid}|{node.short_name()}"
         # Initiate the row model(s) for the node with one incoming edge.
         # More edges may be added later throughout the DFS
         node.initiate_row_models(temp_row_id, parent_edge)
@@ -229,10 +232,11 @@ class FlowContainer:
             elif child_node.uuid in self.visited_nodes:
                 # This is a backward edge to an ancestor of this node.
                 child_row_id = child_node.get_row_models()[0].row_id
+                child_short_id = child_row_id.split("|")[1]
                 self.rows.insert(
                     0,
                     FlowRowModel(
-                        row_id=generate_new_uuid(),
+                        row_id=f"{generate_new_uuid()}|goto.{child_short_id}",
                         type="go_to",
                         edges=[edge],
                         mainarg_destination_row_ids=[child_row_id],
@@ -248,7 +252,9 @@ class FlowContainer:
         # next steps via other incoming edges.
         self.rows = node.get_row_models() + self.rows
 
-    def to_rows(self):
+    def to_rows(self, numbered=False):
+        if not self.nodes:
+            return []
         # TODO: We might want to have a dedicated model for a list of rows
         # that can also contain metadata, used for generating a sheet.
         # TODO: These attributes pollute the namespace of the class,
@@ -263,8 +269,19 @@ class FlowContainer:
         # We now have to remap the temp row_ids to a sequence of numbers
         # Compile the remapping dict
         temp_row_id_to_row_id = {"start": "start"}
-        for i, row in enumerate(self.rows):
-            temp_row_id_to_row_id[row.row_id] = str(i + 1)
+        for idx, row in enumerate(self.rows):
+            if numbered:
+                new_id = str(idx + 1)
+            else:
+                # split off the preceding UUID
+                new_base_id = row.row_id.split("|")[1]
+                # Append a number (if necessary) to ensure uniqueness
+                new_id = new_base_id
+                counter = 1
+                while new_id in temp_row_id_to_row_id.values():
+                    new_id = f"{new_base_id}.{counter}"
+                    counter += 1
+            temp_row_id_to_row_id[row.row_id] = new_id
         # Do the remapping
         for row in self.rows:
             row.row_id = temp_row_id_to_row_id[row.row_id]
@@ -277,6 +294,13 @@ class FlowContainer:
             for edge in row.edges:
                 edge.from_ = temp_row_id_to_row_id[edge.from_]
         return self.rows
+
+    def to_row_data_sheet(self, strip_uuids=False, numbered=False):
+        target_headers = {"edges.*.condition"}
+        excluded_headers = {"obj_id", "_nodeId"} if strip_uuids else {}
+        rows = self.to_rows(numbered)
+        row_parser = RowParser(FlowRowModel, CellParser())
+        return RowDataSheet(row_parser, rows, target_headers, excluded_headers)
 
 
 class UUIDDict:

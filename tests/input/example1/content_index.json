@@ -1,0 +1,127 @@
+{
+  "meta": {
+    "version": "0.1.0"
+  },
+  "sheets": {
+    "content_index": [
+      {
+        "type": "create_flow",
+        "sheet_name": "my_template",
+        "data_sheet": "nesteddata",
+        "data_row_id": "row1",
+        "new_name": "",
+        "data_model": "",
+        "status": "",
+        "group": "",
+        "tags.1": "advanced",
+        "tags.2": "type1"
+      },
+      {
+        "type": "create_flow",
+        "sheet_name": "my_template",
+        "data_sheet": "nesteddata",
+        "data_row_id": "row2",
+        "new_name": "",
+        "data_model": "",
+        "status": "",
+        "group": "",
+        "tags.1": "advanced",
+        "tags.2": "type2"
+      },
+      {
+        "type": "create_flow",
+        "sheet_name": "my_basic_flow",
+        "data_sheet": "",
+        "data_row_id": "",
+        "new_name": "",
+        "data_model": "",
+        "status": "",
+        "group": "",
+        "tags.1": "basic",
+        "tags.2": ""
+      },
+      {
+        "type": "data_sheet",
+        "sheet_name": "nesteddata",
+        "data_sheet": "",
+        "data_row_id": "",
+        "new_name": "",
+        "data_model": "NestedRowModel",
+        "status": "",
+        "group": "",
+        "tags.1": "",
+        "tags.2": ""
+      },
+      {
+        "type": "create_campaign",
+        "sheet_name": "my_campaign",
+        "data_sheet": "",
+        "data_row_id": "",
+        "new_name": "",
+        "data_model": "",
+        "status": "",
+        "group": "My Group",
+        "tags.1": "basic",
+        "tags.2": ""
+      }
+    ],
+    "my_basic_flow": [
+      {
+        "row_id": "",
+        "type": "send_message",
+        "from": "start",
+        "message_text": "Some text"
+      }
+    ],
+    "my_campaign": [
+      {
+        "offset": "15",
+        "unit": "H",
+        "event_type": "F",
+        "delivery_hour": "",
+        "message": "",
+        "relative_to": "Last Seen On",
+        "start_mode": "I",
+        "flow": "my_basic_flow"
+      },
+      {
+        "offset": "120",
+        "unit": "D",
+        "event_type": "M",
+        "delivery_hour": "12",
+        "message": "Hello!",
+        "relative_to": "Created On",
+        "start_mode": "S",
+        "flow": ""
+      }
+    ],
+    "my_template": [
+      {
+        "row_id": "",
+        "type": "send_message",
+        "from": "start",
+        "message_text": "{{value1}}"
+      },
+      {
+        "row_id": "",
+        "type": "send_message",
+        "from": "",
+        "message_text": "{{custom_field.happy}} and {{custom_field.sad}}"
+      }
+    ],
+    "nesteddata": [
+      {
+        "ID": "row1",
+        "value1": "Value1",
+        "custom_field.happy": "Happy1",
+        "custom_field.sad": "Sad1"
+      },
+      {
+        "ID": "row2",
+        "value1": "Value2",
+        "custom_field.happy": "Happy2",
+        "custom_field.sad": "Sad2"
+      }
+    ]
+  }
+}

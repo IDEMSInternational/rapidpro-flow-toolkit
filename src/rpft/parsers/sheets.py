@@ -2,7 +2,7 @@ import json
 import os
 from abc import ABC
 from pathlib import Path
-from typing import List
+from typing import List, Mapping
 
 import tablib
 from google.auth.transport.requests import Request
@@ -24,6 +24,10 @@ class Sheet:
 
 
 class AbstractSheetReader(ABC):
+    @property
+    def sheets(self) -> Mapping[str, Sheet]:
+        return self._sheets
+
     def get_sheet(self, name) -> Sheet:
         return self.sheets.get(name)
 
@@ -34,10 +38,21 @@ class AbstractSheetReader(ABC):
 class CSVSheetReader(AbstractSheetReader):
     def __init__(self, path):
         self.name = path
-        self.sheets = {
+        self._sheets = {
             f.stem: Sheet(reader=self, name=f.stem, table=load_csv(f))
             for f in Path(path).glob("*.csv")
         }
+
+
+class JSONSheetReader(AbstractSheetReader):
+    def __init__(self, filename):
+        self.name = filename
+        data = load_json(filename)
+        self._sheets = {}
+        for name, content in data["sheets"].items():
+            table = tablib.Dataset()
+            table.dict = content
+            self._sheets[name] = Sheet(reader=self, name=name, table=table)
 
 
 class XLSXSheetReader(AbstractSheetReader):
@@ -45,7 +60,7 @@ class XLSXSheetReader(AbstractSheetReader):
         self.name = filename
         with open(filename, "rb") as table_data:
             data = tablib.Databook().load(table_data.read(), "xlsx")
-        self.sheets = {}
+        self._sheets = {}
         for sheet in data.sheets():
             self.sheets[sheet.title] = Sheet(
                 reader=self,
@@ -98,16 +113,16 @@ class GoogleSheetReader(AbstractSheetReader):
             .execute()
         )
 
-        self.sheets = {}
+        self._sheets = {}
         for sheet in result.get("valueRanges", []):
             name = sheet.get("range", "").split("!")[0]
             if name.startswith("'") and name.endswith("'"):
                 name = name[1:-1]
             content = sheet.get("values", [])
-            if name in self.sheets:
+            if name in self._sheets:
                 raise ValueError(f"Warning: Duplicate sheet name: {name}")
             else:
-                self.sheets[name] = Sheet(
+                self._sheets[name] = Sheet(
                     reader=self,
                     name=name,
                     table=self._table_from_content(content),
@@ -180,6 +195,12 @@ class CompositeSheetReader:
 def load_csv(path):
     with open(path, mode="r", encoding="utf-8") as csv:
         return tablib.import_set(csv, format="csv")
+
+
+def load_json(path):
+    with open(path, mode="r", encoding="utf-8") as fjson:
+        data = json.load(fjson)
+    return data
 
 
 def pad(row, n):

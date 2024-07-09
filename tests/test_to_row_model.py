@@ -1,23 +1,42 @@
 import unittest
 
+from rpft.parsers.common.cellparser import CellParser
 from rpft.parsers.common.rowdatasheet import RowDataSheet
 from rpft.parsers.common.rowparser import RowParser
-from rpft.rapidpro.models.containers import FlowContainer
+from rpft.parsers.creation.flowrowmodel import (
+    Edge,
+    FlowRowModel,
+    Webhook,
+    list_of_pairs_to_dict
+)
 from rpft.rapidpro.models.actions import (
+    AddContactGroupAction,
     Group,
     SendMessageAction,
-    AddContactGroupAction,
-    SetRunResultAction,
     SetContactFieldAction,
+    SetRunResultAction,
+    WhatsAppMessageTemplating
 )
+from rpft.rapidpro.models.common import mangle_string
+from rpft.rapidpro.models.containers import FlowContainer
 from rpft.rapidpro.models.nodes import (
     BasicNode,
-    SwitchRouterNode,
-    RandomRouterNode,
+    CallWebhookNode,
     EnterFlowNode,
+    RandomRouterNode,
+    SwitchRouterNode
 )
-from rpft.parsers.creation.flowrowmodel import FlowRowModel, Edge
-from tests.row_data import get_start_row, get_unconditional_node_from_1
+from tests.row_data import (
+    get_message_with_templating,
+    get_start_row,
+    get_unconditional_node_from_1
+)
+
+
+class TestMangle(unittest.TestCase):
+    def test_mangle(self):
+        mangled = mangle_string("ab@cd ef_gh-ij1234567")
+        self.assertEqual(mangled, "abcd_ef_gh-ij12")
 
 
 class TestToRowModels(unittest.TestCase):
@@ -40,6 +59,22 @@ class TestNodes(TestToRowModels):
         node = BasicNode()
         action = SendMessageAction(
             row_data.mainarg_message_text, quick_replies=row_data.choices
+        )
+        node.add_action(action)
+        node.initiate_row_models(1, Edge(from_="start"))
+        row_models = node.get_row_models()
+        self.compare_row_models_without_uuid(row_models, [row_data])
+
+    def test_templating_node(self):
+        row_data = get_message_with_templating()
+        templating = WhatsAppMessageTemplating.from_whats_app_templating_model(
+            row_data.wa_template
+        )
+        node = BasicNode()
+        action = SendMessageAction(
+            row_data.mainarg_message_text,
+            quick_replies=row_data.choices,
+            templating=templating,
         )
         node.add_action(action)
         node.initiate_row_models(1, Edge(from_="start"))
@@ -99,6 +134,30 @@ class TestFlowContainer(TestToRowModels):
         node.add_action(action)
         container = FlowContainer("test_flow")
         container.add_node(node)
+        row_models = container.to_rows(numbered=True)
+        self.compare_row_models_without_uuid(row_models, [row_data])
+
+    def test_webhook_node(self):
+        webhook_data = {
+            "url": "the_url",
+            "method": "POST",
+            "body": "payload",
+        }
+        headers = [["header1", "value1"], ["header2", "value2"]]
+        headers_dict = list_of_pairs_to_dict(headers)
+        row_data = FlowRowModel(
+            row_id="webhook.the_url",
+            edges=[{"from_": "start"}],
+            type="call_webhook",
+            webhook=Webhook(headers=headers, **webhook_data),
+            save_name="result name",
+        )
+        node = CallWebhookNode(
+            result_name="result name", headers=headers_dict, **webhook_data
+        )
+
+        container = FlowContainer("test_flow")
+        container.add_node(node)
         row_models = container.to_rows()
         self.compare_row_models_without_uuid(row_models, [row_data])
 
@@ -119,13 +178,13 @@ class TestFlowContainer(TestToRowModels):
         container = FlowContainer("test_flow")
         container.add_node(node1)
         container.add_node(node2)
-        row_models = container.to_rows()
+        row_models = container.to_rows(numbered=True)
         self.compare_row_models_without_uuid(row_models, [row_data1, row_data2])
 
     def test_conditional_edge(self):
         row_data1 = FlowRowModel(
             **{
-                "row_id": "1",
+                "row_id": "switch.fields_name",
                 "type": "split_by_value",
                 "edges": [{"from_": "start"}],
                 "mainarg_expression": "@fields.name",
@@ -133,11 +192,11 @@ class TestFlowContainer(TestToRowModels):
         )
         row_data2 = FlowRowModel(
             **{
-                "row_id": "2",
+                "row_id": "msg.Message_if_fiel",
                 "type": "send_message",
                 "edges": [
                     {
-                        "from_": "1",
+                        "from_": "switch.fields_name",
                         "condition": {
                             "value": "3",
                             "variable": "@fields.name",
@@ -170,7 +229,7 @@ class TestFlowContainer(TestToRowModels):
     def test_conditional_edge2(self):
         row_data1 = FlowRowModel(
             **{
-                "row_id": "1",
+                "row_id": "switch.contact_groups",
                 "type": "split_by_group",
                 "edges": [{"from_": "start"}],
                 "mainarg_groups": ["my group"],
@@ -179,11 +238,11 @@ class TestFlowContainer(TestToRowModels):
         )
         row_data2 = FlowRowModel(
             **{
-                "row_id": "2",
+                "row_id": "set_contact_field.my_variable",
                 "type": "save_value",
                 "edges": [
                     {
-                        "from_": "1",
+                        "from_": "switch.contact_groups",
                         "condition": {"value": "my group"},
                     }
                 ],
@@ -220,7 +279,7 @@ class TestFlowContainer(TestToRowModels):
 
         row_data1 = FlowRowModel(
             **{
-                "row_id": "1",
+                "row_id": "random",
                 "type": "split_random",
                 "edges": [{"from_": "start"}],
             }
@@ -228,15 +287,15 @@ class TestFlowContainer(TestToRowModels):
 
         row_data2 = FlowRowModel(
             **{
-                "row_id": "2",
+                "row_id": "msg.Second_node_mes",
                 "type": "send_message",
                 "edges": [
                     {
-                        "from_": "1",
+                        "from_": "random",
                         "condition": {"value": "1"},
                     },
                     {
-                        "from_": "1",
+                        "from_": "random",
                         "condition": {"value": "2"},
                     },
                 ],
@@ -265,7 +324,7 @@ class TestFlowContainer(TestToRowModels):
 
         row_data1 = FlowRowModel(
             **{
-                "row_id": "1",
+                "row_id": "wait_for.wait_result",
                 "type": "wait_for_response",
                 "save_name": "wait_result",
                 "no_response": "300",
@@ -275,11 +334,11 @@ class TestFlowContainer(TestToRowModels):
         # A proper case
         row_data2 = FlowRowModel(
             **{
-                "row_id": "2",
+                "row_id": "goto.wait_for.wait_result",
                 "type": "go_to",
                 "edges": [
                     {
-                        "from_": "1",
+                        "from_": "wait_for.wait_result",
                         "condition": {
                             "value": "word",
                             "variable": "@input.text",
@@ -288,34 +347,34 @@ class TestFlowContainer(TestToRowModels):
                         },
                     }
                 ],
-                "mainarg_destination_row_ids": ["1"],
+                "mainarg_destination_row_ids": ["wait_for.wait_result"],
             }
         )
         # The 'Other' category
         row_data3 = FlowRowModel(
             **{
-                "row_id": "3",
+                "row_id": "msg.Node_message_te",
                 "type": "send_message",
                 "edges": [
                     {
-                        "from_": "1",
+                        "from_": "wait_for.wait_result",
                     }
                 ],
-                "mainarg_message_text": "Second node message",
+                "mainarg_message_text": "Node message text number 2",
             }
         )
         # The no response category
         row_data4 = FlowRowModel(
             **{
-                "row_id": "4",
+                "row_id": "msg.Node_message_te.1",
                 "type": "send_message",
                 "edges": [
                     {
-                        "from_": "1",
+                        "from_": "wait_for.wait_result",
                         "condition": {"value": "No Response"},
                     }
                 ],
-                "mainarg_message_text": "Third node message",
+                "mainarg_message_text": "Node message text number 3",
             }
         )
 
@@ -353,7 +412,7 @@ class TestFlowContainer(TestToRowModels):
 
         row_data1 = FlowRowModel(
             **{
-                "row_id": "1",
+                "row_id": "flow.sample_flow",
                 "type": "start_new_flow",
                 "mainarg_flow_name": "sample_flow",
                 "obj_id": "8224bfe2-acec-434f-bc7c-14c584fc4bc8",
@@ -363,11 +422,11 @@ class TestFlowContainer(TestToRowModels):
 
         row_data2 = FlowRowModel(
             **{
-                "row_id": "2",
+                "row_id": "set_run_result.my_result",
                 "type": "save_flow_result",
                 "edges": [
                     {
-                        "from_": "1",
+                        "from_": "flow.sample_flow",
                         "condition": {"value": "expired"},
                     }
                 ],
@@ -419,73 +478,26 @@ class TestRowModelExport(unittest.TestCase):
             "row_id",
             "type",
             "edges.1.from",
-            "edges.1.condition.value",
-            "edges.1.condition.variable",
-            "edges.1.condition.type",
-            "edges.1.condition.name",
-            # 'loop_variable',
-            "include_if",
             "message_text",
-            "wa_template.name",
-            "wa_template.uuid",
-            "webhook.url",
-            "webhook.method",
-            "webhook.body",
-            "data_sheet",
-            "data_row_id",
             "choices.1",
             "choices.2",
             "choices.3",
-            "save_name",
-            "result_category",
-            "image",
-            "audio",
-            "video",
-            "obj_name",
-            "obj_id",
-            "node_name",
             "_nodeId",
-            "no_response",
-            "_ui_type",
-            "_ui_position.1",
-            "_ui_position.2",
+            "_ui_position",
         ]
         expected_content = (
             "1",
             "send_message",
             "start",
-            "",
-            "",
-            "",
-            "",
-            True,
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
+            "Hello",
             "QR1",
             "QR2",
             "QR3",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
             "224f6caa-fd25-47d3-96a9-3d43506b7878",
-            "",
-            "",
-            "123",
-            "456",
+            "123|456",
         )
 
-        sheet = RowDataSheet(RowParser(FlowRowModel, None), [row_data])
+        sheet = RowDataSheet(RowParser(FlowRowModel, CellParser()), [row_data])
         tablib_sheet = sheet.convert_to_tablib()
         self.assertEqual(tablib_sheet.headers, expected_headers)
         self.assertEqual(tablib_sheet[0], expected_content)

@@ -1,8 +1,14 @@
-from rpft.rapidpro.utils import generate_new_uuid
-from rpft.rapidpro.models.exceptions import RapidProActionError
-from rpft.rapidpro.models.common import Group, FlowReference, ContactFieldReference
-
 import copy
+
+from rpft.rapidpro.models.common import (
+    ContactFieldReference,
+    FlowReference,
+    Group,
+    mangle_string,
+)
+from rpft.rapidpro.models.exceptions import RapidProActionError
+from rpft.rapidpro.utils import generate_new_uuid
+from rpft.parsers.creation.flowrowmodel import dict_to_list_of_pairs
 
 # TODO: Check enter flow
 # Node classification:
@@ -31,11 +37,13 @@ class Action:
         return action
 
     def _assign_fields_from_dict(self, data):
-        self.__dict__ = data
+        self.__dict__ = copy.deepcopy(data)
 
-    def __init__(self, type):
+    def __init__(self, type, **kwargs):
         self.uuid = generate_new_uuid()
         self.type = type
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def record_global_uuids(self, uuid_dict):
         pass
@@ -49,18 +57,80 @@ class Action:
             "type": self.type,
         }
 
+    def short_name(self):
+        short_type = short_types.get(self.type, self.type)
+        short_value = mangle_string(self.main_value())
+        return f"{short_type}.{short_value}"
+
+    def main_value(self):
+        raise NotImplementedError
+
     def get_row_model_fields(self):
         # This should probably be an abstract method returning a partially
         # instantiated row model.
-        return NotImplementedError
+        raise NotImplementedError
 
 
-class UnclassifiedAction(Action):
+class DefaultRenderedAction(Action):
     def render(self):
         return self.__dict__
 
     def get_row_model_fields(self):
         return NotImplementedError
+
+
+class AddContactURNAction(DefaultRenderedAction):
+    def __init__(self, **kwargs):
+        super().__init__("add_contact_urn", **kwargs)
+
+    def main_value(self):
+        return self.path
+
+    def get_row_model_fields(self):
+        return {
+            "type": self.type,
+            "mainarg_value": self.path,
+            "urn_scheme": self.scheme if self.scheme != "tel" else "",
+        }
+
+
+class CallWebhookAction(DefaultRenderedAction):
+    def __init__(self, **kwargs):
+        super().__init__("call_webhook", **kwargs)
+
+    def main_value(self):
+        return self.body
+
+    def get_row_model_fields(self):
+        headers = dict_to_list_of_pairs(self.headers)
+        return {
+            "type": self.type,
+            "webhook": {
+                "body": self.body,
+                "url": self.url,
+                "headers": headers,
+                "method": self.method,
+            },
+            "save_name": self.result_name,
+        }
+
+
+class TransferAirtimeAction(DefaultRenderedAction):
+    def __init__(self, **kwargs):
+        assert "amounts" in kwargs
+        super().__init__("transfer_airtime", **kwargs)
+
+    def main_value(self):
+        return self.amounts
+
+    def get_row_model_fields(self):
+        amounts = {k : str(v) for k, v in self.amounts.items()}
+        amounts = dict_to_list_of_pairs(amounts)
+        return {
+            "type": self.type,
+            "mainarg_dict": amounts,
+            "save_name": self.result_name,
+        }
 
 
 class WhatsAppMessageTemplating:
@@ -69,6 +139,28 @@ class WhatsAppMessageTemplating:
         self.uuid = uuid or generate_new_uuid()
         self.template_uuid = template_uuid
         self.variables = variables
+
+    def from_whats_app_templating_model(model):
+        return WhatsAppMessageTemplating(
+            name=model.name,
+            template_uuid=model.uuid,
+            variables=model.variables,
+        )
+
+    def from_rapid_pro_templating(templating):
+        return WhatsAppMessageTemplating(
+            templating["template"]["name"],
+            templating["template"]["uuid"],
+            templating["variables"],
+            templating["uuid"],
+        )
+
+    def to_whats_app_templating_dict(self):
+        return {
+            "name": self.name,
+            "uuid": self.template_uuid,
+            "variables": self.variables,
+        }
 
     def render(self):
         return {
@@ -100,11 +192,8 @@ class SendMessageAction(Action):
             templating = data_copy.pop("templating")
         super()._assign_fields_from_dict(data_copy)
         if "templating" in data:
-            self.templating = WhatsAppMessageTemplating(
-                templating["template"]["name"],
-                templating["template"]["uuid"],
-                templating["variables"],
-                templating["uuid"],
+            self.templating = WhatsAppMessageTemplating.from_rapid_pro_templating(
+                templating
             )
 
     def add_attachment(self, attachment):
@@ -113,6 +202,12 @@ class SendMessageAction(Action):
     def add_quick_reply(self, quick_reply):
         self.quick_replies.append(quick_reply)
 
+    def main_value(self):
+        return self.text
+
+    def _get_attachments(self):
+        return [attachment for attachment in self.attachments if attachment]
+
     def render(self):
         # Can we find a more compact way of invoking the superclass
         # to render the common fields?
@@ -120,9 +215,7 @@ class SendMessageAction(Action):
         render_dict.update(
             {
                 "text": self.text,
-                "attachments": [
-                    attachment for attachment in self.attachments if attachment
-                ],
+                "attachments": self._get_attachments(),
                 "quick_replies": self.quick_replies,
             }
         )
@@ -138,13 +231,37 @@ class SendMessageAction(Action):
         return render_dict
 
     def get_row_model_fields(self):
-        # TODO: image/audio/video. Have to consider: multiple attachments per type?
         # TODO: templating
-        return {
+        attachment_by_type = {}
+        attachments = self._get_attachments()
+        # If there are more than 1 attachment, we cannot encode their
+        # order if we use the image/audio/video column.
+        # Thus we only use these if there is exactly one attachment,
+        # and otherwise we use the general attachment list.
+        if len(attachments) == 1:
+            attachment = attachments[0]
+            for attachment_type in ["image", "audio", "video"]:
+                if attachment.startswith(f"{attachment_type}:"):
+                    attachment_by_type[attachment_type] = attachment[6:]
+                    attachments = []
+                    break
+
+        out_dict = {
             "type": "send_message",
             "mainarg_message_text": self.text,
             "choices": self.quick_replies,
+            "image": attachment_by_type.get("image", ""),
+            "audio": attachment_by_type.get("audio", ""),
+            "video": attachment_by_type.get("video", ""),
+            "attachments": attachments,
         }
+        if hasattr(self, "templating") and self.templating:
+            out_dict.update({
+                "wa_template": WhatsAppMessageTemplating.to_whats_app_templating_dict(
+                    self.templating
+                )
+            })
+        return out_dict
 
 
 class SetContactFieldAction(Action):
@@ -163,6 +280,9 @@ class SetContactFieldAction(Action):
         data_copy = copy.deepcopy(data)
         data_copy["field"] = ContactFieldReference(**data_copy["field"])
         super()._assign_fields_from_dict(data_copy)
+
+    def main_value(self):
+        return self.field.name
 
     def render(self):
         return {
@@ -208,6 +328,9 @@ class SetContactPropertyAction(Action):
         self.property = property
         self.value = data_copy.pop(property)
 
+    def main_value(self):
+        return self.property
+
     def render(self):
         return {"uuid": self.uuid, "type": self.type, self.property: self.value}
 
@@ -239,6 +362,9 @@ class GenericGroupAction(Action):
     def assign_global_uuids(self, uuid_dict):
         for group in self.groups:
             group.assign_uuid(uuid_dict)
+
+    def main_value(self):
+        return self.groups[0].name
 
     def render(self):
         return NotImplementedError
@@ -305,6 +431,16 @@ class SetRunResultAction(Action):
                 f" {len(value)}"
             )
 
+    def main_value(self):
+        return self.name
+
+    def _assign_fields_from_dict(self, data):
+        assert "name" in data
+        assert "value" in data
+        super()._assign_fields_from_dict(data)
+        if "category" not in data:
+            self.category = ""
+
     def render(self):
         render_dict = {
             "type": self.type,
@@ -321,12 +457,18 @@ class SetRunResultAction(Action):
         return render_dict
 
     def get_row_model_fields(self):
-        return {
+        output_dict = {
             "type": "save_flow_result",
             "mainarg_value": self.value,
             "save_name": self.name,
-            "result_category": self.category,
         }
+        if self.category:
+            output_dict.update(
+                {
+                    "result_category": self.category,
+                }
+            )
+        return output_dict
 
 
 class EnterFlowAction(Action):
@@ -346,6 +488,9 @@ class EnterFlowAction(Action):
     def assign_global_uuids(self, uuid_dict):
         self.flow.assign_uuid(uuid_dict)
 
+    def main_value(self):
+        return self.flow.name
+
     def render(self):
         return {"type": self.type, "uuid": self.uuid, "flow": self.flow.render()}
 
@@ -359,18 +504,18 @@ class EnterFlowAction(Action):
 
 action_map = {
     "add_contact_groups": AddContactGroupAction,
-    "add_contact_urn": UnclassifiedAction,
-    "add_input_labels": UnclassifiedAction,
-    "call_classifier": UnclassifiedAction,
-    "call_resthook": UnclassifiedAction,
-    "call_webhook": UnclassifiedAction,
+    "add_contact_urn": AddContactURNAction,
+    "add_input_labels": DefaultRenderedAction,
+    "call_classifier": DefaultRenderedAction,
+    "call_resthook": DefaultRenderedAction,
+    "call_webhook": CallWebhookAction,
     "enter_flow": EnterFlowAction,
-    "open_ticket": UnclassifiedAction,
-    "play_audio": UnclassifiedAction,
+    "open_ticket": DefaultRenderedAction,
+    "play_audio": DefaultRenderedAction,
     "remove_contact_groups": RemoveContactGroupAction,
-    "say_msg": UnclassifiedAction,
-    "send_broadcast": UnclassifiedAction,
-    "send_email": UnclassifiedAction,
+    "say_msg": DefaultRenderedAction,
+    "send_broadcast": DefaultRenderedAction,
+    "send_email": DefaultRenderedAction,
     "send_msg": SendMessageAction,
     "set_contact_channel": SetContactPropertyAction,
     "set_contact_field": SetContactFieldAction,
@@ -379,6 +524,12 @@ action_map = {
     "set_contact_status": SetContactPropertyAction,
     "set_contact_timezone": SetContactPropertyAction,
     "set_run_result": SetRunResultAction,
-    "start_session": UnclassifiedAction,
-    "transfer_airtime": UnclassifiedAction,
+    "start_session": DefaultRenderedAction,
+    "transfer_airtime": TransferAirtimeAction,
+}
+
+short_types = {
+    "call_webhook": "webhook",
+    "enter_flow": "flow",
+    "send_msg": "msg",
 }

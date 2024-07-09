@@ -1,10 +1,18 @@
 import re
 from abc import ABC, abstractmethod
 
-from rpft.parsers.creation.flowrowmodel import FlowRowModel, Edge
-from rpft.rapidpro.models.actions import Action, EnterFlowAction
-from rpft.rapidpro.models.common import Exit
-from rpft.rapidpro.models.routers import SwitchRouter, RandomRouter
+from rpft.parsers.creation.flowrowmodel import (
+    Edge,
+    FlowRowModel,
+)
+from rpft.rapidpro.models.actions import (
+    Action,
+    CallWebhookAction,
+    EnterFlowAction,
+    TransferAirtimeAction,
+)
+from rpft.rapidpro.models.common import Exit, generate_field_key, mangle_string
+from rpft.rapidpro.models.routers import RandomRouter, SwitchRouter
 from rpft.rapidpro.utils import generate_new_uuid
 
 # TODO: EnterFlowNode and WebhookNode are currently children of BaseNode.
@@ -49,10 +57,15 @@ class BaseNode(ABC):
             if data["router"]["type"] == "random":
                 return RandomRouterNode.from_dict(data, ui_data)
             elif data["router"]["type"] == "switch":
-                if data["router"]["operand"] == "@child.run.status":
-                    return EnterFlowNode.from_dict(data, ui_data)
-                elif data["router"]["operand"] == "@results.webhook_result.category":
-                    return CallWebhookNode.from_dict(data, ui_data)
+                if data["actions"]:
+                    if data["actions"][0]["type"] == "enter_flow":
+                        return EnterFlowNode.from_dict(data, ui_data)
+                    elif data["actions"][0]["type"] == "call_webhook":
+                        return CallWebhookNode.from_dict(data, ui_data)
+                    elif data["actions"][0]["type"] == "transfer_airtime":
+                        return TransferAirtimeNode.from_dict(data, ui_data)
+                    else:
+                        raise ValueError("Node contains action of invalid type")
                 else:
                     return SwitchRouterNode.from_dict(data, ui_data)
             else:
@@ -140,6 +153,10 @@ class BaseNode(ABC):
         self.row_models[0].edges.insert(0, edge)
 
     @abstractmethod
+    def short_name(self):
+        pass
+
+    @abstractmethod
     def initiate_row_models(self, node_row_id, parent_edge, **kwargs):
         self.row_models = []
         if self.actions:
@@ -184,6 +201,9 @@ class BasicNode(BaseNode):
     def _add_exit(self, exit):
         raise NotImplementedError
 
+    def short_name(self):
+        return self.actions[0].short_name()
+
     def validate(self):
         if not self.has_basic_exit:
             raise ValueError("has_basic_exit must be True for BasicNode")
@@ -198,7 +218,30 @@ class BasicNode(BaseNode):
         return [(self.default_exit, Edge(from_=self.row_models[-1].row_id))]
 
 
-class SwitchRouterNode(BaseNode):
+class RouterNode(BaseNode, ABC):
+    def add_choice(self, *args, **kwargs):
+        # Subclasses may choose to validate the input
+        self.router.add_choice(*args, **kwargs)
+
+    def update_default_exit(self, destination_uuid):
+        self.router.update_default_category(destination_uuid)
+
+    def record_global_uuids(self, uuid_dict):
+        super().record_global_uuids(uuid_dict)
+        self.router.record_global_uuids(uuid_dict)
+
+    def assign_global_uuids(self, uuid_dict):
+        super().assign_global_uuids(uuid_dict)
+        self.router.assign_global_uuids(uuid_dict)
+
+    def get_exits(self):
+        return self.router.get_exits()
+
+    def get_exit_edge_pairs(self):
+        return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)
+
+
+class SwitchRouterNode(RouterNode):
     def __init__(
         self,
         operand=None,
@@ -225,11 +268,12 @@ class SwitchRouterNode(BaseNode):
         router = SwitchRouter.from_dict(data["router"], exits)
         return SwitchRouterNode(uuid=data["uuid"], router=router)
 
-    def add_choice(self, *args, **kwargs):
-        self.router.add_choice(*args, **kwargs)
-
-    def update_default_exit(self, destination_uuid):
-        self.router.update_default_category(destination_uuid)
+    def short_name(self):
+        short_value = mangle_string(self.router.result_name or self.router.operand)
+        if self.router.wait_timeout:
+            return f"wait_for.{short_value}"
+        else:
+            return f"switch.{short_value}"
 
     def update_no_response_exit(self, destination_uuid):
         self.router.update_no_response_category(destination_uuid)
@@ -240,21 +284,10 @@ class SwitchRouterNode(BaseNode):
     def has_positive_wait(self):
         return self.router.has_positive_wait()
 
-    def record_global_uuids(self, uuid_dict):
-        super().record_global_uuids(uuid_dict)
-        self.router.record_global_uuids(uuid_dict)
-
-    def assign_global_uuids(self, uuid_dict):
-        super().assign_global_uuids(uuid_dict)
-        self.router.assign_global_uuids(uuid_dict)
-
     def validate(self):
         if self.has_basic_exit:
             raise ValueError("Basic exits are not supported in SwitchRouterNode")
         self.router.validate()
-
-    def get_exits(self):
-        return self.router.get_exits()
 
     def render_ui(self):
         ui_entry = super().render_ui()
@@ -353,11 +386,8 @@ class SwitchRouterNode(BaseNode):
                 mainarg_expression=self.router.operand,
             )
 
-    def get_exit_edge_pairs(self):
-        return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)
 
-
-class RandomRouterNode(BaseNode):
+class RandomRouterNode(RouterNode):
     def __init__(self, result_name=None, uuid=None, router=None, ui_pos=None):
         super().__init__(uuid, ui_pos=ui_pos)
         if router:
@@ -371,17 +401,21 @@ class RandomRouterNode(BaseNode):
         router = RandomRouter.from_dict(data["router"], exits)
         return RandomRouterNode(uuid=data["uuid"], router=router)
 
-    def add_choice(self, *args, **kwargs):
-        self.router.add_choice(*args, **kwargs)
+    def update_default_exit(self, destination_uuid):
+        raise ValueError("RandomRouterNode does not support default exits.")
+
+    def short_name(self):
+        if self.router.result_name:
+            short_value = mangle_string(self.router.result_name)
+            return f"random.{short_value}"
+        else:
+            return "random"
 
     def validate(self):
         if self.has_basic_exit:
-            raise ValueError("Default exits are not supported in SwitchRouterNode")
+            raise ValueError("Default exits are not supported in RandomRouterNode")
 
         self.router.validate()
-
-    def get_exits(self):
-        return self.router.get_exits()
 
     def render_ui(self):
         ui_entry = super().render_ui()
@@ -398,11 +432,8 @@ class RandomRouterNode(BaseNode):
             type="split_random",
         )
 
-    def get_exit_edge_pairs(self):
-        return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)
 
-
-class EnterFlowNode(BaseNode):
+class EnterFlowNode(RouterNode):
     def __init__(
         self,
         flow_name=None,
@@ -462,9 +493,8 @@ class EnterFlowNode(BaseNode):
             raise ValueError("EnterFlowNode node must have exactly one action")
         return EnterFlowNode(uuid=data["uuid"], router=router, action=actions[0])
 
-    def add_choice(self, *args, **kwargs):
-        # TODO: validate the input
-        self.router.add_choice(*args, **kwargs)
+    def short_name(self):
+        return self.actions[0].short_name()
 
     def update_default_exit(self, destination_uuid):
         raise ValueError("EnterFlowNode does not support default exits.")
@@ -479,9 +509,6 @@ class EnterFlowNode(BaseNode):
     def validate(self):
         pass
 
-    def get_exits(self):
-        return self.router.get_exits()
-
     def render_ui(self):
         ui_entry = super().render_ui()
         if not ui_entry:
@@ -495,11 +522,8 @@ class EnterFlowNode(BaseNode):
         # If we refactor this to be a child of SwitchRouterNode, careful here!
         super().initiate_row_models(current_row_id, parent_edge)
 
-    def get_exit_edge_pairs(self):
-        return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)
 
-
-class CallWebhookNode(BaseNode):
+class CallWebhookNode(RouterNode):
     def __init__(
         self,
         result_name=None,
@@ -535,32 +559,28 @@ class CallWebhookNode(BaseNode):
                 raise ValueError(
                     "Either an action or a url/result_name have to be provided."
                 )
-            # This is kinda lazy, we might want a dedicated Webhook action.
-            action = Action.from_dict(
-                {
-                    "type": "call_webhook",
-                    "result_name": result_name,
-                    "url": url,
-                    "method": method,
-                    "body": body,
-                    "headers": headers,
-                    "uuid": generate_new_uuid(),
-                }
+            action = CallWebhookAction(
+                result_name=result_name,
+                url=url,
+                method=method,
+                body=body,
+                headers=headers,
             )
             self.add_action(action)
 
         if router:
             self.router = router
         else:
+            result_field = generate_field_key(result_name)
             self.router = SwitchRouter(
-                operand=f"@results.{result_name}.category",
+                operand=f"@results.{result_field}.category",
                 result_name=None,
                 wait_timeout=None,
             )
             self.router.default_category.update_name("Failure")
 
             self.add_choice(
-                comparison_variable=f"@results.{result_name}.category",
+                comparison_variable=f"@results.{result_field}.category",
                 comparison_type="has_only_text",
                 comparison_arguments=["Success"],
                 category_name="Success",
@@ -578,13 +598,6 @@ class CallWebhookNode(BaseNode):
             raise ValueError("WebhookNode node must have exactly one action")
         return CallWebhookNode(uuid=data["uuid"], router=router, action=actions[0])
 
-    def add_choice(self, *args, **kwargs):
-        # TODO: validate the input
-        self.router.add_choice(*args, **kwargs)
-
-    def update_default_exit(self, destination_uuid):
-        self.router.update_default_category(destination_uuid)
-
     def update_success_exit(self, destination_uuid):
         category = self.router._get_category_or_none("Success")
         category.update_destination_uuid(destination_uuid)
@@ -592,11 +605,12 @@ class CallWebhookNode(BaseNode):
     def update_failure_exit(self, destination_uuid):
         self.update_default_exit(destination_uuid)
 
+    def short_name(self):
+        short_value = mangle_string(self.router.result_name or self.actions[0].url)
+        return f"webhook.{short_value}"
+
     def validate(self):
         pass
-
-    def get_exits(self):
-        return self.router.get_exits()
 
     def render_ui(self):
         ui_entry = super().render_ui()
@@ -607,8 +621,93 @@ class CallWebhookNode(BaseNode):
         return ui_entry
 
     def initiate_row_models(self, current_row_id, parent_edge):
-        # Webhook is not yet part of the sheet specification
-        raise NotImplementedError
+        super().initiate_row_models(current_row_id, parent_edge)
 
-    def get_exit_edge_pairs(self):
-        return self.router.get_exit_edge_pairs(self.row_models[-1].row_id)
+
+class TransferAirtimeNode(RouterNode):
+    def __init__(
+        self,
+        amounts=None,
+        result_name=None,
+        success_destination_uuid=None,
+        failure_destination_uuid=None,
+        uuid=None,
+        router=None,
+        action=None,
+        ui_pos=None,
+    ):
+        """
+        Either an action or a flow_name have to be provided.
+        """
+        super().__init__(uuid, ui_pos=ui_pos)
+
+        if action:
+            if action.type != "transfer_airtime":
+                raise ValueError(
+                    "Action for TransferAirtimeNode must be of type transfer_airtime"
+                )
+            self.add_action(action)
+        else:
+            if not amounts or not result_name:
+                raise ValueError(
+                    "Either an action or a amounts/result_name have to be provided."
+                )
+            assert type(amounts) is dict
+            action = TransferAirtimeAction(
+                amounts=amounts,
+                result_name=result_name,
+            )
+            self.add_action(action)
+
+        if router:
+            self.router = router
+        else:
+            result_field = generate_field_key(result_name)
+            self.router = SwitchRouter(
+                operand=f"@results.{result_field}",
+            )
+            self.router.default_category.update_name("Failure")
+
+            self.add_choice(
+                comparison_variable=f"@results.{result_field}",
+                comparison_type="has_category",
+                comparison_arguments=["Success"],
+                category_name="Success",
+                destination_uuid=success_destination_uuid,
+            )
+            self.router.update_default_category(failure_destination_uuid, "Failure")
+            # Suppress the warning about overwriting default category
+            self.router.has_explicit_default_category = False
+
+    def from_dict(data, ui_data=None):
+        exits = [Exit.from_dict(exit_data) for exit_data in data["exits"]]
+        router = SwitchRouter.from_dict(data["router"], exits)
+        actions = [Action.from_dict(action) for action in data["actions"]]
+        if len(actions) != 1:
+            raise ValueError("TransferAirtimeNode node must have exactly one action")
+        return TransferAirtimeNode(uuid=data["uuid"], router=router, action=actions[0])
+
+    def update_success_exit(self, destination_uuid):
+        category = self.router._get_category_or_none("Success")
+        category.update_destination_uuid(destination_uuid)
+
+    def update_failure_exit(self, destination_uuid):
+        self.update_default_exit(destination_uuid)
+
+    def short_name(self):
+        short_value = mangle_string(self.actions[0].result_name)
+        return f"airtime.{short_value}"
+
+    def validate(self):
+        pass
+
+    def render_ui(self):
+        ui_entry = super().render_ui()
+        if not ui_entry:
+            return None
+        ui_entry["type"] = "split_by_airtime"
+        ui_entry["config"] = {}
+        return ui_entry
+
+    def initiate_row_models(self, current_row_id, parent_edge):
+        super().initiate_row_models(current_row_id, parent_edge)

@@ -66,6 +66,12 @@ class BaseRouter:
     def get_exits(self):
         return [c.get_exit() for c in self.get_categories()]
 
+    def record_global_uuids(self, uuid_dict):
+        pass
+
+    def assign_global_uuids(self, uuid_dict):
+        pass
+
     def get_categories(self):
         # TODO: Remove this and have the default category included in the list for the
         # SwitchRouter
@@ -104,16 +110,16 @@ class SwitchRouter(BaseRouter):
         self.wait_timeout = wait_timeout
 
         self.has_explicit_default_category = False
-        if categories and default_category:
-            self.categories = categories
+
+        if default_category:
             self.default_category = default_category
             # Indicates that a default category has been added by the user
             self.has_explicit_default_category = True
         else:
-            self.categories = []
             # Add an implicit default category
             category = RouterCategory("Other", None)
             self.default_category = category
+        self.categories = categories or []
 
         self.has_explicit_no_response_category = False
         if self.wait_timeout:
@@ -335,8 +341,11 @@ class SwitchRouter(BaseRouter):
                         # For groups and expired/complete, var/type/name are implicit
                         condition = Condition(value=case.arguments[arg_idx])
                     else:
+                        value = ""
+                        if case.type not in RouterCase.NO_ARGS_TESTS:
+                            value = case.arguments[arg_idx]
                         condition = Condition(
-                            value=case.arguments[arg_idx],
+                            value=value,
                             variable=self.operand,
                             type=case.type,
                             name=category.name,

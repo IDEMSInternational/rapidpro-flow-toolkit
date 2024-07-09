@@ -26,15 +26,18 @@ class TestFlowParserReverse(unittest.TestCase):
         if model.obj_id and not model_exp.obj_id:
             # If no explicit object UUID was specified, don't compare
             model_dict["obj_id"] = ""
-        for field in ["image", "audio", "video", "obj_name", "node_name", "ui_type"]:
+        for field in ["obj_name", "node_name", "ui_type"]:
             # We ignore these. Attachments need to be rethought,
             # the other of these fields may be removed as well.
             model_dict.pop(field)
             model_exp_dict.pop(field)
-        # TODO: We have trailing '' quick replies here.
+        # TODO: We have trailing '' quick replies and webhook.headers here.
         # They get removed in the conversion process, but probably the RowParser
         # should already take care of them
         model_exp_dict["choices"] = [qr for qr in model_exp_dict["choices"] if qr]
+        model_exp_dict["webhook"]["headers"] = [
+            header for header in model_exp_dict["webhook"]["headers"] if header
+        ]
         self.assertEqual(model_dict, model_exp_dict)
 
     def run_example(self, filename, flow_name):
@@ -44,7 +47,7 @@ class TestFlowParserReverse(unittest.TestCase):
         parser = FlowParser(container, flow_name, table)
         flow = parser.parse()
         container.validate()
-        row_models = flow.to_rows()
+        row_models = flow.to_rows(numbered=True)
         data_rows = parser.sheet_parser.parse_all()
         self.assertEqual(len(row_models), len(data_rows))
         for model, model_exp in zip(row_models, data_rows):

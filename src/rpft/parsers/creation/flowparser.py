@@ -1,34 +1,46 @@
 from collections import defaultdict
 
+from rpft.logger.logger import get_logger, logging_context
+from rpft.parsers.common.cellparser import CellParser
+from rpft.parsers.common.rowparser import RowParser
+from rpft.parsers.common.sheetparser import SheetParser
+from rpft.parsers.creation.flowrowmodel import (
+    Condition,
+    Edge,
+    FlowRowModel,
+    list_of_pairs_to_dict,
+)
 from rpft.rapidpro.models.actions import (
+    AddContactGroupAction,
+    AddContactURNAction,
+    Group,
+    RemoveContactGroupAction,
     SendMessageAction,
     SetContactFieldAction,
-    AddContactGroupAction,
-    RemoveContactGroupAction,
-    SetRunResultAction,
     SetContactPropertyAction,
-    Group,
+    SetRunResultAction,
     WhatsAppMessageTemplating,
 )
 from rpft.rapidpro.models.containers import FlowContainer
 from rpft.rapidpro.models.exceptions import RapidProActionError
 from rpft.rapidpro.models.nodes import (
     BasicNode,
-    SwitchRouterNode,
-    RandomRouterNode,
-    EnterFlowNode,
     CallWebhookNode,
-)
+    EnterFlowNode,
+    RandomRouterNode,
+    SwitchRouterNode,
+    TransferAirtimeNode,
+    )
 from rpft.rapidpro.models.routers import SwitchRouter
-from rpft.parsers.common.cellparser import CellParser
-from rpft.parsers.common.sheetparser import SheetParser
-from rpft.parsers.common.rowparser import RowParser
-from rpft.parsers.creation.flowrowmodel import FlowRowModel
-from rpft.parsers.creation.flowrowmodel import Condition
-
-from rpft.logger.logger import get_logger, logging_context
 
 LOGGER = get_logger()
+
+
+def string_to_int_or_float(s):
+    try:
+        return int(s)
+    except ValueError:
+        return float(s)
 
 
 class NodeGroup:
@@ -198,7 +210,10 @@ class RowNodeGroup:
             # For BasicNode, this updates the default exit.
             # For SwitchRouterNode, this updates the exit of the default category.
             # For EnterFlowNode, this should throw an error.
-            exit_node.update_default_exit(destination_uuid)
+            try:
+                exit_node.update_default_exit(destination_uuid)
+            except ValueError as e:
+                LOGGER.critical(str(e))
             return
 
         # Completed/Expired edge from start_new_flow
@@ -215,7 +230,9 @@ class RowNodeGroup:
             return
 
         # Completed/Expired edge from start_new_flow
-        if isinstance(exit_node, CallWebhookNode):
+        if isinstance(exit_node, CallWebhookNode) or isinstance(
+            exit_node, TransferAirtimeNode
+        ):
             if condition.value.lower() == "success":
                 exit_node.update_success_exit(destination_uuid)
                 self.has_loose_exit = False
@@ -223,7 +240,8 @@ class RowNodeGroup:
                 exit_node.update_failure_exit(destination_uuid)
             else:
                 LOGGER.error(
-                    "Condition from call_webhook must be 'Success' or 'Failure'."
+                    "Condition from call_webhook/transfer_airtime must be "
+                    "'Success' or 'Failure'."
                 )
             return
 
@@ -452,10 +470,8 @@ class FlowParser:
         if row.type == "send_message":
             templating = None
             if row.wa_template.name:
-                templating = WhatsAppMessageTemplating(
-                    name=row.wa_template.name,
-                    template_uuid=row.wa_template.uuid,
-                    variables=row.wa_template.variables,
+                templating = WhatsAppMessageTemplating.from_whats_app_templating_model(
+                    row.wa_template
                 )
             send_message_action = SendMessageAction(
                 text=row.mainarg_message_text, templating=templating
@@ -463,9 +479,12 @@ class FlowParser:
             for att_type, attachment in zip(
                 ["image", "audio", "video"], [row.image, row.audio, row.video]
             ):
+                attachment = attachment.strip()
                 if attachment:
                     # TODO: Add depending on prefix.
                     send_message_action.add_attachment(f"{att_type}:{attachment}")
+            for attachment in row.attachments:
+                send_message_action.add_attachment(attachment)
 
             quick_replies = [qr for qr in row.choices if qr]
             if quick_replies:
@@ -481,6 +500,11 @@ class FlowParser:
             group = self._get_or_create_group(row.mainarg_groups[0], row.obj_id)
             add_group_action = AddContactGroupAction(groups=[group])
             return add_group_action
+        elif row.type == "add_contact_urn":
+            return AddContactURNAction(
+                path=row.mainarg_value,
+                scheme=row.urn_scheme or 'tel',
+            )
         elif row.type == "remove_from_group":
             group = self._get_or_create_group(row.mainarg_groups[0], row.obj_id)
             remove_group_action = RemoveContactGroupAction(groups=[group])
@@ -503,6 +527,7 @@ class FlowParser:
             "split_random",
             "start_new_flow",
             "call_webhook",
+            "transfer_airtime",
         ]:
             return None
         else:
@@ -515,21 +540,6 @@ class FlowParser:
             # have tests checking for group UUIDs.
             uuid = None
         return Group(name=name, uuid=uuid)
-
-    def _validate_webhook_headers(self, headers):
-        # Dict is not yet supported in the row parser,
-        # so we need to convert a list of pairs into dict.
-        if type(headers) is dict:
-            return headers
-        elif type(headers) is list:
-            if headers == [""]:
-                # Future row parser should return [] instead of [""]
-                return {}
-            if not all(map(lambda x: type(x) is list and len(x) == 2, headers)):
-                LOGGER.critical("Webhook headers must be a list of pairs.")
-            return {k: v for k, v in headers}
-        else:
-            LOGGER.critical("Webhook headers must be a dict.")
 
     def _get_row_node(self, row):
         if (
@@ -572,13 +582,34 @@ class FlowParser:
                 )
             return EnterFlowNode(row.mainarg_flow_name, uuid=node_uuid, ui_pos=ui_pos)
         elif row.type in ["call_webhook"]:
-            headers = self._validate_webhook_headers(row.webhook.headers)
+            try:
+                headers = list_of_pairs_to_dict(row.webhook.headers)
+            except ValueError as e:
+                LOGGER.critical("webhook.headers: " + str(e))
             return CallWebhookNode(
                 result_name=row.save_name,
                 url=row.webhook.url,
                 method=row.webhook.method,
                 body=row.webhook.body,
                 headers=headers,
+                uuid=node_uuid,
+                ui_pos=ui_pos,
+            )
+        elif row.type in ["transfer_airtime"]:
+            try:
+                airtime_amounts = list_of_pairs_to_dict(row.mainarg_dict)
+            except ValueError as e:
+                LOGGER.critical("airtime_amounts: " + str(e))
+            try:
+                airtime_amounts = {
+                    k : string_to_int_or_float(v)
+                    for k, v in airtime_amounts.items()
+                }
+            except ValueError:
+                LOGGER.critical("airtime_amounts: Current values must be numerical")
+            return TransferAirtimeNode(
+                result_name=row.save_name,
+                amounts=airtime_amounts,
                 uuid=node_uuid,
                 ui_pos=ui_pos,
             )
@@ -727,8 +758,12 @@ class FlowParser:
         if row_action:
             new_node.add_action(row_action)
 
-        for edge in row.edges:
-            self._add_row_edge(edge, new_node.uuid)
+        for i, edge in enumerate(row.edges):
+            if edge != Edge() or i == 0:
+                # Omit trivial edges (i.e. from is blank so implicitly goes
+                # (from the previous row, and no condition either)
+                # unless it is the first edge in the list.
+                self._add_row_edge(edge, new_node.uuid)
 
         new_node_group = RowNodeGroup(new_node, row.type)
         self.append_node_group(new_node_group, row.row_id)

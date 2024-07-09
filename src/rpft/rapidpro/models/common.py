@@ -1,7 +1,13 @@
 import re
 
-from rpft.rapidpro.utils import generate_new_uuid
 from rpft.rapidpro.models.exceptions import RapidProActionError
+from rpft.rapidpro.utils import generate_new_uuid
+
+
+def mangle_string(string):
+    string = re.sub(r"[. ]", "_", string)
+    string = re.sub(r"[^A-Za-z0-9\_\-]+", "", string)
+    return string[:15]
 
 
 class Exit:
@@ -86,10 +92,15 @@ class Group:
     def from_dict(data):
         return Group(**data)
 
-    def __init__(self, name, uuid=None, query=None):
+    def __init__(
+        self, name, uuid=None, query=None, status=None, system=None, count=None
+    ):
         self.name = name
         self.uuid = uuid
         self.query = query
+        self.status = status
+        self.system = system
+        self.count = count
 
     def record_uuid(self, uuid_dict):
         uuid_dict.record_group_uuid(self.name, self.uuid)
@@ -99,6 +110,8 @@ class Group:
 
     def render(self):
         render_dict = {"name": self.name, "uuid": self.uuid}
-        if self.query:
-            render_dict["query"] = self.query
+        for attribute in ["query", "status", "system", "count"]:
+            value = getattr(self, attribute)
+            if value is not None:
+                render_dict[attribute] = value
         return render_dict

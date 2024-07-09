@@ -1,4 +1,5 @@
 from typing import List
+
 from rpft.parsers.common.rowparser import ParserModel
 
 
@@ -13,10 +14,42 @@ class Condition(ParserModel):
 
 
 class Webhook(ParserModel):
+    # Headers should ideally be a dict, once that is supported
     url: str = ""
     method: str = ""
     headers: list = []
     body: str = ""
+
+
+def list_of_pairs_to_dict(headers):
+    # Dict is not yet supported in the row parser,
+    # so we need to convert a list of pairs into dict.
+    # This function can be removed once dict support is implemented.
+    if type(headers) is dict:
+        return headers
+    elif type(headers) is list:
+        if headers == [""]:
+            # Future row parser should return [] instead of [""]
+            return {}
+        if not all(map(lambda x: type(x) is list and len(x) == 2, headers)):
+            raise ValueError("Value must be a list of pairs.")
+        return {k: v for k, v in headers}
+    else:
+        raise ValueError("Value must be a dict or list of pairs.")
+
+
+def dict_to_list_of_pairs(headers):
+    # Reverse list_of_pairs_to_dict
+    # This function can be removed once dict support is implemented.
+    if type(headers) is list:
+        return headers
+    elif type(headers) is dict:
+        converted = []
+        for k, v in headers.items():
+            converted.append([k, v])
+        return converted
+    else:
+        raise ValueError("Value must be a list/dict.")
 
 
 class WhatsAppTemplating(ParserModel):
@@ -56,6 +89,7 @@ class FlowRowModel(ParserModel):
     mainarg_value: str = ""
     mainarg_groups: List[str] = []
     mainarg_none: str = ""
+    mainarg_dict: list = []  # encoded as list of pairs
     mainarg_destination_row_ids: List[str] = []
     mainarg_flow_name: str = ""
     mainarg_expression: str = ""
@@ -71,6 +105,8 @@ class FlowRowModel(ParserModel):
     image: str = ""
     audio: str = ""
     video: str = ""
+    attachments: List[str] = []  # These come after image/audio/video attachments
+    urn_scheme: str = ""
     obj_name: str = ""  # What is this used for?
     obj_id: str = ""  # This should be a list
     node_name: str = ""  # What is this used for?
@@ -98,6 +134,7 @@ class FlowRowModel(ParserModel):
             "mainarg_destination_row_ids": "message_text",
             "mainarg_flow_name": "message_text",
             "mainarg_expression": "message_text",
+            "mainarg_dict": "message_text",
             "webhook.body": "message_text",
             # 'mainarg_iterlist' : 'message_text',  # Not supported for export
         }
@@ -126,6 +163,7 @@ class FlowRowModel(ParserModel):
             "remove_from_group": "mainarg_groups",
             "save_flow_result": "mainarg_value",
             "wait_for_response": "mainarg_none",
+            "add_contact_urn": "mainarg_value",
             "set_contact_language": "mainarg_value",
             "set_contact_name": "mainarg_value",
             "set_contact_status": "mainarg_value",
@@ -133,6 +171,7 @@ class FlowRowModel(ParserModel):
             "split_random": "mainarg_none",
             "go_to": "mainarg_destination_row_ids",
             "call_webhook": "webhook.body",
+            "transfer_airtime": "mainarg_dict",
             "start_new_flow": "mainarg_flow_name",
             "split_by_value": "mainarg_expression",
             "split_by_group": "mainarg_groups",

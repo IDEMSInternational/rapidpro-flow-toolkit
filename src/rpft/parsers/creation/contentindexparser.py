@@ -107,6 +107,11 @@ class ContentIndexParser:
                     self._process_data_sheet(row)
                 elif row.type in ["template_definition", "create_flow"]:
                     if row.type == "template_definition":
+                        if row.new_name:
+                            LOGGER.warning(
+                                "template_definition does not support 'new_name'; "
+                                f"new_name '{row.new_name}' will be ignored."
+                            )
                         self._add_template(row, True)
                     else:
                         self.flow_definition_rows.append((logging_prefix, row))
@@ -122,6 +127,8 @@ class ContentIndexParser:
                 elif row.type == "create_triggers":
                     trigger_parser = self.create_trigger_parser(row)
                     self.trigger_parsers.append((logging_prefix, trigger_parser))
+                elif row.type == "ignore_row":
+                    self._process_ignore_row(row.sheet_name[0])
                 else:
                     LOGGER.error(f"invalid type: '{row.type}'")
 
@@ -138,6 +145,23 @@ class ContentIndexParser:
             self.template_sheets[sheet_name] = TemplateSheet(
                 sheet.table, row.template_argument_definitions
             )
+
+    def _process_ignore_row(self, sheet_name):
+        # Remove the flow definition row for the given name
+        self.flow_definition_rows = [
+            (logging_prefix, row)
+            for logging_prefix, row in self.flow_definition_rows
+            if (row.new_name or row.sheet_name[0]) != sheet_name
+        ]
+        # Template definitions are NOT removed, as their existence
+        # has no effect on the output flows.
+        # Remove campaign/trigger definitions with the given name
+        self.campaign_parsers.pop(sheet_name, None)
+        self.trigger_parsers = [
+            (logging_prefix, trigger_parser)
+            for logging_prefix, trigger_parser in self.trigger_parsers
+            if trigger_parser.sheet_name != sheet_name
+        ]
 
     def _populate_missing_templates(self):
         for logging_prefix, row in self.flow_definition_rows:

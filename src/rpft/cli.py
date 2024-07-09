@@ -1,7 +1,7 @@
 import argparse
 import json
 
-from rpft.converters import create_flows, save_data_sheets
+from rpft import converters
 from rpft.logger.logger import initialize_main_logger
 
 LOGGER = initialize_main_logger()
@@ -9,87 +9,220 @@ LOGGER = initialize_main_logger()
 
 def main():
     args = create_parser().parse_args()
-    if args.command == "create_flows":
-        output = create_flows(
-            args.input,
-            None,
-            args.format,
-            data_models=args.datamodels,
-            tags=args.tags,
-        )
-    elif args.command == "save_data_sheets":
-        output = save_data_sheets(
-            args.input,
-            None,
-            args.format,
-            data_models=args.datamodels,
-            tags=args.tags,
-        )
-    else:
-        print("Invalid command.")
-        exit(0)
+    args.func(args)
 
+
+def create_flows(args):
+    flows = converters.create_flows(
+        args.input,
+        None,
+        args.format,
+        data_models=args.datamodels,
+        tags=args.tags,
+    )
+
+    with open(args.output, "w", encoding="utf-8") as export:
+        json.dump(flows, export, indent=4)
+
+
+def convert_to_json(args):
+    content = converters.convert_to_json(args.input, args.format)
+
+    with open(args.output, "wb") as export:
+        export.write(bytes(content, "utf-8"))
+
+
+def flows_to_sheets(args):
+    converters.flows_to_sheets(
+        args.input, args.output, args.format, args.strip_uuids, args.numbered
+    )
+
+
+def save_data_sheets(args):
+    output = converters.save_data_sheets(
+        args.input,
+        None,
+        args.format,
+        data_models=args.datamodels,
+        tags=args.tags,
+    )
     with open(args.output, "w") as export:
         json.dump(output, export, indent=4)
 
 
 def create_parser():
     parser = argparse.ArgumentParser(
-        description=(
-            "Generate RapidPro flows JSON from spreadsheets\n"
-            "\n"
-            "Example usage:\n"
-            "create_flows --output=flows.json --format=csv --datamodels=example.models"
-            " sheet1.csv sheet2.csv"
-        ),
-        formatter_class=argparse.RawTextHelpFormatter,
+        description=("create RapidPro flows JSON from spreadsheets"),
     )
-    parser.add_argument(
-        "command",
-        choices=["create_flows", "save_data_sheets"],
-        help=(
-            "create_flows: create flows from spreadsheets\n"
-            "save_data_sheets: save data from spreadsheets as json\n"
-            "flow_to_sheet: create spreadsheets from flows (not implemented)"
-        ),
-    )
-    parser.add_argument(
-        "input",
-        nargs="+",
-        help=(
-            "CSV/XLSX: path to files on local file system\n"
-            "Google Sheets: sheet ID i.e."
-            " https://docs.google.com/spreadsheets/d/[ID]/edit"
-        ),
-    )
-    parser.add_argument("-o", "--output", required=True, help="Output JSON filename")
-    parser.add_argument(
-        "-f",
-        "--format",
+    sub = parser.add_subparsers(
+        help="run {subcommand} --help for further information",
         required=True,
-        choices=["csv", "google_sheets", "xlsx"],
-        help="Input sheet format",
+        title="subcommands",
     )
+
+    _add_create_command(sub)
+    _add_convert_command(sub)
+    _add_flows_to_sheets_command(sub)
+    _add_save_data_sheets_command(sub)
+
+    return parser
+
+
+def _add_create_command(sub):
+    parser = sub.add_parser(
+        "create",
+        aliases=["create_flows"],
+        help="create RapidPro flows from spreadsheets",
+    )
+
+    parser.set_defaults(func=create_flows)
     parser.add_argument(
         "--datamodels",
         help=(
-            "Module name of the module defining user data models, i.e. models "
-            "underlying the data sheets. E.g. if the model definitions reside in "
-            "./myfolder/mysubfolder/mymodelsfile.py, then this argument should be "
-            "myfolder.mysubfolder.mymodelsfile"
+            "name of the module defining user data models underlying the data sheets,"
+            " e.g. if the model definitions reside in"
+            " ./myfolder/mysubfolder/mymodelsfile.py, then this argument should be"
+            " myfolder.mysubfolder.mymodelsfile"
         ),
     )
     parser.add_argument(
+        "-f",
+        "--format",
+        choices=["csv", "google_sheets", "json", "xlsx"],
+        help="input sheet format",
+        required=True,
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="output JSON filename",
+        required=True,
+    )
+    parser.add_argument(
         "--tags",
-        nargs="*",
         help=(
-            "Tags to filter the content index sheet. A sequence of lists, with each "
+            "tags to filter the content index sheet: a sequence of lists, with each "
             "list starting with an integer (tag position) followed by tags to include "
-            "for this position. Example: 1 foo bar 2 baz means: only include rows if "
+            "for this position, e.g. '1 foo bar 2 baz', means only include rows if "
             "tags:1 is empty, foo or bar, and tags:2 is empty or baz"
         ),
+        nargs="*",
     )
-    return parser
+    parser.add_argument(
+        "input",
+        help=(
+            "paths to XLSX or JSON files, or directories containing CSV files, or"
+            " Google Sheets IDs i.e. from the URL; inputs should be of the same format"
+        ),
+        nargs="+",
+    )
+
+
+def _add_convert_command(sub):
+    parser = sub.add_parser("convert", help="save input spreadsheets as JSON")
+
+    parser.set_defaults(func=convert_to_json)
+    parser.add_argument(
+        "-f",
+        "--format",
+        choices=["csv", "google_sheets", "json", "xlsx"],
+        help="input sheet format",
+        required=True,
+    )
+    parser.add_argument(
+        "input",
+        help=(
+            "path to XLSX or JSON file, or directory containing CSV files, or Google"
+            " Sheets ID i.e. from the URL"
+        ),
+    )
+    parser.add_argument(
+        "output",
+        help=("path to output JSON file"),
+    )
+
+
+def _add_flows_to_sheets_command(sub):
+    parser = sub.add_parser(
+        "flows_to_sheets", help="convert RapidPro JSON into spreadsheets"
+    )
+
+    parser.set_defaults(func=flows_to_sheets)
+    parser.add_argument(
+        "--strip_uuids",
+        action="store_true",
+        help="strip all UUIDs from output to allow for comparing outputs",
+    )
+    parser.add_argument(
+        "--numbered",
+        action="store_true",
+        help="Use sequential numbers instead of short representations for row IDs",
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        choices=["csv", "xlsx"],
+        help="desired sheet format (default: csv)",
+        default="csv",
+    )
+    parser.add_argument(
+        "input",
+        help=("path to input RapidPro JSON file"),
+    )
+    parser.add_argument(
+        "-o",
+        "output",
+        help=("output folder"),
+    )
+
+
+def _add_save_data_sheets_command(sub):
+    parser = sub.add_parser(
+        "save_data_sheets",
+        help="save data sheets referenced in context index as nested json",
+    )
+
+    parser.set_defaults(func=save_data_sheets)
+    parser.add_argument(
+        "--datamodels",
+        help=(
+            "name of the module defining user data models underlying the data sheets,"
+            " e.g. if the model definitions reside in"
+            " ./myfolder/mysubfolder/mymodelsfile.py, then this argument should be"
+            " myfolder.mysubfolder.mymodelsfile"
+        ),
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        choices=["csv", "google_sheets", "json", "xlsx"],
+        help="input sheet format",
+        required=True,
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="output JSON filename",
+        required=True,
+    )
+    parser.add_argument(
+        "--tags",
+        help=(
+            "tags to filter the content index sheet: a sequence of lists, with each "
+            "list starting with an integer (tag position) followed by tags to include "
+            "for this position, e.g. '1 foo bar 2 baz', means only include rows if "
+            "tags:1 is empty, foo or bar, and tags:2 is empty or baz"
+        ),
+        nargs="*",
+    )
+    parser.add_argument(
+        "input",
+        help=(
+            "paths to XLSX or JSON files, or directories containing CSV files, or"
+            " Google Sheets IDs i.e. from the URL; inputs should be of the same format"
+        ),
+        nargs="+",
+    )
 
 
 if __name__ == "__main__":
