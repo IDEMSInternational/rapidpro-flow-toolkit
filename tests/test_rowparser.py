@@ -34,7 +34,6 @@ class TestRowParserBoolean(unittest.TestCase):
             {"bool_field": "  False  "},
             {"bool_field": "FALSE"},
             {"bool_field": "false"},
-            {"bool_field": "0"},
         ]
         for inp in inputs:
             out = self.parser.parse_row(inp)
@@ -46,16 +45,13 @@ class TestRowParserBoolean(unittest.TestCase):
             {"bool_field": "  True  "},
             {"bool_field": "TRUE"},
             {"bool_field": "true"},
+            {"bool_field": "something"},
             {"bool_field": "1"},
+            {"bool_field": "0"},
         ]
         for inp in inputs:
             out = self.parser.parse_row(inp)
             self.assertEqual(out, self.trueModel)
-
-    def test_convert_invalid(self):
-        inp = {"bool_field": "something"}
-        with self.assertRaises(RowParserError):
-            _ = self.parser.parse_row(inp)
 
     def test_convert_default(self):
         inp = {}

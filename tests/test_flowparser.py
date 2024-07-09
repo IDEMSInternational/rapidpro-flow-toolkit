@@ -723,7 +723,7 @@ class TestConditionals(TestBlocks):
             "row_id,type,from,include_if,message_text\n"
             ",send_message,,,text1\n"
             ",send_message,,FALSE,text2\n"
-            ",send_message,,1,text3\n"
+            ",send_message,,something,text3\n"
             ",send_message,,False,text4\n"
             ",send_message,,{{1 == 0}},text5\n"
             ",send_message,,{@1 == 0@},text6\n"
