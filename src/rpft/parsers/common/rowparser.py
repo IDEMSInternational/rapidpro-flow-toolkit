@@ -99,12 +99,10 @@ def is_default_value(model_instance, field, field_value):
 
 def str_to_bool(string):
     # in this case, the default value takes effect.
-    if string.lower() == "false" or string == "0":
+    if string.lower() == "false":
         return False
-    elif string.lower() == "true" or string == "1":
-        return True
     else:
-        raise RowParserError("Boolean must be true/1 or false/0 " f'but is "{string}"')
+        return True
 
 
 def get_field_name(string):
