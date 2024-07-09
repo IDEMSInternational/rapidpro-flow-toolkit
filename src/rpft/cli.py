@@ -174,7 +174,6 @@ def _add_flows_to_sheets_command(sub):
         help=("path to input RapidPro JSON file"),
     )
     parser.add_argument(
-        "-o",
         "output",
         help=("output folder"),
     )
