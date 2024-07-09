@@ -46,7 +46,7 @@ def save_data_sheets(args):
         data_models=args.datamodels,
         tags=args.tags,
     )
-    with open(args.output, "w") as export:
+    with open(args.output, "w", encoding="utf-8") as export:
         json.dump(output, export, indent=4)
 
 
@@ -76,6 +76,10 @@ def _add_create_command(sub):
     )
 
     parser.set_defaults(func=create_flows)
+    _add_content_index_arguments(parser)
+
+
+def _add_content_index_arguments(parser):
     parser.add_argument(
         "--datamodels",
         help=(
@@ -183,46 +187,7 @@ def _add_save_data_sheets_command(sub):
     )
 
     parser.set_defaults(func=save_data_sheets)
-    parser.add_argument(
-        "--datamodels",
-        help=(
-            "name of the module defining user data models underlying the data sheets,"
-            " e.g. if the model definitions reside in"
-            " ./myfolder/mysubfolder/mymodelsfile.py, then this argument should be"
-            " myfolder.mysubfolder.mymodelsfile"
-        ),
-    )
-    parser.add_argument(
-        "-f",
-        "--format",
-        choices=["csv", "google_sheets", "json", "xlsx"],
-        help="input sheet format",
-        required=True,
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        help="output JSON filename",
-        required=True,
-    )
-    parser.add_argument(
-        "--tags",
-        help=(
-            "tags to filter the content index sheet: a sequence of lists, with each "
-            "list starting with an integer (tag position) followed by tags to include "
-            "for this position, e.g. '1 foo bar 2 baz', means only include rows if "
-            "tags:1 is empty, foo or bar, and tags:2 is empty or baz"
-        ),
-        nargs="*",
-    )
-    parser.add_argument(
-        "input",
-        help=(
-            "paths to XLSX or JSON files, or directories containing CSV files, or"
-            " Google Sheets IDs i.e. from the URL; inputs should be of the same format"
-        ),
-        nargs="+",
-    )
+    _add_content_index_arguments(parser)
 
 
 if __name__ == "__main__":
