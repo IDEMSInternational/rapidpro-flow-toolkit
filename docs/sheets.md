@@ -246,7 +246,6 @@ further as needed:
 - `RowModel.parse_obj(nested_dict)`
 - `rowmodelinstance.dict()`
 
-
 It would be desirable to add a method to `RowDataSheet` to export its content
 to a nested JSON. The reverse is less straight-forward, as we need to store some
 metadata describing the model somewhere (either via headers, a pydantic json schema,
