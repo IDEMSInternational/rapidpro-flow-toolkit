@@ -3,7 +3,6 @@ import os
 import shutil
 from pathlib import Path
 
-from rpft.parsers.common.model_inference import model_from_headers
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import (
@@ -15,6 +14,7 @@ from rpft.parsers.sheets import (
     XLSXSheetReader,
 )
 from rpft.rapidpro.models.containers import RapidProContainer
+
 
 def create_flows(input_files, output_file, sheet_format, data_models=None, tags=[]):
     """

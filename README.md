@@ -11,12 +11,12 @@ rpft --help
 
 # Command Line Interface (CLI)
 
-The CLI supports three subcommands:
+The CLI supports the following subcommands:
 
 - `create_flows`: create RapidPro flows (in JSON format) from spreadsheets using content index
 - `flows_to_sheets`: convert RapidPro flows (in JSON format) into spreadsheets
 - `convert`: save input spreadsheets as JSON
-- `save_data_sheets`: save input spreadsheets as nested JSON using content index
+- `save_data_sheets`: save input spreadsheets as nested JSON using content index - an experimental feature that is likely to change.
 
 Full details of the available options for each can be found via the help feature:
 

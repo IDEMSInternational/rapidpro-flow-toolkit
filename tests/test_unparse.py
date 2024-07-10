@@ -387,7 +387,3 @@ class TestUnparseToStringDict(unittest.TestCase):
             "model_with_stuff.str_field": "string",
         }
         self.assertEqual(output1, exp1)
-
-
-if __name__ == "__main__":
-    unittest.main()

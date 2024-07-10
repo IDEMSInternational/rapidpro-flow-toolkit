@@ -148,7 +148,3 @@ class TestModelInference(unittest.TestCase):
                 field1=(List[MySubmodel], [MySubmodel(), MySubmodel()]),
             ),
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

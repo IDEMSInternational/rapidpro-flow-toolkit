@@ -8,8 +8,6 @@ from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
 from tests.utils import Context, traverse_flow
 
-# flake8: noqa: E501
-
 
 def csv_join(*args):
     return "\n".join(args) + "\n"
@@ -57,7 +55,10 @@ class TestParsing(TestTemplate):
             ",send_message,start,Some text",
         )
 
-        sheet_reader = MockSheetReader(ci_sheet, {"my_template": my_template, "my_template2": my_template})
+        sheet_reader = MockSheetReader(
+            ci_sheet,
+            {"my_template": my_template, "my_template2": my_template},
+        )
         ci_parser = ContentIndexParser(sheet_reader)
         template_sheet = ci_parser.get_template_sheet("my_template")
         self.assertEqual(template_sheet.table[0][1], "send_message")
@@ -173,11 +174,14 @@ class TestParsing(TestTemplate):
         render_output = container.render()
         self.assertEqual(len(render_output["flows"]), 3)
         names = {flow["name"] for flow in render_output["flows"]}
-        self.assertEqual(names, {
-            "bulk_renamed - row1",
-            "bulk_renamed - row2",
-            "row2_renamed - row2",
-        })
+        self.assertEqual(
+            names,
+            {
+                "bulk_renamed - row1",
+                "bulk_renamed - row2",
+                "row2_renamed - row2",
+            },
+        )
 
     def test_generate_flows(self):
         ci_sheet = (
@@ -639,33 +643,33 @@ class TestParsing(TestTemplate):
 class TestOperation(unittest.TestCase):
     def test_concat(self):
         # Concatenate two fresh sheets
-        ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type\n"
-            "data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,concat\n"
+        ci_sheet = csv_join(
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type",
+            "data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,concat",
         )
         self.check_concat(ci_sheet)
 
     def test_concat_implicit(self):
         # Concatenate two fresh sheets
-        ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type\n"
-            "data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,\n"
+        ci_sheet = csv_join(
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type",
+            "data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,"
         )
         self.check_concat(ci_sheet)
 
     def test_concat2(self):
         # Concatenate a fresh sheet with an existing sheet
-        ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type\n"
-            "data_sheet,simpleA,,,renamedA,SimpleRowModel,\n"
-            "data_sheet,renamedA;simpleB,,,simpledata,SimpleRowModel,concat\n"
+        ci_sheet = csv_join(
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type",
+            "data_sheet,simpleA,,,renamedA,SimpleRowModel,",
+            "data_sheet,renamedA;simpleB,,,simpledata,SimpleRowModel,concat",
         )
         self.check_concat(ci_sheet)
 
     def test_concat3(self):
         # Concatenate two existing sheets
-        ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type\n"
+        ci_sheet = csv_join(
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type",
             "data_sheet,simpleA,,,renamedA,SimpleRowModel,\n"
             "data_sheet,simpleB,,,renamedB,SimpleRowModel,\n"
             "data_sheet,renamedA;renamedB,,,simpledata,SimpleRowModel,concat\n"
@@ -699,7 +703,7 @@ class TestOperation(unittest.TestCase):
         # The filter operation is referencing a sheet new (not previously parsed) sheet
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
-            "data_sheet,simpleA,,,simpledata,SimpleRowModel,filter|expression;value2=='fruit'\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,filter|expression;value2=='fruit'\n"  # noqa: E501
         )
         self.check_example1(ci_sheet)
 
@@ -708,7 +712,7 @@ class TestOperation(unittest.TestCase):
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
             "data_sheet,simpleA,,,,SimpleRowModel,\n"
-            "data_sheet,simpleA,,,simpledata,SimpleRowModel,filter|expression;value2=='fruit'\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,filter|expression;value2=='fruit'\n"  # noqa: E501
         )
         self.check_example1(ci_sheet, original="simpleA")
 
@@ -716,7 +720,7 @@ class TestOperation(unittest.TestCase):
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
             "data_sheet,simpleA,,,renamedA,SimpleRowModel,\n"
-            "data_sheet,renamedA,,,simpledata,SimpleRowModel,filter|expression;value2=='fruit'\n"
+            "data_sheet,renamedA,,,simpledata,SimpleRowModel,filter|expression;value2=='fruit'\n"  # noqa: E501
         )
         self.check_example1(ci_sheet, original="renamedA")
 
@@ -758,7 +762,7 @@ class TestOperation(unittest.TestCase):
     def test_filter_fresh2(self):
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
-            "data_sheet,simpleA,,,simpledata,SimpleRowModel,\"filter|expression;value1 in ['orange','apple']\"\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,\"filter|expression;value1 in ['orange','apple']\"\n"  # noqa: E501
         )
         exp_keys = ["rowA", "rowC"]
         self.check_filtersort(ci_sheet, exp_keys)
@@ -766,7 +770,7 @@ class TestOperation(unittest.TestCase):
     def test_filter_fresh3(self):
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
-            "data_sheet,simpleA,,,simpledata,SimpleRowModel,filter|expression;value1.lower() > 'd'\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,filter|expression;value1.lower() > 'd'\n"  # noqa: E501
         )
         exp_keys = ["rowA", "rowB", "rowD"]
         self.check_filtersort(ci_sheet, exp_keys)
@@ -774,7 +778,7 @@ class TestOperation(unittest.TestCase):
     def test_sort(self):
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
-            "data_sheet,simpleA,,,simpledata,SimpleRowModel,sort|expression;value1.lower()\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,sort|expression;value1.lower()\n"  # noqa: E501
         )
         exp_keys = ["rowC", "rowD", "rowA", "rowB"]
         rows = self.check_filtersort(ci_sheet, exp_keys)
@@ -788,7 +792,7 @@ class TestOperation(unittest.TestCase):
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
             "data_sheet,simpleA,,,,SimpleRowModel,\n"
-            "data_sheet,simpleA,,,simpledata,SimpleRowModel,sort|expression;value1.lower()\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,sort|expression;value1.lower()\n"  # noqa: E501
         )
         exp_keys = ["rowC", "rowD", "rowA", "rowB"]
         self.check_filtersort(ci_sheet, exp_keys, original="simpleA")
@@ -796,7 +800,7 @@ class TestOperation(unittest.TestCase):
     def test_sort_descending(self):
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation\n"
-            "data_sheet,simpleA,,,simpledata,SimpleRowModel,sort|expression;value1.lower()|order;descending\n"
+            "data_sheet,simpleA,,,simpledata,SimpleRowModel,sort|expression;value1.lower()|order;descending\n"  # noqa: E501
         )
         exp_keys = ["rowB", "rowA", "rowD", "rowC"]
         self.check_filtersort(ci_sheet, exp_keys)
@@ -805,7 +809,7 @@ class TestOperation(unittest.TestCase):
 class TestModelInference(TestTemplate):
     def setUp(self):
         self.ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,status\n"  # noqa: E501
+            "type,sheet_name,data_sheet,data_row_id,status\n"
             "template_definition,my_template,,,\n"
             "create_flow,my_template,mydata,,\n"
             "data_sheet,mydata,,,\n"
@@ -815,7 +819,6 @@ class TestModelInference(TestTemplate):
             ",send_message,start,Lst {{lst.0}} {{lst.1}}\n"
             ",send_message,,{{custom_field.happy}} and {{custom_field.sad}}\n"
         )
-
 
     def check_example(self, sheet_dict):
         sheet_reader = MockSheetReader(self.ci_sheet, sheet_dict)
@@ -1025,22 +1028,17 @@ class TestParseTriggers(unittest.TestCase):
         self.assertEqual(groups2[0]["uuid"], mygroup_uuid)
 
     def test_parse_triggers_without_flow(self):
-        ci_sheet = (
-            "type,sheet_name\n"
-            "create_triggers,my_triggers\n"
-        )
+        ci_sheet = "type,sheet_name\n" "create_triggers,my_triggers\n"
         my_triggers = (
             "type,keywords,flow,groups,exclude_groups,match_type\n"
             "K,the word,my_basic_flow,My Group,,\n"
         )
 
-        sheet_reader = MockSheetReader(
-            ci_sheet, {"my_triggers": my_triggers}
-        )
+        sheet_reader = MockSheetReader(ci_sheet, {"my_triggers": my_triggers})
         ci_parser = ContentIndexParser(sheet_reader)
         container = ci_parser.parse_all()
         with self.assertRaises(RapidProTriggerError):
-            render_output = container.render()
+            container.render()
 
     def test_ignore_triggers(self):
         ci_sheet = (
@@ -1252,41 +1250,40 @@ class TestSaveAsDict(unittest.TestCase):
         output = ci_parser.data_sheets_to_dict()
         output["meta"].pop("version")
         exp = {
-            "meta" : {
-                "user_models_module" : "tests.datarowmodels.nestedmodel",
+            "meta": {
+                "user_models_module": "tests.datarowmodels.nestedmodel",
             },
-            "sheets" : {
-                "simpledata_renamed" : {
-                    "model" : "ListRowModel",
-                    "rows" : [
+            "sheets": {
+                "simpledata_renamed": {
+                    "model": "ListRowModel",
+                    "rows": [
                         {
                             "ID": "rowID",
-                            "list_value" : ["val1", "val2"],
+                            "list_value": ["val1", "val2"],
                         }
-                    ]
+                    ],
                 },
-                "nesteddata" : {
-                    "model" : "NestedRowModel",
-                    "rows" : [
+                "nesteddata": {
+                    "model": "NestedRowModel",
+                    "rows": [
                         {
                             "ID": "row1",
                             "value1": "Value1",
-                            "custom_field" : {
+                            "custom_field": {
                                 "happy": "Happy1",
-                                "sad": "Sad1",                            
-                            }
+                                "sad": "Sad1",
+                            },
                         },
                         {
                             "ID": "row2",
                             "value1": "Value2",
-                            "custom_field" : {
+                            "custom_field": {
                                 "happy": "Happy2",
-                                "sad": "Sad2",                            
-                            }
-                        }
-                    ]
-                }
-            }
+                                "sad": "Sad2",
+                            },
+                        },
+                    ],
+                },
+            },
         }
         self.assertEqual(output, exp)
-

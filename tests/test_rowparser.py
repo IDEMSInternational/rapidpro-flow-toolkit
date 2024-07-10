@@ -1,7 +1,7 @@
 import unittest
 from typing import List
 
-from rpft.parsers.common.rowparser import ParserModel, RowParser, RowParserError
+from rpft.parsers.common.rowparser import ParserModel, RowParser
 from tests.mocks import MockCellParser
 
 
@@ -128,10 +128,6 @@ class TestRowParserListStr(unittest.TestCase):
             out = self.parser.parse_row(inp)
             self.assertEqual(out, self.onetwoModel)
 
-        # inp = {"list_field": "1"}
-        # with self.assertRaises(ValueError):
-        #     out = self.parser.parse_row(inp)
-
 
 class ListIntModel(ParserModel):
     list_field: List[int] = []
@@ -155,7 +151,3 @@ class TestRowParserList(TestRowParserListStr):
         self.emptyModel = ListModel(**{"list_field" : []})
         self.oneModel = ListModel(**{"list_field" : ["1"]})
         self.onetwoModel = ListModel(**{"list_field" : ["1", "2"]})
-
-
-if __name__ == "__main__":
-    unittest.main()

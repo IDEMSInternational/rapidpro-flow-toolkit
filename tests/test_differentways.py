@@ -133,7 +133,3 @@ class TestDifferentWays(unittest.TestCase):
     def test_single_kwarg(self):
         output_single_kwarg = self.parser.parse_row(input_single_kwarg)
         self.assertEqual(output_single_kwarg, output_single_kwarg_exp)
-
-
-if __name__ == "__main__":
-    unittest.main()

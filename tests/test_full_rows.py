@@ -225,7 +225,3 @@ class TestDifferentWays(unittest.TestCase):
     def test_input_6(self):
         output6 = self.parser.parse_row(input6)
         self.assertEqual(output6, output6_exp)
-
-
-if __name__ == "__main__":
-    unittest.main()

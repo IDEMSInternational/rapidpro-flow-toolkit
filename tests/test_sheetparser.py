@@ -53,7 +53,3 @@ class TestSheetParser(unittest.TestCase):
         self.assertEqual(
             rows[2], {"field1": "row3f1", "field2": "row3f2", "context": {}}
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

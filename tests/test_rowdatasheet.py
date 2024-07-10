@@ -117,7 +117,3 @@ class TestRowDataSheet(unittest.TestCase):
             RowDataSheet(self.rowparser, [rowA, rowC]).export(
                 outfile, file_format="xlsx"
             )
-
-
-if __name__ == "__main__":
-    unittest.main()
