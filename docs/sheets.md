@@ -246,4 +246,84 @@ further as needed:
 - `RowModel.parse_obj(nested_dict)`
 - `rowmodelinstance.dict()`
 
-However, no such CLI functionality is implemented, at this point.
+
+It would be desirable to add a method to `RowDataSheet` to export its content
+to a nested JSON. The reverse is less straight-forward, as we need to store some
+metadata describing the model somewhere (either via headers, a pydantic json schema,
+or a reference to an already defined model).
+
+
+The CLI command `save_data_sheets` implements exporting all data sheets referenced in
+a content index as (a single) nested JSON. This is implemented in `save_data_sheets` in [](/src/rpft/converters.py), using the [`ContentIndexParser`](rapidpro.md). However, it its
+own `DataSheet` class via its `to_dict` method. It would be good to unify `DataSheet`
+and `RowDataSheet`, and provide this as standalone functionality, once it's decided which meta-data describing the underlying model needs to be stored.
+
+Below is some (untested) code outlining roughly how this could look like:
+
+
+```python
+from converters import create_sheet_reader
+
+def convert_to_nested_json(input_file, sheet_format, user_data_model_module_name=None):
+    """
+    Convert source spreadsheet(s) into nested json.
+
+    :param input_file: source spreadsheet to convert
+    :param sheet_format: format of the input spreadsheet
+    :param user_data_model_module_name: see ContentIndexParser
+    :returns: content of the input file converted to nested json.
+    """
+
+    reader = create_sheet_reader(sheet_format, input_file)
+    # reader.sheets: Mapping[str, Sheet]
+    # user_data_model_module_name: We need this once
+    user_models_module = None
+    if user_data_model_module_name:
+        user_models_module = importlib.import_module(
+            user_data_model_module_name
+        )
+    sheets = {}
+    for sheet_name, sheet in reader.sheets.items():
+        data_model_name = ...  # This is not stored anywhere. We need this for each sheet
+    	user_model = infer_model(sheet.name, user_models_module, data_model_name, sheet.table.headers)
+        rows = sheet_to_list_of_nested_dict(sheet, user_model)
+        sheets[sheet_name] = rows
+    return sheets
+
+def sheet_to_list_of_nested_dict(sheet, user_model):
+	'''
+	The first three lines of this is a common functionality already used in various places,
+	and should be wrapped in a function (and the output should probably be RowDataSheet
+	rather than List[RowModel]).
+	'''
+    row_parser = RowParser(user_model, CellParser())
+    sheet_parser = SheetParser(row_parser, sheet.table)
+    data_rows = sheet_parser.parse_all()  # list of row model
+    return [row.dict() for row in data_rows]
+    # Below is what the content index parser does:
+    # it stores it as a dict rather than list, assuming an ID column
+    # model_instances = OrderedDict((row.ID, row) for row in data_rows)
+    # return DataSheet(model_instances, user_model)
+
+def nested_json_to_data_sheet(row, user_models_module=None, data_model_name=None, headers=None):
+    # rows: a list of nested dicts
+    user_model = infer_model("model_name?", user_models_module, data_model_name, headers)
+    data_rows = []
+    for row in rows:
+        # Remark: there is also parse_raw for json strings and parse_file,
+        # however, I assume these are not applicable here because we have some
+        # meta information inside our files.
+        data_rows.append(user_model.parse_obj(row))
+    return data_rows
+    # Alternatively, using DataSheet again:
+    # model_instances = OrderedDict((row.ID, row) for row in data_rows)
+    # return DataSheet(model_instances, user_model)
+
+def infer_model(name, user_models_module=None, data_model_name=None, headers=None)
+    # returns a subclass of https://docs.pydantic.dev/latest/api/base_model/#pydantic.BaseModel
+    if user_models_module and data_model_name:
+        user_model = getattr(user_models_module, data_model_name)
+    else:
+        user_model = model_from_headers(name, headers)
+    return user_model
+```
