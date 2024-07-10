@@ -1,0 +1,249 @@
+# Generic parsers from spreadsheets to data models
+
+On an idealized and simplified level, we have the following chain of converting
+different representations of data:
+
+Spreadsheet File: An XLSX, folder of CSVs, ID of a Google Sheet, flat JSON
+(list of dicts mapping column headers to column entries)
+
+^
+
+| `SheetReader`: Upon construction, reads a file and then has a dict
+of `Sheet`s indexed by name.
+
+v
+
+`Sheet`: Wrapper around [`tablib.Dataset`]
+(https://tablib.readthedocs.io/en/stable/api.html#dataset-object)
+
+^
+
+| `SheetParser`, `RowParser`, `CellParser`
+
+v
+
+`RowDataSheet`: Wrapper around `List[RowModel]` for some `RowModel`,
+which is a subclass of [`pydantic.BaseModel`]
+(https://docs.pydantic.dev/latest/concepts/models/#basic-model-usage)
+
+^
+
+| pydantic functionality
+
+v
+
+Nested dict/JSON
+
+`RowModel`s are classes representing the data contained in an individual row.
+Thus, the data in one row is a `RowModel` instance. `RowModel` may contain
+basic types, lists or other `pydantic.BaseModel`s as attributes, and thereby
+their data can be nested.
+
+In practice, `Sheet` and `RowDataSheet` are used somewhat inconsistently, and in
+their stead sometimes `tablib.Dataset`, `List[RowModel]` or other custom
+classes are used, maybe motivating a refactor in the future. We outline the
+details of the three conversion steps below.
+
+
+## Conversion between spreadsheet files and `Sheet`s
+
+SheetReaders and `Sheet`s are defined in [](/src/rpft/parsers/sheets.py)
+
+The `Sheet` class wraps [`tablib.Dataset`]
+(https://tablib.readthedocs.io/en/stable/api.html#dataset-object) (which is
+often referred to as `table`). `Sheet`s also have a `name`.
+
+
+### Forward direction
+
+`Sheet`s are produced by SheetReaders that can read different input file
+formats. Currently, `Sheet`s have an additional SheetReader attribute `reader`
+indicating which reader produced it (it's not clear whether this is necessary.
+refactor?).
+
+SheetReaders take a file reference upon construction, and provide
+`reader.get_sheet(name) -> Sheet` and `reader.get_sheets_by_name(name) -> List[Sheet]`
+to access `Sheet`s by their name. While generally the name of a sheet
+within a file is unique, the latter function is useful with the
+`CompositeSheetReader`, which is composed of multiple SheetReaders and thus
+implicitly references multiple files.
+
+We have subclasses of `AbstractSheetReader` for different formats:
+
+- XLSX
+- CSV (file reference is a folder containing CSVs)
+- Google Sheet (reference is an ID)
+- flat JSON (contains a dict mapping sheet names to their content. Each content
+  is a list of dicts mapping column headers to column entries)
+
+
+### Reverse direction
+
+The are currently no SheetWriters, and thus this conversion step is
+one-directional. When we want to write spreadsheets, this is implemented ad-hoc
+by using `tablib.Dataset`'s export functionality (for CSV, XLSX), see for
+example [`RowDataSheet.export`](`/src/rpft/parsers/common/rowdatasheet.py`), or
+`json.dump` for flat JSON.
+
+
+## Conversion between `Sheet`s and `RowDataSheet`s
+
+While `Sheet` is a simple table representation of a sheet with rows and columns
+(which have column headers), a [`RowDataSheet`](/src/rpft/parsers/common/rowdatasheet.py) 
+represents a list of `RowModel`
+instances. `RowModel`s are subclasses of [`pydantic.BaseModel`]
+(https://docs.pydantic.dev/latest/concepts/models/#basic-model-usage), and may
+contain basic types, lists and other models as attributes, nested arbirarily
+deep. How sheets and their column headers correspond to `RowModel`s is
+documented in more detail in [](models.md).
+
+
+### Forward direction
+
+The conversion from `Sheet` and `RowDataSheet` invokes a 3 level hierarchy:
+`SheetParser`, `RowParser` and `CellParser`.
+
+
+#### Sheet parser
+
+The [`SheetParser`](/src/rpft/parsers/common/sheetparser.py) has a `table`
+(`tablib.Dataset`) and a `RowParser` and provides two functions:
+
+- `parse_all`: returns the output as `List[RowModel]`
+- `get_row_data_sheet`: returns the output as `RowDataSheet`
+
+The `SheetParser` invokes the `RowParser` to convert each of the rows.
+The `RowParser` has the `RowModel` that each row is to be converted to.
+
+
+#### Row parser
+
+A [`RowParser`](`/src/rpft/parsers/common/rowparser.py`) has an
+associated `RowModel` and a `CellParser`.
+
+It provides a function `parse_row(data)` to convert a spreadsheet
+row into a `RowModel` instance containing the provided data.
+`data` is a `dict[str, str]` mapping column headers to the
+corresponding entry of the spreadsheet in this row, and is provided
+by the `SheetParser`. Column headers determine which field of the
+model the column contains data for, and different ways to address fields
+in the data models are supported, see [](models.md).
+
+The `RowParser` interprets the column headers and if the column contains
+a non-basic type (e.g. a list or a submodel), it invokes the `CellParser`
+to convert the cell content into a nested list, which it then processes
+further to assign values to the model fields.
+
+
+#### Cell parser
+
+The [`CellParser`](/src/rpft/parsers/common/cellparser.py) has a function
+`parse(value)` that takes a string (the cell content) and converts it into
+a nested list. It uses `|` and `;` characters (in that order) as list
+separators, and `\` can be used as an escape chacter.
+
+Examples:
+
+- `a;b` --> ['a','b']
+- `a\;b` --> 'a;b'
+- `a,b|1,2` --> [['a','b'],['1','2']]
+
+More examples can be found in [](/tests/test_cellparser.py).
+
+
+#### Templating
+
+Cells of a sheet may contain [Jinja2](https://jinja.palletsprojects.com/en/3.1.x/) templates.
+For example, the content of a cell may look like `Hello {{user_name}}!`.
+
+With a given templating context mapping variable names to values
+(e.g. {"user_name": "Chris"), such a string can be evaluated,
+e.g. to `Hello Chris!`.
+
+More examples can be found in [](/tests/test_cellparser.py).
+
+
+##### Instantiating templated sheets
+
+A `SheetParser` as an optional templating context, that it passes down to the `RowParser`
+for each row, which in turn passes it down to the `CellParser` for each cell.
+The `CellParser` will try to evaluate all templates that appear in the cell, and
+throw an error if a variable is undefined (because it is missing from the context).
+
+Therefore, if a `Sheet` contains templating, we need a templating context in order to
+instantiate the templates and convert the `Sheet` into a `RowDataSheet`.
+It is not possible to convert `Sheet`s with uninstantiated templates into
+`RowDataSheet`s (and thus also nested JSONs). If we want to store such sheets as JSON,
+we have to store it as flat JSON.
+
+In fact, such a conversion of uninstatiated templates is in principle not possible,
+as the following example shows:
+
+Imagine we have a column encoding a `list` field in our `RowModel`, and the
+corresponding cell contains `{% for e in my_list %}{{e}};{% endfor %}`.
+With a context (e.g. `{"my_list": [1, 2, 3]}`), this can be evalued to
+`"1;2;3;"` and processed by the `CellParser` into `[1, 2, 3]`, which the 
+`RowParser` then assigns to the field in the `RowModel`. However, uninstantiated,
+this cell contains the string `"{% for e in my_list %}{{e}};{% endfor %}"`,
+and the `RowParser` cannot assign a string to a field of type `list`.
+
+
+##### Control flow and changing context
+
+In addition to `parse_all`, the `SheetParser` also offers a function
+`parse_next_row` to parse a sheet row by row. The invoker of `parse_next_row`
+may change the templating context between calls by using `add_to_context`
+and `remove_from_context`. Thus, the invoker may interpret the content of a
+row, and adjust the templating context accordingly before parsing the next row.
+The invoker may also repeat the parsing of rows by setting and returning to
+bookmarks, e.g. to implement for loops, using `create_bookmark`,
+`go_to_bookmark` and `remove_bookmark`.
+
+
+
+### Reverse direction
+
+The `RowDataSheet` class has a method `convert_to_tablib` which converts
+its content to `tablib.Dataset`. It uses the `unparse_row` method of the
+`RowParser` associated to the `RowDataSheet` to turn each `RowModel` instance
+into a `dict[str,str]` mapping column headers to a string representation of
+their content. In the process, it converts complex types into nested lists
+and uses the `CellParser`'s `join_from_lists` method to get a string
+representation of nested lists.
+
+By default, the column headers are chosen in such a way the every column
+contains a basic type: For example, for list fields, we have one column
+per entry.
+But as there are many different sheet representations of a `RowModel`,
+depending on the choice of the headers, the `RowDataSheet` has two more
+optional arguments:
+
+- `target_headers` (`set[str]`): Complex type fields (`RowModel`s, `list`s,
+  `dict`s) whose content should be represented in the output dict as a single
+  entry. A trailing asterisk may be used to specify multiple fields at once,
+  such as `list.*` and `field.*`.
+- `excluded_headers` (`set[str]`): Fields to exclude from the output. Same format
+    as target_headers.
+
+Remark: No templating is supported in the reverse direction.
+
+
+## Conversion between `RowDataSheet`s and Nested JSON
+
+As `RowModel`s are instances of `pydantic.BaseModel`,
+it is easy to convert them to dict/json:
+
+Reading/writing a single `RowModel` instance from/to json:
+
+- `RowModel.parse_json(nested_json)`
+- `rowmodelinstance.json()`
+
+In practice, we have a list of `RowModel`s, which we want to convert into a
+single JSON containing a list of rows (and possibly additional metadata).
+Thus we can use the conversion to dict functions and then process the results
+further as needed:
+
+- `RowModel.parse_obj(nested_dict)`
+- `rowmodelinstance.dict()`
+
+However, no such CLI functionality is implemented, at this point.
