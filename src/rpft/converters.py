@@ -33,7 +33,7 @@ def create_flows(input_files, output_file, sheet_format, data_models=None, tags=
     flows = parser.parse_all().render()
 
     if output_file:
-        with open(output_file, "w", encoding='utf8') as export:
+        with open(output_file, "w", encoding="utf8") as export:
             json.dump(flows, export, indent=4)
 
     return flows
@@ -101,7 +101,7 @@ def flows_to_sheets(
     :param numbered: Use sequential numbers instead of short reps for row IDs.
     :returns: None.
     """
-    with open(input_file, "r", encoding='utf-8') as f:
+    with open(input_file, "r", encoding="utf-8") as f:
         data = json.load(f)
     container = RapidProContainer.from_dict(data)
     for flow in container.flows:

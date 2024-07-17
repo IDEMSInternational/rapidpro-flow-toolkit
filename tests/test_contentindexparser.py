@@ -653,7 +653,7 @@ class TestOperation(unittest.TestCase):
         # Concatenate two fresh sheets
         ci_sheet = csv_join(
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type",
-            "data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,"
+            "data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,",
         )
         self.check_concat(ci_sheet)
 
@@ -672,7 +672,7 @@ class TestOperation(unittest.TestCase):
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type",
             "data_sheet,simpleA,,,renamedA,SimpleRowModel,\n"
             "data_sheet,simpleB,,,renamedB,SimpleRowModel,\n"
-            "data_sheet,renamedA;renamedB,,,simpledata,SimpleRowModel,concat\n"
+            "data_sheet,renamedA;renamedB,,,simpledata,SimpleRowModel,concat\n",
         )
         self.check_concat(ci_sheet)
 

@@ -38,10 +38,7 @@ class DataSheet:
         rows = []
         for content in self.rows.values():
             rows.append(content.dict())
-        return {
-            "model" : self.row_model.__name__,
-            "rows" : rows
-        }
+        return {"model": self.row_model.__name__, "rows": rows}
 
 
 class ParserError(Exception):
@@ -350,11 +347,11 @@ class ContentIndexParser:
         for sheet_name, sheet in self.data_sheets.items():
             sheets[sheet_name] = sheet.to_dict()
         return {
-            "sheets" : sheets,
-            "meta" : {
-                "user_models_module" : self.user_models_module.__name__,
-                "version" : "0.1.0",
-            }
+            "sheets": sheets,
+            "meta": {
+                "user_models_module": self.user_models_module.__name__,
+                "version": "0.1.0",
+            },
         }
 
     def parse_all(self):

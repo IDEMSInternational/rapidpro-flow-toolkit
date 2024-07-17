@@ -124,7 +124,7 @@ class TransferAirtimeAction(DefaultRenderedAction):
         return self.amounts
 
     def get_row_model_fields(self):
-        amounts = {k : str(v) for k, v in self.amounts.items()}
+        amounts = {k: str(v) for k, v in self.amounts.items()}
         amounts = dict_to_list_of_pairs(amounts)
         return {
             "type": self.type,
@@ -256,11 +256,13 @@ class SendMessageAction(Action):
             "attachments": attachments,
         }
         if hasattr(self, "templating") and self.templating:
-            out_dict.update({
-                "wa_template": WhatsAppMessageTemplating.to_whats_app_templating_dict(
-                    self.templating
-                )
-            })
+            out_dict.update(
+                {
+                    "wa_template": WhatsAppMessageTemplating.to_whats_app_templating_dict(
+                        self.templating
+                    )
+                }
+            )
         return out_dict
 
 

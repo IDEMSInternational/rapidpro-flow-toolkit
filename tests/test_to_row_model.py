@@ -7,7 +7,7 @@ from rpft.parsers.creation.flowrowmodel import (
     Edge,
     FlowRowModel,
     Webhook,
-    list_of_pairs_to_dict
+    list_of_pairs_to_dict,
 )
 from rpft.rapidpro.models.actions import (
     AddContactGroupAction,
@@ -15,7 +15,7 @@ from rpft.rapidpro.models.actions import (
     SendMessageAction,
     SetContactFieldAction,
     SetRunResultAction,
-    WhatsAppMessageTemplating
+    WhatsAppMessageTemplating,
 )
 from rpft.rapidpro.models.common import mangle_string
 from rpft.rapidpro.models.containers import FlowContainer
@@ -24,12 +24,12 @@ from rpft.rapidpro.models.nodes import (
     CallWebhookNode,
     EnterFlowNode,
     RandomRouterNode,
-    SwitchRouterNode
+    SwitchRouterNode,
 )
 from tests.row_data import (
     get_message_with_templating,
     get_start_row,
-    get_unconditional_node_from_1
+    get_unconditional_node_from_1,
 )
 
 

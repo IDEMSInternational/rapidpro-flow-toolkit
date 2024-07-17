@@ -50,7 +50,7 @@ class Trigger:
                 self._assign_groups(
                     self.exclude_groups,
                     exclude_group_names,
-                    exclude_group_uuids
+                    exclude_group_uuids,
                 )
 
     def _assign_groups(self, groups_field, group_names, group_uuids):

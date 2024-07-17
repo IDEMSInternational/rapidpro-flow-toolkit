@@ -33,7 +33,7 @@ from rpft.rapidpro.models.nodes import (
     RandomRouterNode,
     SwitchRouterNode,
     TransferAirtimeNode,
-    )
+)
 from rpft.rapidpro.models.routers import SwitchRouter
 
 LOGGER = get_logger()
@@ -509,7 +509,7 @@ class FlowParser:
         elif row.type == "add_contact_urn":
             return AddContactURNAction(
                 path=row.mainarg_value,
-                scheme=row.urn_scheme or 'tel',
+                scheme=row.urn_scheme or "tel",
             )
         elif row.type == "remove_from_group":
             group = self._get_or_create_group(row.mainarg_groups[0], row.obj_id)
@@ -608,8 +608,7 @@ class FlowParser:
                 LOGGER.critical("airtime_amounts: " + str(e))
             try:
                 airtime_amounts = {
-                    k : string_to_int_or_float(v)
-                    for k, v in airtime_amounts.items()
+                    k: string_to_int_or_float(v) for k, v in airtime_amounts.items()
                 }
             except ValueError:
                 LOGGER.critical("airtime_amounts: Current values must be numerical")

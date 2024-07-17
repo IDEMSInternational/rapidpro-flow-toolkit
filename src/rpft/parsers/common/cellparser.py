@@ -84,7 +84,7 @@ class CellParser:
             else:
                 locations = [-1] + sep_locations + [len(string)]
             return [
-                string[locations[i] + 1: locations[i + 1]]
+                string[locations[i] + 1 : locations[i + 1]]
                 for i in range(len(locations) - 1)
             ]
 

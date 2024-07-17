@@ -25,8 +25,8 @@ class BoolModel(ParserModel):
 class TestRowParserBoolean(unittest.TestCase):
     def setUp(self):
         self.parser = RowParser(BoolModel, MockCellParser())
-        self.falseModel = BoolModel(**{"bool_field" : False})
-        self.trueModel = BoolModel(**{"bool_field" : True})
+        self.falseModel = BoolModel(**{"bool_field": False})
+        self.trueModel = BoolModel(**{"bool_field": True})
 
     def test_convert_false(self):
         inputs = [
@@ -66,8 +66,8 @@ class IntModel(ParserModel):
 class TestRowParserInt(unittest.TestCase):
     def setUp(self):
         self.parser = RowParser(IntModel, MockCellParser())
-        self.twelveModel = IntModel(**{"int_field" : 12})
-        self.zeroModel = IntModel(**{"int_field" : 0})
+        self.twelveModel = IntModel(**{"int_field": 12})
+        self.zeroModel = IntModel(**{"int_field": 0})
 
     def test_convert_int(self):
         inputs = [
@@ -94,9 +94,9 @@ class ListStrModel(ParserModel):
 class TestRowParserListStr(unittest.TestCase):
     def setUp(self):
         self.parser = RowParser(ListStrModel, MockCellParser())
-        self.emptyModel = ListStrModel(**{"list_field" : []})
-        self.oneModel = ListStrModel(**{"list_field" : ["1"]})
-        self.onetwoModel = ListStrModel(**{"list_field" : ["1", "2"]})
+        self.emptyModel = ListStrModel(**{"list_field": []})
+        self.oneModel = ListStrModel(**{"list_field": ["1"]})
+        self.onetwoModel = ListStrModel(**{"list_field": ["1", "2"]})
 
     def test_convert_empty(self):
         inputs = [
@@ -136,9 +136,9 @@ class ListIntModel(ParserModel):
 class TestRowParserListInt(TestRowParserListStr):
     def setUp(self):
         self.parser = RowParser(ListIntModel, MockCellParser())
-        self.emptyModel = ListIntModel(**{"list_field" : []})
-        self.oneModel = ListIntModel(**{"list_field" : [1]})
-        self.onetwoModel = ListIntModel(**{"list_field" : [1, 2]})
+        self.emptyModel = ListIntModel(**{"list_field": []})
+        self.oneModel = ListIntModel(**{"list_field": [1]})
+        self.onetwoModel = ListIntModel(**{"list_field": [1, 2]})
 
 
 class ListModel(ParserModel):
@@ -148,6 +148,6 @@ class ListModel(ParserModel):
 class TestRowParserList(TestRowParserListStr):
     def setUp(self):
         self.parser = RowParser(ListModel, MockCellParser())
-        self.emptyModel = ListModel(**{"list_field" : []})
-        self.oneModel = ListModel(**{"list_field" : ["1"]})
-        self.onetwoModel = ListModel(**{"list_field" : ["1", "2"]})
+        self.emptyModel = ListModel(**{"list_field": []})
+        self.oneModel = ListModel(**{"list_field": ["1"]})
+        self.onetwoModel = ListModel(**{"list_field": ["1", "2"]})
