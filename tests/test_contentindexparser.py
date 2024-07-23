@@ -16,16 +16,18 @@ def csv_join(*args):
 class TestTemplate(unittest.TestCase):
     def compare_messages(self, render_output, flow_name, messages_exp, context=None):
         flow_found = False
+
         for flow in render_output["flows"]:
             if flow["name"] == flow_name:
                 flow_found = True
                 actions = traverse_flow(flow, context or Context())
                 actions_exp = list(zip(["send_msg"] * len(messages_exp), messages_exp))
                 self.assertEqual(actions, actions_exp)
-        if not flow_found:
-            self.assertTrue(
-                False, msg=f'Flow with name "{flow_name}" does not exist in output.'
-            )
+
+        self.assertTrue(
+            flow_found,
+            msg=f'Flow with name "{flow_name}" does not exist in output.',
+        )
 
 
 class TestParsing(TestTemplate):
