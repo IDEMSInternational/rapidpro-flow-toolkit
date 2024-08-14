@@ -35,8 +35,8 @@ dependencies = [
     "google-api-python-client~=2.6.0",
     "google-auth-oauthlib~=0.4.4",
     "networkx~=2.5.1",
-    "openpyxl~=3.0.7",
-    "pydantic~=1.10.14",
+    "openpyxl",
+    "pydantic < 2",
     "tablib[ods]>=3.1.0",
 ]
 
