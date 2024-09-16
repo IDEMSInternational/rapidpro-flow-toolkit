@@ -3,7 +3,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from typing import List
 
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 
 
 class RowParserError(Exception):
