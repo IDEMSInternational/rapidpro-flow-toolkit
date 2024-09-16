@@ -1,6 +1,6 @@
 from typing import List
 import unittest
-from pydantic import create_model, BaseModel
+from pydantic.v1 import create_model, BaseModel
 
 from rpft.parsers.common.model_inference import (
     get_value_for_type,

@@ -1,6 +1,6 @@
 from typing import List
 
-from pydantic import validator
+from pydantic.v1 import validator
 
 from rpft.parsers.common.rowparser import ParserModel
 

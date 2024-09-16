@@ -1,5 +1,5 @@
 from rpft.parsers.common.rowparser import ParserModel
-from pydantic import validator
+from pydantic.v1 import validator
 
 
 class CampaignEventRowModel(ParserModel):
