@@ -38,16 +38,25 @@ def flows_to_sheets(args):
     )
 
 
-def save_data_sheets(args):
-    output = converters.save_data_sheets(
+def legacy_sheets_to_uni(args):
+    data: dict = converters.legacy_sheets_to_uni(
         args.input,
-        None,
         args.format,
-        data_models=args.datamodels,
-        tags=args.tags,
+        data_models=args.models,
     )
+
     with open(args.output, "w", encoding="utf-8") as export:
-        json.dump(output, export, indent=4)
+        json.dump(data, export, indent=2)
+
+
+def uni_to_sheets(args):
+    with open(args.output, "wb") as handle:
+        handle.write(converters.uni_to_sheets(args.input))
+
+
+def sheets_to_uni(args):
+    # TODO: convert uni sheets to uni JSON
+    ...
 
 
 def create_parser():
@@ -63,7 +72,9 @@ def create_parser():
     _add_create_command(sub)
     _add_convert_command(sub)
     _add_flows_to_sheets_command(sub)
-    _add_save_data_sheets_command(sub)
+    _add_legacy_to_uni_command(sub)
+    _add_uni_to_sheets_command(sub)
+    _add_sheets_to_uni_command(sub)
 
     return parser
 
@@ -76,25 +87,13 @@ def _add_create_command(sub):
     )
 
     parser.set_defaults(func=create_flows)
-    _add_content_index_arguments(parser)
-
-
-def _add_content_index_arguments(parser):
     parser.add_argument(
-        "--datamodels",
+        "input",
         help=(
-            "name of the module defining user data models underlying the data sheets,"
-            " e.g. if the model definitions reside in"
-            " ./myfolder/mysubfolder/mymodelsfile.py, then this argument should be"
-            " myfolder.mysubfolder.mymodelsfile"
+            "paths to XLSX or JSON files, or directories containing CSV files, or"
+            " Google Sheets IDs i.e. from the URL; inputs should be of the same format"
         ),
-    )
-    parser.add_argument(
-        "-f",
-        "--format",
-        choices=["csv", "google_sheets", "json", "xlsx"],
-        help="input sheet format",
-        required=True,
+        nargs="+",
     )
     parser.add_argument(
         "-o",
@@ -113,12 +112,20 @@ def _add_content_index_arguments(parser):
         nargs="*",
     )
     parser.add_argument(
-        "input",
+        "--datamodels",
         help=(
-            "paths to XLSX or JSON files, or directories containing CSV files, or"
-            " Google Sheets IDs i.e. from the URL; inputs should be of the same format"
+            "name of the module defining user data models underlying the data sheets,"
+            " e.g. if the model definitions reside in"
+            " ./myfolder/mysubfolder/mymodelsfile.py, then this argument should be"
+            " myfolder.mysubfolder.mymodelsfile"
         ),
-        nargs="+",
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        choices=["csv", "google_sheets", "json", "xlsx"],
+        help="input sheet format",
+        required=True,
     )
 
 
@@ -179,14 +186,67 @@ def _add_flows_to_sheets_command(sub):
     )
 
 
-def _add_save_data_sheets_command(sub):
+def _add_legacy_to_uni_command(sub):
     parser = sub.add_parser(
-        "save_data_sheets",
-        help="save data sheets referenced in context index as nested json",
+        "legacy-to-uni",
+        help="convert legacy sheets to nested JSON",
     )
 
-    parser.set_defaults(func=save_data_sheets)
-    _add_content_index_arguments(parser)
+    parser.set_defaults(func=legacy_sheets_to_uni)
+    parser.add_argument(
+        "input",
+        help=(
+            "location of workbook (xlsx, Google Sheets) or directory containing CSVs"
+        ),
+    )
+    parser.add_argument(
+        "output",
+        help=("location where JSON output file will be saved"),
+    )
+    parser.add_argument(
+        "--models",
+        help=("name of the Python module defining user data models"),
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        choices=["csv", "google_sheets", "xlsx"],
+        help="input sheet format",
+        required=True,
+    )
+
+
+def _add_uni_to_sheets_command(sub):
+    parser = sub.add_parser(
+        "uni-to-sheets",
+        help="convert JSON to sheets",
+    )
+    parser.set_defaults(func=uni_to_sheets)
+    parser.add_argument(
+        "input",
+        help=("location of input JSON file"),
+    )
+    parser.add_argument(
+        "output",
+        help=("location where sheets will be saved"),
+    )
+
+
+def _add_sheets_to_uni_command(sub):
+    parser = sub.add_parser(
+        "sheets-to-uni",
+        help="convert sheets to nested JSON",
+    )
+
+    parser.set_defaults(func=sheets_to_uni)
+    parser.add_argument(
+        "input",
+        help=("location of workbook"),
+    )
+    parser.add_argument(
+        "output",
+        help=("location where JSON will be saved"),
+    )
 
 
 if __name__ == "__main__":

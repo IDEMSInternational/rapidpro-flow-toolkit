@@ -3,6 +3,7 @@ import os
 import shutil
 from pathlib import Path
 
+from rpft.parsers.universal import create_workbook, parse_legacy_sheets
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import (
@@ -14,6 +15,7 @@ from rpft.parsers.sheets import (
     XLSXSheetReader,
 )
 from rpft.rapidpro.models.containers import RapidProContainer
+from tablib import Databook, Dataset
 
 
 def create_flows(input_files, output_file, sheet_format, data_models=None, tags=[]):
@@ -39,30 +41,33 @@ def create_flows(input_files, output_file, sheet_format, data_models=None, tags=
     return flows
 
 
-def save_data_sheets(input_files, output_file, sheet_format, data_models=None, tags=[]):
+def legacy_sheets_to_uni(in_file, sheet_format, data_models=None) -> dict:
     """
-    Save data sheets as JSON.
-
-    Collect the data sheets referenced in the source content index spreadsheet(s) and
-    save this collection in a single JSON file. Returns the output as a dict.
-
-    :param sources: list of source spreadsheets
-    :param output_files: (deprecated) path of file to export output to as JSON
-    :param sheet_format: format of the spreadsheets
-    :param data_models: name of module containing supporting Python data classes
-    :param tags: names of tags to be used to filter the source spreadsheets
-    :returns: dict representing the collection of data sheets.
+    Convert legacy data sheets to universal format
     """
+    reader = create_sheet_reader(sheet_format, in_file)
 
-    parser = get_content_index_parser(input_files, sheet_format, data_models, tags)
+    return parse_legacy_sheets(data_models, reader)
 
-    output = parser.data_sheets_to_dict()
 
-    if output_file:
-        with open(output_file, "w") as export:
-            json.dump(output, export, indent=4)
+def uni_to_sheets(infile) -> bytes:
+    with open(infile, "r") as handle:
+        data = json.load(handle)
 
-    return output
+    sheets = create_workbook(data)
+    book = Databook(
+        [
+            Dataset(*sheet[1][1:], headers=sheet[1][0], title=sheet[0])
+            for sheet in sheets
+        ]
+    )
+
+    return book.export("xlsx")
+
+
+def sheets_to_uni(infile) -> dict:
+    # TODO: convert uni sheets to dictionary
+    ...
 
 
 def get_content_index_parser(input_files, sheet_format, data_models, tags):
