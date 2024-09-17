@@ -3,7 +3,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from typing import List
 
-from pydantic.v1 import BaseModel
+from pydantic.v1 import BaseModel, Field
 
 from rpft.parsers.common.cellparser import CellParser
 
@@ -32,6 +32,14 @@ class ParserModel(BaseModel):
     def header_name_to_field_name_with_context(header, row):
         # This is used for models representing a full sheet row.
         return header
+
+
+def field_names(model: BaseModel) -> List[str]:
+    return [field.alias for field in model.__fields__.values()]
+
+
+def get_field(model: BaseModel, name: str) -> Field:
+    return next(field for field in model.__fields__.values() if field.alias == name)
 
 
 def get_list_child_model(model):
@@ -161,7 +169,7 @@ class RowParser:
             # Get the list of keys that are available for the target model
             # Note: The fields have a well defined ordering.
             # See https://pydantic-docs.helpmanual.io/usage/models/#field-ordering
-            model_fields = list(model.__fields__.keys())
+            model_fields = field_names(model)
 
             if type(value) is not list:
                 # It could be that an object is specified via a single element.
@@ -260,9 +268,9 @@ class RowParser:
         else:
             assert is_parser_model_type(model)
             key = model.header_name_to_field_name(field_name)
-            if key not in model.__fields__:
+            if key not in field_names(model):
                 raise ValueError(f"Field {key} doesn't exist in target type {model}.")
-            child_model = model.__fields__[key].outer_type_
+            child_model = get_field(model, key).outer_type_
             # TODO: how does ModelField.outer_type_ and ModelField.type_
             # deal with nested lists, e.g. List[List[str]]?
             # Write test cases and fix code.
