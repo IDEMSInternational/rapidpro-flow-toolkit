@@ -291,7 +291,7 @@ def create_obj(pairs):
     obj = benedict()
 
     for kp, v in pairs:
-        obj[*kp] = v
+        obj[kp] = v
 
     return obj
 
