@@ -34,9 +34,11 @@ dependencies = [
     "google-api-python-client ~= 2.174",
     "google-auth-oauthlib ~= 1.2",
     "networkx~=2.5.1",
+    "odfpy",
     "openpyxl",
     "pydantic >= 2",
-    "tablib[ods]>=3.1.0",
+    "python-benedict",
+    "tablib @ git+https://github.com/istride/tablib@v3.8.0-1",
 ]
 
 [project.urls]

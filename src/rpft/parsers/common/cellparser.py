@@ -1,7 +1,7 @@
 import logging
 import re
 
-from jinja2 import Environment, contextfilter
+from jinja2 import ChainableUndefined, Environment, contextfilter
 from jinja2.nativetypes import NativeEnvironment
 
 
@@ -32,11 +32,13 @@ class CellParser:
         return eval(string, {}, context)
 
     def __init__(self):
-        self.env = Environment()
+        self.env = Environment(undefined=ChainableUndefined)
         self.env.filters["escape"] = CellParser.escape_string
         self.env.filters["eval"] = CellParser.evaluate_string
         self.native_env = NativeEnvironment(
-            variable_start_string="{@", variable_end_string="@}"
+            variable_start_string="{@",
+            variable_end_string="@}",
+            undefined=ChainableUndefined,
         )
         self.native_env.filters["escape"] = CellParser.escape_string
         self.native_env.filters["eval"] = CellParser.evaluate_string

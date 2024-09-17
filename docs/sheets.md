@@ -41,20 +41,18 @@ The `Sheet` class wraps [tablib.Dataset] (which is often referred to as `table`)
 
 `Sheet`s are produced by SheetReaders that can read different input file formats. Currently, `Sheet`s have an additional SheetReader attribute `reader` indicating which reader produced it, which may be useful for error reporting.
 
-`SheetReader`s take a file reference upon construction and provide the following methods to access `Sheet`s by name:
+`SheetReader`s take a file reference upon construction and provide the following method to access `Sheet`s by name:
 
 - `get_sheet(name) -> Sheet`
-- `get_sheets_by_name(name) -> List[Sheet]`
 
-While generally the name of a sheet within a file is unique, the latter function is useful with the `CompositeSheetReader`, which is composed of multiple SheetReaders and thus implicitly references multiple files.
+The name of a sheet within a file is always unique.
 
 We have subclasses of `AbstractSheetReader` for different formats:
 
 - XLSX
 - CSV (file reference is a folder containing CSVs)
 - Google Sheet (reference is an ID)
-- flat JSON (contains a dict mapping sheet names to their content. Each content
-  is a list of dicts mapping column headers to column entries)
+- flat JSON (contains a dict mapping sheet names to their content. Each content is a list of dicts mapping column headers to column entries)
 
 
 ### Reverse direction
