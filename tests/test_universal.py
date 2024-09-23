@@ -6,6 +6,7 @@ from rpft.parsers.universal import (
     create_workbook,
     parse_legacy_sheets,
     parse_table,
+    parse_tables,
     tabulate,
 )
 from tablib import Dataset
@@ -341,6 +342,23 @@ class TestConvertLegacyToUniversal(TestCase):
         }
 
         self.assertEqual(output, exp)
+
+
+class TestConvertWorkbookToUniversal(TestCase):
+
+    def test_workbook_converts_to_list_of_objects(self):
+        workbook = DatasetSheetReader(
+            [
+                Dataset(("t1a1", "t1b1"), headers=("T1A", "T1B"), title="table1"),
+                Dataset(("t2a1", "t2b1"), headers=("T2A", "T2B"), title="table2"),
+            ]
+        )
+
+        nested = parse_tables(workbook)
+
+        self.assertIsInstance(nested, list)
+        self.assertEqual(len(nested), 2)
+        self.assertTrue(all(type(o) is dict for o in nested))
 
 
 class TestConvertTableToNested(TestCase):
