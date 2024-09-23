@@ -244,7 +244,16 @@ def _(value: bool) -> str:
     return str(value).lower()
 
 
-# TODO: create a function to parse a list of tables i.e. a workbook
+def parse_tables(reader: AbstractSheetReader) -> dict:
+    """
+    Parse a workbook into a nested structure
+    """
+    return [
+        parse_table(title, sheet.table.headers, sheet.table[:])
+        for title, sheet in reader.sheets.items()
+    ]
+
+
 def parse_table(
     title: str = None,
     headers: Sequence[str] = tuple(),
@@ -253,10 +262,12 @@ def parse_table(
     """
     Parse data in tabular form into a nested structure
     """
-    if not headers or not rows:
-        return {title or "table": []}
+    title = title or "table"
 
-    return create_obj(stream(title or "table", headers, rows))
+    if not headers or not rows:
+        return {title: []}
+
+    return create_obj(stream(title, headers, rows))
 
 
 def stream(
@@ -293,7 +304,7 @@ def create_obj(pairs):
     for kp, v in pairs:
         obj[kp] = v
 
-    return obj
+    return dict(obj)
 
 
 def convert_cell(s: str, recursive=True) -> Any:

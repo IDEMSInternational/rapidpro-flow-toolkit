@@ -3,7 +3,7 @@ import os
 import shutil
 from pathlib import Path
 
-from rpft.parsers.universal import create_workbook, parse_legacy_sheets
+from rpft.parsers.universal import create_workbook, parse_legacy_sheets, parse_tables
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import (
@@ -65,9 +65,8 @@ def uni_to_sheets(infile) -> bytes:
     return book.export("xlsx")
 
 
-def sheets_to_uni(infile) -> dict:
-    # TODO: convert uni sheets to dictionary
-    ...
+def sheets_to_uni(infile, fmt) -> list:
+    return parse_tables(create_sheet_reader(fmt, infile))
 
 
 def get_content_index_parser(input_files, sheet_format, data_models, tags):
