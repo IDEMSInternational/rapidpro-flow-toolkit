@@ -220,6 +220,37 @@ class TestConvertLegacyToUniversal(TestCase):
             " have been processed",
         )
 
+    def test_sheet_order_is_preserved(self):
+        datasets = [
+            Dataset(
+                ("data_sheet", "sheet_2", "SimpleRowModel"),
+                ("data_sheet", "sheet_3", "SimpleRowModel"),
+                headers=("type", "sheet_name", "data_model"),
+                title="content_index",
+            ),
+            Dataset(
+                ("val1", "val2"),
+                headers=("value1", "value2"),
+                title="sheet_3",
+            ),
+            Dataset(
+                ("val1", "val2"),
+                headers=("value1", "value2"),
+                title="sheet_2",
+            ),
+        ]
+
+        output = parse_legacy_sheets(
+            "tests.datarowmodels.simplemodel",
+            DatasetSheetReader(datasets),
+        )
+
+        self.assertEqual(
+            list(output.keys()),
+            ["content_index", "sheet_3", "sheet_2"],
+            "Order of keys should be same as in workbook",
+        )
+
     def test_save_as_dict(self):
         # TODO: Break up this test into smaller, more manageable pieces
         self.maxDiff = None
