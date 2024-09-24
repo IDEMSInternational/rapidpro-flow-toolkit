@@ -29,26 +29,21 @@ def parse_legacy_sheets(models_module: str, reader: AbstractSheetReader) -> dict
     """
     Convert multiple sheets in the legacy format into a nested data structure
     """
-    content_index: List[ContentIndexRowModel] = parse_content_index(
-        reader,
-        "content_index",
-    )
-    model_finder = ModelFinder(models_module)
-    data = {
-        "content_index": to_dict(
-            parse_sheet(
-                ContentIndexRowModel,
-                reader.get_sheet("content_index"),
-            )
+    content_index: List[ContentIndexRowModel] = {
+        entry.sheet_name[0]: entry
+        for entry in parse_content_index(
+            reader,
+            "content_index",
         )
+        if len(entry.sheet_name) == 1
     }
+    model_finder = ModelFinder(models_module)
+    data = {}
+    unconverted = []
 
-    for entry in content_index:
-
-        if len(entry.sheet_name) == 1:
-            name = entry.sheet_name[0]
-            model = model_finder.find_for_entry(entry)
-            sheet = reader.get_sheet(name)
+    for name, sheet in reader.sheets.items():
+        if name in content_index:
+            model = model_finder.find_for_entry(content_index[name])
 
             if sheet and model:
                 data[name] = to_dict(parse_sheet(model, sheet))
@@ -58,19 +53,20 @@ def parse_legacy_sheets(models_module: str, reader: AbstractSheetReader) -> dict
                     "Sheet" if not sheet else "Model",
                     {"sheet": name, "model": model},
                 )
-
-    remaining = set(reader.sheets.keys()) - set(data.keys())
-
-    for name in remaining:
-        table = reader.get_sheet(name).table
-        data[name] = [list(table.headers)] + [list(r) for r in table]
+        elif name == "content_index":
+            data[name] = to_dict(parse_sheet(ContentIndexRowModel, sheet))
+        else:
+            data[name] = [list(sheet.table.headers)] + [
+                list(r) for r in sheet.table
+            ]
+            unconverted += [name]
 
     LOGGER.info(
         str(
             {
                 "index": {"count": len(data)},
                 "sheets": {"count": len(reader.sheets)},
-                "unconverted": {"count": len(remaining), "names": remaining},
+                "unconverted": {"count": len(unconverted), "names": unconverted},
             }
         )
     )
