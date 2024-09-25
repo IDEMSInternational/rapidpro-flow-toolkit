@@ -1,5 +1,6 @@
 import importlib
 import logging
+import re
 from collections import defaultdict
 from collections.abc import Sequence
 from functools import singledispatch
@@ -23,6 +24,7 @@ LOGGER = logging.getLogger(__name__)
 KEY_VALUE_SEP = ":"
 PROP_ACCESSOR = "."
 SEQ_ITEM_SEP = "|"
+DEINDEX_PATTERN = re.compile(r"(.*)\.\d+")
 
 
 def parse_legacy_sheets(models_module: str, reader: AbstractSheetReader) -> dict:
@@ -39,6 +41,7 @@ def parse_legacy_sheets(models_module: str, reader: AbstractSheetReader) -> dict
     }
     model_finder = ModelFinder(models_module)
     data = {}
+    meta = {}
     unconverted = []
 
     for name, sheet in reader.sheets.items():
@@ -46,7 +49,7 @@ def parse_legacy_sheets(models_module: str, reader: AbstractSheetReader) -> dict
             model = model_finder.find_for_entry(content_index[name])
 
             if sheet and model:
-                data[name] = to_dict(parse_sheet(model, sheet))
+                data[name] = to_dicts(parse_sheet(model, sheet))
             else:
                 LOGGER.warning(
                     "%s not found, %s",
@@ -54,12 +57,17 @@ def parse_legacy_sheets(models_module: str, reader: AbstractSheetReader) -> dict
                     {"sheet": name, "model": model},
                 )
         elif name == "content_index":
-            data[name] = to_dict(parse_sheet(ContentIndexRowModel, sheet))
+            data[name] = to_dicts(parse_sheet(ContentIndexRowModel, sheet))
         else:
-            data[name] = [list(sheet.table.headers)] + [
-                list(r) for r in sheet.table
-            ]
+            data[name] = [list(sheet.table.headers)] + [list(r) for r in sheet.table]
             unconverted += [name]
+
+        meta[name] = {
+            "headers": [
+                m[1] if (m := DEINDEX_PATTERN.match(h)) else h
+                for h in sheet.table.headers
+            ]
+        }
 
     LOGGER.info(
         str(
@@ -70,6 +78,8 @@ def parse_legacy_sheets(models_module: str, reader: AbstractSheetReader) -> dict
             }
         )
     )
+
+    data["_idems"] = {"tabulate": meta}
 
     return data
 
@@ -105,7 +115,7 @@ def parse_sheet(model, sheet: Sheet):
         )
 
 
-def to_dict(instances):
+def to_dicts(instances):
     return [
         instance.dict(
             by_alias=True,
@@ -141,81 +151,25 @@ class ModelFinder:
 
 
 def create_workbook(data: dict) -> list:
-    return [(k, tabulate(v)) for k, v in data.items()]
+    meta = data.pop("_idems", {})
+
+    return [(k, tabulate(v, meta.get(k, {}))) for k, v in data.items()]
 
 
 def tabulate(data, meta: dict = {}) -> List[List[str]]:
     """
     Convert a nested data structure to a tabular form
     """
-    flattened = tabulate_data(data, meta, [])
-    headers = {
-        (k, v.get("meta", {}).get("alias")): None
-        for item in flattened
-        for k, v in item.items()
-    }
-    rows = [
-        [item.get(h, {}).get("data", "") for h, _ in headers.keys()]
-        for item in flattened
-    ]
-
-    return [[alias or name for name, alias in headers.keys()]] + rows
-
-
-@singledispatch
-def tabulate_data(data, meta, path):
-    return create_prop(path, str(data), meta)
-
-
-@tabulate_data.register
-def _(data: list, meta, path):
-    if len(path) > 0:
-        if meta.get("layout") == "wide":
-            out = dict()
-
-            for i, item in enumerate(data, start=1):
-                out = out | tabulate_data(item, meta | {"alias": path}, path + [str(i)])
-
-            return out
-
-        return create_prop(path, stringify(data), meta)
-
+    headers = meta.get("headers", []) or list(
+        {k: None for item in data for k, v in item.items()}.keys()
+    )
     rows = []
 
     for item in data:
-        rows.append(tabulate_data(item, meta, path + ["[]"]))
+        obj = benedict(item)
+        rows += [[stringify(obj[kp]) for kp in keypaths(headers)]]
 
-    return rows
-
-
-@tabulate_data.register
-def _(data: dict, meta, path):
-    if not path:
-        raise Exception("Cannot tabulate dict to table... yet.")
-
-    if len(path) <= 1 or meta.get("layout") == "wide":
-        out = dict()
-
-        for k, v in data.items():
-            out = out | tabulate_data(v, meta.get(k, {}), path + [k])
-
-        return out
-
-    return create_prop(path, stringify(data), meta)
-
-
-@tabulate_data.register
-def _(data: bool, meta, path):
-    return create_prop(path, str(data).lower(), meta)
-
-
-def create_prop(path, data, meta={}) -> dict:
-    if meta.get("alias"):
-        meta["alias"] = ".".join(meta["alias"][1:])
-
-    key = ".".join(path[1:])
-
-    return {key: {"meta": meta, "data": data}}
+    return [headers] + rows
 
 
 @singledispatch
@@ -273,21 +227,23 @@ def stream(
 ):
     yield [("_idems", "tabulate", title, "headers"), headers]
 
-    counters = defaultdict(int)
-    hs = []
-
-    for key in headers:
-        hs += [(key, counters[key])]
-        counters[key] += 1
-
-    hs = [create_keypath(h, i, counters[h]) for h, i in hs]
-
     for i, row in enumerate(rows):
-        for h, v in zip(hs, row):
+        for h, v in zip(keypaths(headers), row):
             yield [[title, i] + h, convert_cell(v)]
 
 
-def create_keypath(header, index, count):
+def keypaths(headers):
+    counters = defaultdict(int)
+    indexed = []
+
+    for key in headers:
+        indexed += [(key, counters[key])]
+        counters[key] += 1
+
+    return [keypath(h, i, counters[h]) for h, i in indexed]
+
+
+def keypath(header, index, count):
     expanded = header.split(PROP_ACCESSOR)
     i = index if index < count else count - 1
 
