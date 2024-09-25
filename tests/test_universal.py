@@ -45,6 +45,25 @@ class TestConvertUniversalToTable(TestCase):
 
         self.assertEqual(table[1], ["true", "1.23", "123", "hello"])
 
+    def test_columns_can_be_ordered_by_metadata(self):
+        meta = {"headers": ["integer", "float", "string", "boolean"]}
+        data = [
+            {
+                "boolean": True,
+                "float": 1.23,
+                "integer": "123",
+                "string": "hello",
+            },
+        ]
+
+        table = tabulate(data, meta)
+
+        self.assertEqual(
+            table[1],
+            ["123", "1.23", "hello", "true"],
+            "Columns should be in the same order as the headers metadata",
+        )
+
     def test_arrays_use_single_cell_layout_by_default(self):
         data = [
             {
@@ -57,7 +76,14 @@ class TestConvertUniversalToTable(TestCase):
         self.assertEqual(table[1], ["yes | no | 1 | false"])
 
     def test_arrays_use_wide_layout_if_indicated_by_metadata(self):
-        meta = {"choices": {"layout": "wide"}}
+        meta = {
+            "headers": [
+                "choices",
+                "choices",
+                "choices",
+                "choices",
+            ]
+        }
         data = [
             {
                 "choices": ["yes", "no", 1, False],
@@ -84,7 +110,7 @@ class TestConvertUniversalToTable(TestCase):
         self.assertEqual(table[1], ["prop1: val1 | prop2: val2"])
 
     def test_objects_use_wide_layout_if_indicated_by_metadata(self):
-        meta = {"obj": {"layout": "wide"}}
+        meta = {"headers": ["obj.prop1", "obj.prop2"]}
         data = [
             {
                 "obj": {
@@ -109,6 +135,10 @@ class TestUniversalToWorkbook(TestCase):
         data = {
             "group1": [{"a": "a1", "b": "b1"}],
             "group2": [{"A": "A1", "B": "B1"}],
+            "_idems": {
+                "group1": {"headers": ["a", "b"]},
+                "group2": {"headers": ["A", "B"]},
+            },
         }
 
         workbook = create_workbook(data)
@@ -244,11 +274,62 @@ class TestConvertLegacyToUniversal(TestCase):
             "tests.datarowmodels.simplemodel",
             DatasetSheetReader(datasets),
         )
+        del output["_idems"]
 
         self.assertEqual(
             list(output.keys()),
             ["content_index", "sheet_3", "sheet_2"],
             "Order of keys should be same as in workbook",
+        )
+
+    def test_original_column_headers_are_preserved(self):
+        datasets = [
+            Dataset(
+                ("data_sheet", "sheet_2", "SimpleRowModel"),
+                headers=("type", "sheet_name", "data_model"),
+                title="content_index",
+            ),
+            Dataset(
+                ("val2", "val1"),
+                headers=("value2", "value1"),
+                title="sheet_2",
+            ),
+        ]
+
+        output = parse_legacy_sheets(
+            "tests.datarowmodels.simplemodel",
+            DatasetSheetReader(datasets),
+        )
+
+        self.assertEqual(
+            output["_idems"]["tabulate"]["sheet_2"]["headers"],
+            ["value2", "value1"],
+            "Original column headers should be stored as metadata",
+        )
+
+    def test_list_indices_removed_from_headers(self):
+        datasets = [
+            Dataset(
+                ("data_sheet", "simpledata", "ListRowModel"),
+                headers=("type", "sheet_name", "data_model"),
+                title="content_index",
+            ),
+            Dataset(
+                ("rowID", "val1", "val2"),
+                headers=("ID", "list_value.1", "list_value.2"),
+                title="simpledata",
+            ),
+        ]
+
+        output = parse_legacy_sheets(
+            "tests.datarowmodels.nestedmodel",
+            DatasetSheetReader(datasets),
+        )
+
+        self.assertEqual(
+            output["_idems"]["tabulate"]["simpledata"]["headers"],
+            ["ID", "list_value", "list_value"],
+            "Column headers should be stored as metadata, without indices",
         )
 
     def test_save_as_dict(self):
@@ -297,6 +378,7 @@ class TestConvertLegacyToUniversal(TestCase):
             "tests.datarowmodels.nestedmodel",
             DatasetSheetReader(datasets),
         )
+        del output["_idems"]
         exp = {
             "content_index": [
                 {
