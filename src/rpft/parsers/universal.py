@@ -25,6 +25,9 @@ KEY_VALUE_SEP = ":"
 PROP_ACCESSOR = "."
 SEQ_ITEM_SEP = "|"
 DEINDEX_PATTERN = re.compile(r"(.*)\.\d+")
+META_KEY = "_idems"
+TABULATE_KEY = "tabulate"
+HEADERS_KEY = "headers"
 
 
 def parse_legacy_sheets(models_module: str, reader: AbstractSheetReader) -> dict:
@@ -62,12 +65,7 @@ def parse_legacy_sheets(models_module: str, reader: AbstractSheetReader) -> dict
             data[name] = [list(sheet.table.headers)] + [list(r) for r in sheet.table]
             unconverted += [name]
 
-        meta[name] = {
-            "headers": [
-                m[1] if (m := DEINDEX_PATTERN.match(h)) else h
-                for h in sheet.table.headers
-            ]
-        }
+        meta[name] = {HEADERS_KEY: sheet.table.headers}
 
     LOGGER.info(
         str(
@@ -79,7 +77,7 @@ def parse_legacy_sheets(models_module: str, reader: AbstractSheetReader) -> dict
         )
     )
 
-    data["_idems"] = {"tabulate": meta}
+    data[META_KEY] = {TABULATE_KEY: meta}
 
     return data
 
@@ -116,13 +114,17 @@ def parse_sheet(model, sheet: Sheet):
 
 
 def to_dicts(instances):
-    return [
-        instance.dict(
-            by_alias=True,
-            exclude_unset=True,
-        )
-        for instance in instances
-    ]
+    objs = []
+
+    for instance in instances:
+        obj = instance.dict(by_alias=True, exclude_unset=True)
+
+        if "template_argument_definitions" in obj:
+            obj["template_arguments"] = obj.pop("template_argument_definitions")
+
+        objs += [obj]
+
+    return objs
 
 
 class ModelFinder:
@@ -151,7 +153,7 @@ class ModelFinder:
 
 
 def create_workbook(data: dict) -> list:
-    meta = data.pop("_idems", {})
+    meta = data.pop(META_KEY, {}).get(TABULATE_KEY, {})
 
     return [(k, tabulate(v, meta.get(k, {}))) for k, v in data.items()]
 
@@ -160,7 +162,10 @@ def tabulate(data, meta: dict = {}) -> List[List[str]]:
     """
     Convert a nested data structure to a tabular form
     """
-    headers = meta.get("headers", []) or list(
+    if all(type(item) is list for item in data):
+        return data
+
+    headers = meta.get(HEADERS_KEY, []) or list(
         {k: None for item in data for k, v in item.items()}.keys()
     )
     rows = []
@@ -225,7 +230,7 @@ def stream(
     headers: Sequence[str] = tuple(),
     rows: Sequence[Sequence[str]] = tuple(),
 ):
-    yield [("_idems", "tabulate", title, "headers"), headers]
+    yield [(META_KEY, TABULATE_KEY, title, HEADERS_KEY), headers]
 
     for i, row in enumerate(rows):
         for h, v in zip(keypaths(headers), row):
@@ -244,10 +249,17 @@ def keypaths(headers):
 
 
 def keypath(header, index, count):
-    expanded = header.split(PROP_ACCESSOR)
+    expanded = [normalise_key(k) for k in header.split(PROP_ACCESSOR)]
     i = index if index < count else count - 1
 
     return expanded + [i] if count > 1 else expanded
+
+
+def normalise_key(key):
+    try:
+        return int(key) - 1
+    except ValueError:
+        return key
 
 
 def create_obj(pairs):
