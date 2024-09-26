@@ -110,20 +110,41 @@ class TestConvertUniversalToTable(TestCase):
         self.assertEqual(table[1], ["prop1: val1 | prop2: val2"])
 
     def test_objects_use_wide_layout_if_indicated_by_metadata(self):
-        meta = {"headers": ["obj.prop1", "obj.prop2"]}
+        meta = {"headers": ["obj1.k1", "obj1.k2", "seq1.1.k1", "seq1.2.k2"]}
         data = [
             {
-                "obj": {
-                    "prop1": "val1",
-                    "prop2": "val2",
+                "obj1": {
+                    "k1": "obj1_k1_v",
+                    "k2": "obj1_k2_v",
                 },
+                "seq1": [
+                    {"k1": "seq1_k1_v"},
+                    {"k2": "seq1_k2_v"},
+                ],
             },
         ]
 
         table = tabulate(data, meta)
 
-        self.assertEqual(table[0], ["obj.prop1", "obj.prop2"])
-        self.assertEqual(table[1], ["val1", "val2"])
+        self.assertEqual(
+            table[0],
+            ["obj1.k1", "obj1.k2", "seq1.1.k1", "seq1.2.k2"],
+        )
+        self.assertEqual(
+            table[1],
+            ["obj1_k1_v", "obj1_k2_v", "seq1_k1_v", "seq1_k2_v"],
+        )
+
+    def test_2d_arrays_are_passed_through(self):
+        meta = {"headers": ["A", "B"]}
+        data = [
+            ["A", "B"],
+            ["a1", "b1"],
+        ]
+
+        table = tabulate(data, meta)
+
+        self.assertEqual(table, data)
 
     # TODO: test pointers/references
     # TODO: add explicit type information
@@ -136,8 +157,10 @@ class TestUniversalToWorkbook(TestCase):
             "group1": [{"a": "a1", "b": "b1"}],
             "group2": [{"A": "A1", "B": "B1"}],
             "_idems": {
-                "group1": {"headers": ["a", "b"]},
-                "group2": {"headers": ["A", "B"]},
+                "tabulate": {
+                    "group1": {"headers": ["a", "b"]},
+                    "group2": {"headers": ["B", "A"]},
+                },
             },
         }
 
@@ -147,7 +170,11 @@ class TestUniversalToWorkbook(TestCase):
         self.assertEqual(workbook[0][0], "group1")
         self.assertEqual(workbook[0][1], [["a", "b"], ["a1", "b1"]])
         self.assertEqual(workbook[1][0], "group2")
-        self.assertEqual(workbook[1][1], [["A", "B"], ["A1", "B1"]])
+        self.assertEqual(
+            workbook[1][1],
+            [["B", "A"], ["B1", "A1"]],
+            "Columns should be ordered according to metadata",
+        )
 
 
 class TestConvertLegacyToUniversal(TestCase):
@@ -305,31 +332,6 @@ class TestConvertLegacyToUniversal(TestCase):
             output["_idems"]["tabulate"]["sheet_2"]["headers"],
             ["value2", "value1"],
             "Original column headers should be stored as metadata",
-        )
-
-    def test_list_indices_removed_from_headers(self):
-        datasets = [
-            Dataset(
-                ("data_sheet", "simpledata", "ListRowModel"),
-                headers=("type", "sheet_name", "data_model"),
-                title="content_index",
-            ),
-            Dataset(
-                ("rowID", "val1", "val2"),
-                headers=("ID", "list_value.1", "list_value.2"),
-                title="simpledata",
-            ),
-        ]
-
-        output = parse_legacy_sheets(
-            "tests.datarowmodels.nestedmodel",
-            DatasetSheetReader(datasets),
-        )
-
-        self.assertEqual(
-            output["_idems"]["tabulate"]["simpledata"]["headers"],
-            ["ID", "list_value", "list_value"],
-            "Column headers should be stored as metadata, without indices",
         )
 
     def test_save_as_dict(self):
