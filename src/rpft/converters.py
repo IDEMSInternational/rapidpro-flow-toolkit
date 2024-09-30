@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -72,11 +73,11 @@ def uni_to_sheets(infile) -> bytes:
         ]
     )
 
-    return book.export("xlsx")
+    return book.export("ods")
 
 
-def sheets_to_uni(infile, fmt) -> list:
-    return parse_tables(create_sheet_reader(fmt, infile))
+def sheets_to_uni(infile) -> list:
+    return parse_tables(create_sheet_reader(None, infile))
 
 
 def get_content_index_parser(input_files, sheet_format, data_models, tags):
@@ -124,6 +125,8 @@ def flows_to_sheets(
 
 
 def create_sheet_reader(sheet_format, input_file):
+    sheet_format = sheet_format if sheet_format else detect_format(input_file)
+
     if sheet_format == "csv":
         sheet_reader = CSVSheetReader(input_file)
     elif sheet_format == "xlsx":
@@ -136,6 +139,14 @@ def create_sheet_reader(sheet_format, input_file):
         raise Exception(f"Format {sheet_format} currently unsupported.")
 
     return sheet_reader
+
+
+def detect_format(fp):
+    if bool(re.fullmatch(r"[a-z0-9_-]{44}", fp, re.IGNORECASE)):
+        return "google_sheets"
+
+    if Path(fp).suffix.lower() == ".xlsx":
+        return "xlsx"
 
 
 def sheets_to_csv(path, sheet_ids):
