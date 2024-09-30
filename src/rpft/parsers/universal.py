@@ -184,9 +184,15 @@ def stringify(value) -> str:
 
 @stringify.register
 def _(value: dict) -> str:
-    return " | ".join(
-        "{0}: {1}".format(stringify(k), stringify(v)) for k, v in value.items()
+
+    s = " | ".join(
+        f"{stringify(k)}{KEY_VALUE_SEP} {stringify(v)}" for k, v in value.items()
     )
+
+    if len(value) == 1:
+        s += " " + SEQ_ITEM_SEP
+
+    return s
 
 
 @stringify.register
@@ -203,10 +209,12 @@ def parse_tables(reader: AbstractSheetReader) -> dict:
     """
     Parse a workbook into a nested structure
     """
-    return [
-        parse_table(title, sheet.table.headers, sheet.table[:])
-        for title, sheet in reader.sheets.items()
-    ]
+    obj = benedict()
+
+    for title, sheet in reader.sheets.items():
+        obj.merge(parse_table(title, sheet.table.headers, sheet.table[:]))
+
+    return obj
 
 
 def parse_table(
@@ -266,9 +274,11 @@ def create_obj(pairs):
     obj = benedict()
 
     for kp, v in pairs:
+        # print("KP:", kp)
+        # print("V:", v)
         obj[kp] = v
 
-    return dict(obj)
+    return obj
 
 
 def convert_cell(s: str, recursive=True) -> Any:
@@ -290,7 +300,7 @@ def convert_cell(s: str, recursive=True) -> Any:
     if clean in ("true", "false"):
         return clean == "true"
 
-    if recursive and KEY_VALUE_SEP in s:
+    if recursive and KEY_VALUE_SEP in s and SEQ_ITEM_SEP in s:
         try:
             props = [p.split(KEY_VALUE_SEP, 1) for p in s.split(SEQ_ITEM_SEP) if p]
 

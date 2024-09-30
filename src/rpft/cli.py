@@ -54,8 +54,10 @@ def uni_to_sheets(args):
 
 
 def sheets_to_uni(args):
-    # TODO: convert uni sheets to uni JSON
-    ...
+    data = converters.sheets_to_uni(args.input)
+
+    with open(args.output, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
 
 
 def create_parser():
