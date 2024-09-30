@@ -109,6 +109,13 @@ class TestConvertUniversalToTable(TestCase):
 
         self.assertEqual(table[1], ["prop1: val1 | prop2: val2"])
 
+    def test_object_with_single_property_within_cell_has_trailing_separator(self):
+        data = [{"obj": {"k": "v"}}]
+
+        table = tabulate(data)
+
+        self.assertEqual(table[1], ["k: v |"])
+
     def test_objects_use_wide_layout_if_indicated_by_metadata(self):
         meta = {"headers": ["obj1.k1", "obj1.k2", "seq1.1.k1", "seq1.2.k2"]}
         data = [
@@ -461,7 +468,7 @@ class TestConvertLegacyToUniversal(TestCase):
 
 class TestConvertWorkbookToUniversal(TestCase):
 
-    def test_workbook_converts_to_list_of_objects(self):
+    def test_workbook_converts_to_object(self):
         workbook = DatasetSheetReader(
             [
                 Dataset(("t1a1", "t1b1"), headers=("T1A", "T1B"), title="table1"),
@@ -471,9 +478,12 @@ class TestConvertWorkbookToUniversal(TestCase):
 
         nested = parse_tables(workbook)
 
-        self.assertIsInstance(nested, list)
-        self.assertEqual(len(nested), 2)
-        self.assertTrue(all(type(o) is dict for o in nested))
+        self.assertIsInstance(nested, dict)
+        self.assertEqual(list(nested.keys()), ["_idems", "table1", "table2"])
+        self.assertEqual(
+            list(nested["_idems"]["tabulate"].keys()),
+            ["table1", "table2"],
+        )
 
 
 class TestConvertTableToNested(TestCase):
@@ -560,6 +570,8 @@ class TestCellConversion(TestCase):
         self.assertEqual(convert_cell("one"), "one")
         self.assertEqual(convert_cell(" one "), "one")
         self.assertEqual(convert_cell(""), "")
+        self.assertEqual(convert_cell("http://example.com/"), "http://example.com/")
+        self.assertEqual(convert_cell("k1: v1"), "k1: v1")
 
     def test_raises_error_if_not_string_input(self):
         self.assertRaises(TypeError, convert_cell, None)
@@ -578,8 +590,6 @@ class TestCellConversion(TestCase):
         self.assertEqual(convert_cell("k1 | v1 : k2 | v2"), ["k1", "v1 : k2", "v2"])
 
     def test_convert_cell_string_to_dict(self):
-        self.assertEqual(convert_cell("k1: v1"), {"k1": "v1"})
-        self.assertEqual(convert_cell(" k1 : v1 "), {"k1": "v1"})
         self.assertEqual(convert_cell("k1: v1 |"), {"k1": "v1"})
-        self.assertEqual(convert_cell("k1: k2: v2"), {"k1": "k2: v2"})
+        self.assertEqual(convert_cell("k1: k2: v2 |"), {"k1": "k2: v2"})
         self.assertEqual(convert_cell("k1: 1 | k2: true"), {"k1": 1, "k2": True})
