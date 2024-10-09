@@ -66,10 +66,7 @@ class NodeGroup:
         return self.node_groups[-1]
 
     def has_loose_exits(self):
-        for node_group in self.node_groups:
-            if node_group.has_loose_exits():
-                return True
-        return False
+        return any(group.has_loose_exits() for group in self.node_groups)
 
     def add_exit(self, destination_uuid, condition):
         if condition != Condition():
@@ -107,13 +104,13 @@ class NoOpNodeGroup:
 
     def has_loose_exits(self):
         if self.router_node:
-            for exit in self.router_node.get_exits():
-                if exit.destination_uuid is None:
-                    return True
+            return any(
+                exit.destination_uuid is None for exit in self.router_node.get_exits()
+            )
         else:
-            for edge in self.parent_edges:
-                if edge.source_node_group.has_loose_exits():
-                    return True
+            return any(
+                edge.source_node_group.has_loose_exits() for edge in self.parent_edges
+            )
 
     def connect_loose_exits(self, destination_uuid):
         if self.router_node:
@@ -199,10 +196,7 @@ class RowNodeGroup:
         # A loose exit is a default exit (i.e. exit of a router-less node,
         # or exit connected to the default router case) which is not
         # connected to any further node.
-        for exit in self.nodes[-1].get_exits():
-            if exit.destination_uuid is None:
-                return True
-        return False
+        return any(exit.destination_uuid is None for exit in self.nodes[-1].get_exits())
 
     def connect_loose_exits(self, destination_uuid):
         for exit in self.nodes[-1].get_exits():
@@ -344,8 +338,11 @@ class FlowParser:
             self.sheet_parser = sheet_parser
         else:
             assert table is not None
-            row_parser = RowParser(FlowRowModel, CellParser())
-            self.sheet_parser = SheetParser(row_parser, table, self.context)
+            self.sheet_parser = SheetParser(
+                RowParser(FlowRowModel, CellParser()),
+                table,
+                self.context,
+            )
         self.node_group_stack = [NodeGroup()]
         self.row_id_to_nodegroup = defaultdict()
         self.node_name_to_node_map = defaultdict()
@@ -498,34 +495,33 @@ class FlowParser:
                     send_message_action.add_quick_reply(qr)
             return send_message_action
         elif row.type == "save_value":
-            set_contact_field_action = SetContactFieldAction(
+            return SetContactFieldAction(
                 field_name=row.save_name, value=row.mainarg_value
             )
-            return set_contact_field_action
         elif row.type == "add_to_group":
-            group = self._get_or_create_group(row.mainarg_groups[0], row.obj_id)
-            add_group_action = AddContactGroupAction(groups=[group])
-            return add_group_action
+            return AddContactGroupAction(
+                groups=[self._get_or_create_group(row.mainarg_groups[0], row.obj_id)]
+            )
         elif row.type == "add_contact_urn":
             return AddContactURNAction(
                 path=row.mainarg_value,
                 scheme=row.urn_scheme or "tel",
             )
         elif row.type == "remove_from_group":
-            group = self._get_or_create_group(row.mainarg_groups[0], row.obj_id)
-            remove_group_action = RemoveContactGroupAction(groups=[group])
-            return remove_group_action
+            return RemoveContactGroupAction(
+                groups=[self._get_or_create_group(row.mainarg_groups[0], row.obj_id)]
+            )
         elif row.type == "save_flow_result":
-            set_run_result_action = SetRunResultAction(
+            return SetRunResultAction(
                 row.save_name, row.mainarg_value, category=row.result_category
             )
-            return set_run_result_action
         elif row.type.startswith("set_contact_"):
             property = row.type.replace("set_contact_", "")
+
             if property not in ["channel", "language", "name", "status", "timezone"]:
                 LOGGER.error(f"Unknown operation set_contact_{property}.")
-            action = SetContactPropertyAction(property, row.mainarg_value)
-            return action
+
+            return SetContactPropertyAction(property, row.mainarg_value)
         elif row.type in [
             "wait_for_response",
             "split_by_value",
@@ -566,11 +562,13 @@ class FlowParser:
             except ValueError:
                 LOGGER.warn("UI position coordinates have to be integers")
                 ui_pos = None
+
             if not ui_pos or len(ui_pos) != 2:
                 LOGGER.warn("A UI position must consist of exactly two coordiates")
                 ui_pos = None
         else:
             ui_pos = None
+
         if row.type in [
             "send_message",
             "save_value",
@@ -606,12 +604,14 @@ class FlowParser:
                 airtime_amounts = list_of_pairs_to_dict(row.mainarg_dict)
             except ValueError as e:
                 LOGGER.critical("airtime_amounts: " + str(e))
+
             try:
                 airtime_amounts = {
                     k: string_to_int_or_float(v) for k, v in airtime_amounts.items()
                 }
             except ValueError:
                 LOGGER.critical("airtime_amounts: Current values must be numerical")
+
             return TransferAirtimeNode(
                 result_name=row.save_name,
                 amounts=airtime_amounts,
@@ -684,9 +684,12 @@ class FlowParser:
     def _parse_goto_row(self, row):
         # If there is a single destination, connect all edges to that destination.
         # If not, ensure the number of edges and destinations match.
-        destination_row_ids = row.mainarg_destination_row_ids
-        if len(destination_row_ids) == 1:
-            destination_row_ids = row.mainarg_destination_row_ids * len(row.edges)
+        destination_row_ids = (
+            row.mainarg_destination_row_ids * len(row.edges)
+            if len(row.mainarg_destination_row_ids) == 1
+            else row.mainarg_destination_row_ids
+        )
+
         if not len(row.edges) == len(destination_row_ids):
             LOGGER.critical(
                 "If a go_to has multiple destinations, the number of destinations has"
@@ -694,8 +697,10 @@ class FlowParser:
             )
 
         for edge, destination_row_id in zip(row.edges, destination_row_ids):
-            destination_node_group = self.row_id_to_nodegroup[destination_row_id]
-            self._add_row_edge(edge, destination_node_group.entry_node().uuid)
+            self._add_row_edge(
+                edge,
+                self.row_id_to_nodegroup[destination_row_id].entry_node().uuid,
+            )
 
     def _parse_noop_row(self, row, store_row_id=True):
         new_node = NoOpNodeGroup()
@@ -740,10 +745,12 @@ class FlowParser:
             # from_ row_id has to match.
             if len(row.edges) == 1 and row.edges[0].condition == Condition():
                 # Get the group that this row is linked to.
-                if row.edges[0].from_:
-                    predecessor_group = self.row_id_to_nodegroup.get(row.edges[0].from_)
-                else:
-                    predecessor_group = self.most_recent_node_group()
+                predecessor_group = (
+                    self.row_id_to_nodegroup.get(row.edges[0].from_)
+                    if row.edges[0].from_
+                    else self.most_recent_node_group()
+                )
+
                 if predecessor_group.entry_node() == existing_node:
                     existing_node.add_action(row_action)
                     if row.row_id:

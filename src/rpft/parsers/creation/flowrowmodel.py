@@ -24,32 +24,29 @@ class Webhook(ParserModel):
 def list_of_pairs_to_dict(headers):
     # Dict is not yet supported in the row parser,
     # so we need to convert a list of pairs into dict.
-    # This function can be removed once dict support is implemented.
     if type(headers) is dict:
         return headers
-    elif type(headers) is list:
+
+    if type(headers) is list:
         if headers == [""]:
-            # Future row parser should return [] instead of [""]
             return {}
+
         if not all(map(lambda x: type(x) is list and len(x) == 2, headers)):
             raise ValueError("Value must be a list of pairs.")
+
         return {k: v for k, v in headers}
-    else:
-        raise ValueError("Value must be a dict or list of pairs.")
+
+    raise ValueError("Value must be a dict or list of pairs.")
 
 
 def dict_to_list_of_pairs(headers):
-    # Reverse list_of_pairs_to_dict
-    # This function can be removed once dict support is implemented.
     if type(headers) is list:
         return headers
-    elif type(headers) is dict:
-        converted = []
-        for k, v in headers.items():
-            converted.append([k, v])
-        return converted
-    else:
-        raise ValueError("Value must be a list/dict.")
+
+    if type(headers) is dict:
+        return [[k, v] for k, v in headers.items()]
+
+    raise ValueError("Value must be a list/dict.")
 
 
 class WhatsAppTemplating(ParserModel):
@@ -82,7 +79,6 @@ class FlowRowModel(ParserModel):
     row_id: str = ""
     type: str
     edges: List[Edge]
-    # These are the fields that message_text can map to
     loop_variable: List[str] = []
     include_if: bool = True
     mainarg_message_text: str = ""
@@ -93,7 +89,7 @@ class FlowRowModel(ParserModel):
     mainarg_destination_row_ids: List[str] = []
     mainarg_flow_name: str = ""
     mainarg_expression: str = ""
-    mainarg_iterlist: list = []  # no specified type of elements
+    mainarg_iterlist: list = []
     wa_template: WhatsAppTemplating = WhatsAppTemplating()
     webhook: Webhook = Webhook()
     data_sheet: str = ""
@@ -105,11 +101,11 @@ class FlowRowModel(ParserModel):
     image: str = ""
     audio: str = ""
     video: str = ""
-    attachments: List[str] = []  # These come after image/audio/video attachments
+    attachments: List[str] = []
     urn_scheme: str = ""
-    obj_name: str = ""  # What is this used for?
-    obj_id: str = ""  # This should be a list
-    node_name: str = ""  # What is this used for?
+    obj_name: str = ""
+    obj_id: str = ""
+    node_name: str = ""
     node_uuid: str = ""
     no_response: str = ""
     ui_type: str = ""
@@ -121,7 +117,6 @@ class FlowRowModel(ParserModel):
     # mainarg_none should be ''
     # _ui_position should be '' or a list of two ints
     # ...
-
     def field_name_to_header_name(field):
         field_map = {
             "node_uuid": "_nodeId",
@@ -136,12 +131,10 @@ class FlowRowModel(ParserModel):
             "mainarg_expression": "message_text",
             "mainarg_dict": "message_text",
             "webhook.body": "message_text",
-            # 'mainarg_iterlist' : 'message_text',  # Not supported for export
         }
         return field_map.get(field, field)
 
     def header_name_to_field_name_with_context(header, row):
-        # TODO: This should be defined outside of this function
         basic_header_dict = {
             "from": "edges.*.from_",
             "condition": "edges.*.condition.value",
@@ -154,8 +147,6 @@ class FlowRowModel(ParserModel):
             "_ui_type": "ui_type",
             "_ui_position": "ui_position",
         }
-        # .update({f"choice_{i}" : f"choices:{i}" for i in range(1,11)})
-
         row_type_to_main_arg = {
             "send_message": "mainarg_message_text",
             "save_value": "mainarg_value",
@@ -187,11 +178,11 @@ class FlowRowModel(ParserModel):
 
         if header in basic_header_dict:
             return basic_header_dict[header]
+
         if header == "message_text":
             return row_type_to_main_arg[row["type"]]
+
         return header
 
     def is_starting_row(self):
-        if len(self.edges) == 1 and self.edges[0].from_ == "start":
-            return True
-        return False
+        return len(self.edges) == 1 and self.edges[0].from_ == "start"
