@@ -192,6 +192,11 @@ class CompositeSheetReader:
         return sheets
 
 
+class DatasetSheetReader(AbstractSheetReader):
+    def __init__(self, datasets):
+        self._sheets = {d.title: Sheet(self, d.title, d) for d in datasets}
+
+
 def load_csv(path):
     with open(path, mode="r", encoding="utf-8") as csv:
         return tablib.import_set(csv, format="csv")
