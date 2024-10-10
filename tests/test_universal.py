@@ -447,7 +447,7 @@ class TestConvertLegacyToUniversal(TestCase):
                 {
                     "row_id": "",
                     "type": "send_message",
-                    "from": "start",
+                    "from": ["start"],
                     "message_text": "Some text",
                 },
             ],

@@ -1,5 +1,7 @@
 from pydantic import ConfigDict
 
+from pydantic.v1 import Field
+
 from rpft.parsers.common.rowparser import ParserModel
 from rpft.parsers.creation.models import Condition
 
@@ -175,3 +177,34 @@ class FlowRowModel(ParserModel):
 
     def is_starting_row(self):
         return len(self.edges) == 1 and self.edges[0].from_ == "start"
+
+
+class FlowTemplateStatement(ParserModel):
+    attachments: List[str] = []
+    audio: str = ""
+    choices: List[str] = []
+    condition: List[str] = Field(default_factory=list)
+    condition_value: List[str] = Field(default_factory=list)
+    condition_name: List[str] = Field(default_factory=list)
+    condition_type: List[str] = Field(default_factory=list)
+    condition_var: List[str] = Field(default_factory=list)
+    condition_variable: List[str] = Field(default_factory=list)
+    data_row_id: str = ""
+    data_sheet: str = ""
+    from_: List[str] = Field(alias="from", default_factory=list)
+    image: str = ""
+    include_if: str = "true"
+    loop_variable: List[str] = Field(default_factory=list)
+    message_text: str = ""
+    no_response: str = ""
+    nodeId: str = Field(alias="_nodeId", default="")
+    node_name: str = ""
+    obj_id: str = ""
+    obj_name: str = ""
+    row_id: str = ""
+    save_name: str = ""
+    template_arguments: list = []
+    type: str = ""
+    video: str = ""
+    wa_template: WhatsAppTemplating = WhatsAppTemplating()
+    webhook: Webhook = Webhook()
