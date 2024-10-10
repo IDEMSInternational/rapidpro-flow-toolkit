@@ -1,10 +1,7 @@
 from enum import Enum
 from typing import List
 
-from pydantic.v1 import Field
-
 from rpft.parsers.common.rowparser import ParserModel
-from rpft.parsers.creation.flowrowmodel import WhatsAppTemplating, Webhook
 from rpft.parsers.creation.models import SurveyConfig
 
 
@@ -52,33 +49,3 @@ class ContentIndexRowModel(ParserModel):
             return "survey_config"
         else:
             return header
-
-
-class CreateFlowRowModel(ParserModel):
-    audio: str = ""
-    choices: List[str] = []
-    condition: str = ""
-    condition_name: str = ""
-    condition_type: str = ""
-    condition_var: str = ""
-    data_row_id: str = ""
-    data_sheet: str = ""
-    from_: str = Field(alias="from", default="")
-    image: str = ""
-    include_if: str = ""
-    loop_variable: str = ""
-    mainarg_destination_row_ids: List[str] = []
-    mainarg_expression: str = ""
-    message_text: str = ""
-    no_response: str = ""
-    nodeId: str = Field(alias="_nodeId", default="")
-    node_name: str = ""
-    obj_id: str = ""
-    obj_name: str = ""
-    row_id: str = ""
-    save_name: str = ""
-    template_arguments: list = []
-    type: str = ""
-    video: str = ""
-    wa_template: WhatsAppTemplating = WhatsAppTemplating()
-    webhook: Webhook = Webhook()
