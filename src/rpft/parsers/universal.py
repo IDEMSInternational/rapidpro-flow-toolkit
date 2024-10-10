@@ -8,14 +8,12 @@ from typing import Any, List
 
 from benedict import benedict
 
-from rpft.parsers.common.cellparser import CellParser
+from rpft.parsers.common.cellparser import TemplatePreserver
 from rpft.parsers.common.rowparser import RowParser
 from rpft.parsers.common.sheetparser import SheetParser
 from rpft.parsers.creation.campaigneventrowmodel import CampaignEventRowModel
-from rpft.parsers.creation.contentindexrowmodel import (
-    ContentIndexRowModel,
-    CreateFlowRowModel,
-)
+from rpft.parsers.creation.contentindexrowmodel import ContentIndexRowModel
+from rpft.parsers.creation.flowrowmodel import FlowTemplateStatement
 from rpft.parsers.creation.triggerrowmodel import TriggerRowModel
 from rpft.parsers.sheets import AbstractSheetReader, Sheet
 
@@ -101,7 +99,7 @@ def parse_content_index(reader, name):
 def parse_sheet(model, sheet: Sheet):
     try:
         return SheetParser(
-            RowParser(model, CellParser()),
+            RowParser(model, TemplatePreserver()),
             sheet.table,
             context=None,
         ).parse_all()
@@ -131,9 +129,9 @@ class ModelFinder:
     type_model_map = {
         "content_index": ContentIndexRowModel,
         "create_campaign": CampaignEventRowModel,
-        "create_flow": CreateFlowRowModel,
+        "create_flow": FlowTemplateStatement,
         "create_triggers": TriggerRowModel,
-        "template_definition": CreateFlowRowModel,
+        "template_definition": FlowTemplateStatement,
     }
 
     def __init__(self, module=None):
@@ -274,8 +272,6 @@ def create_obj(pairs):
     obj = benedict()
 
     for kp, v in pairs:
-        # print("KP:", kp)
-        # print("V:", v)
         obj[kp] = v
 
     return obj
