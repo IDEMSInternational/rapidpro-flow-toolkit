@@ -6,6 +6,7 @@ from typing import Dict, List
 from rpft.logger.logger import get_logger, logging_context
 from rpft.parsers.common.model_inference import model_from_headers
 from rpft.parsers.common.sheetparser import SheetParser
+from rpft.parsers.creation import globalrowmodels
 from rpft.parsers.creation.campaigneventrowmodel import CampaignEventRowModel
 from rpft.parsers.creation.campaignparser import CampaignParser
 from rpft.parsers.creation.contentindexrowmodel import ContentIndexRowModel
@@ -245,16 +246,17 @@ class ContentIndexParser:
     def _get_new_data_sheet(self, sheet_name, data_model_name=None):
         user_model = None
 
-        if self.user_models_module and data_model_name:
-            try:
-                user_model = getattr(self.user_models_module, data_model_name)
-            except AttributeError:
+        if data_model_name:
+            if hasattr(globalrowmodels, data_model_name):
+                user_model = getattr(globalrowmodels, data_model_name)
+            if self.user_models_module:
+                if hasattr(self.user_models_module, data_model_name):
+                    user_model = getattr(self.user_models_module, data_model_name)
+            if not user_model:
                 LOGGER.critical(
                     f'Undefined data_model_name "{data_model_name}" '
                     f"in {self.user_models_module}."
                 )
-
-        data_table = self._get_sheet_or_die(sheet_name)
 
         with logging_context(sheet_name):
             data_table = self._get_sheet_or_die(sheet_name).table
