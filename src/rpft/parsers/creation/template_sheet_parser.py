@@ -10,11 +10,13 @@ class TemplateSheetParser:
     # The model representing the format of the template instance sheet
     # is implicit in the row parser
 
-    def __init__(self, row_parser):
-        self.row_parser = row_parser
+    def __init__(self, row_model):
+        self.row_model = row_model
 
     def parse_sheet(self, template_data_table, flow_definition_table):
-        template_sheet_parser = SheetParser(self.row_parser, template_data_table)
+        template_sheet_parser = SheetParser(
+            template_data_table, row_model=self.row_model
+        )
         template_rows = template_sheet_parser.parse_all()
         rapidpro_container = RapidProContainer()
 

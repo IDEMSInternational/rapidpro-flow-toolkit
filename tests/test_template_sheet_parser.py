@@ -20,8 +20,7 @@ class YesNoTemplate(ParserModel):
 
 class TestParsing(unittest.TestCase):
     def setUp(self) -> None:
-        row_parser = RowParser(YesNoTemplate, CellParser())
-        self.template_sheet_parser = TemplateSheetParser(row_parser)
+        self.template_sheet_parser = TemplateSheetParser(YesNoTemplate)
 
     def test_parse(self):
         flow_rows = get_table_from_file("input/templates/yes_no_template.csv")

@@ -3,9 +3,7 @@ from collections import OrderedDict
 from typing import Dict, List
 
 from rpft.logger.logger import get_logger, logging_context
-from rpft.parsers.common.cellparser import CellParser
 from rpft.parsers.common.model_inference import model_from_headers
-from rpft.parsers.common.rowparser import RowParser
 from rpft.parsers.common.sheetparser import SheetParser
 from rpft.parsers.creation.campaigneventrowmodel import CampaignEventRowModel
 from rpft.parsers.creation.campaignparser import CampaignParser
@@ -76,12 +74,9 @@ class ContentIndexParser:
         self._populate_missing_templates()
 
     def _process_content_index_table(self, sheet: Sheet):
-        sheet_parser = SheetParser(
-            RowParser(ContentIndexRowModel, CellParser()),
-            sheet.table,
-        )
+        rows = SheetParser(sheet.table, ContentIndexRowModel).parse_all()
 
-        for row_idx, row in enumerate(sheet_parser.parse_all(), start=2):
+        for row_idx, row in enumerate(rows, start=2):
             logging_prefix = f"{sheet.reader.name}-{sheet.name} | row {row_idx}"
 
             with logging_context(logging_prefix):
@@ -267,10 +262,7 @@ class ContentIndexParser:
                 LOGGER.info("Inferring RowModel automatically")
                 user_model = model_from_headers(sheet_name, data_table.headers)
 
-            data_rows = SheetParser(
-                RowParser(user_model, CellParser()),
-                data_table,
-            ).parse_all()
+            data_rows = SheetParser(data_table, user_model).parse_all()
             model_instances = OrderedDict((row.ID, row) for row in data_rows)
 
             return DataSheet(model_instances, user_model)
@@ -386,21 +378,13 @@ class ContentIndexParser:
     def create_campaign_parser(self, row):
         sheet_name = row.sheet_name[0]
         sheet = self._get_sheet_or_die(sheet_name)
-        rows = SheetParser(
-            RowParser(CampaignEventRowModel, CellParser()),
-            sheet.table,
-        ).parse_all()
-
+        rows = SheetParser(sheet.table, CampaignEventRowModel).parse_all()
         return CampaignParser(row.new_name or sheet_name, row.group, rows)
 
     def create_trigger_parser(self, row):
         sheet_name = row.sheet_name[0]
         sheet = self._get_sheet_or_die(sheet_name)
-        rows = SheetParser(
-            RowParser(TriggerRowModel, CellParser()),
-            sheet.table,
-        ).parse_all()
-
+        rows = SheetParser(sheet.table, TriggerRowModel).parse_all()
         return TriggerParser(sheet_name, rows)
 
     def parse_all_campaigns(self, rapidpro_container):

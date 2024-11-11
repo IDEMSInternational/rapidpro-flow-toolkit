@@ -9,13 +9,13 @@ from tests.mocks import MockRowParser
 class TestSheetParser(TestCase):
     def setUp(self):
         self.parser = SheetParser(
-            MockRowParser(),
             tablib.Dataset(
                 ("row1f1", "row1f2"),
                 ("row2f1", "row2f2"),
                 ("row3f1", "row3f2"),
                 headers=("field1", "field2"),
             ),
+            row_parser=MockRowParser(),
         )
 
     def test_context_and_bookmarks(self):

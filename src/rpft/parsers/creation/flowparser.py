@@ -339,9 +339,9 @@ class FlowParser:
         else:
             assert table is not None
             self.sheet_parser = SheetParser(
-                RowParser(FlowRowModel, CellParser()),
                 table,
-                self.context,
+                row_parser=RowParser(FlowRowModel, CellParser()),
+                context=self.context,
             )
         self.node_group_stack = [NodeGroup()]
         self.row_id_to_nodegroup = defaultdict()
