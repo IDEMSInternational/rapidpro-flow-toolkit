@@ -462,6 +462,7 @@ class FlowParser:
             row.data_sheet,
             row.data_row_id,
             row.template_arguments,
+            self.context,
         )
         for edge in row.edges:
             self._add_row_edge(edge, node_group.entry_node().uuid)

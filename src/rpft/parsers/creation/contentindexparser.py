@@ -1,5 +1,6 @@
 import importlib
 from collections import OrderedDict
+import copy
 from typing import Dict, List
 
 from rpft.logger.logger import get_logger, logging_context
@@ -335,7 +336,7 @@ class ContentIndexParser:
         return self.template_sheets[name]
 
     def get_node_group(
-        self, template_name, data_sheet, data_row_id, template_arguments
+        self, template_name, data_sheet, data_row_id, template_arguments, context=None
     ):
         if (data_sheet and data_row_id) or (not data_sheet and not data_row_id):
             with logging_context(f"{template_name}"):
@@ -345,6 +346,7 @@ class ContentIndexParser:
                     data_row_id,
                     template_arguments,
                     RapidProContainer(),
+                    context=context or {},
                     parse_as_block=True,
                 )
         else:
@@ -466,12 +468,14 @@ class ContentIndexParser:
         rapidpro_container,
         new_name="",
         parse_as_block=False,
+        context=None,
     ):
         base_name = new_name or sheet_name
 
+        context = copy.copy(context or {})
         if data_sheet and data_row_id:
             flow_name = " - ".join([base_name, data_row_id])
-            context = self.get_data_sheet_row(data_sheet, data_row_id)
+            context.update(dict(self.get_data_sheet_row(data_sheet, data_row_id)))
         else:
             if data_sheet or data_row_id:
                 LOGGER.warn(
@@ -480,13 +484,12 @@ class ContentIndexParser:
                 )
 
             flow_name = base_name
-            context = {}
 
         template_sheet = self.get_template_sheet(sheet_name)
         context = self.map_template_arguments_to_context(
             template_sheet.argument_definitions,
             template_arguments,
-            dict(context),
+            context,
         )
         flow_parser = FlowParser(
             rapidpro_container,
