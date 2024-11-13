@@ -11,10 +11,12 @@ from rpft.parsers.creation.campaigneventrowmodel import CampaignEventRowModel
 from rpft.parsers.creation.campaignparser import CampaignParser
 from rpft.parsers.creation.contentindexrowmodel import ContentIndexRowModel
 from rpft.parsers.creation.flowparser import FlowParser
+from rpft.parsers.creation.global_templates import get_survey_reader
 from rpft.parsers.creation.tagmatcher import TagMatcher
+from rpft.parsers.creation.surveyparser import SurveyParser
 from rpft.parsers.creation.triggerparser import TriggerParser
 from rpft.parsers.creation.triggerrowmodel import TriggerRowModel
-from rpft.parsers.sheets import Sheet
+from rpft.parsers.sheets import CompositeSheetReader, Sheet
 from rpft.rapidpro.models.containers import RapidProContainer
 
 LOGGER = get_logger()
@@ -53,23 +55,25 @@ class ContentIndexParser:
         user_data_model_module_name=None,
         tag_matcher=TagMatcher(),
     ):
-        self.reader = sheet_reader
         self.tag_matcher = tag_matcher
         self.template_sheets = {}
         self.data_sheets = {}
         self.flow_definition_rows: List[ContentIndexRowModel] = []
         self.campaign_parsers: Dict[str, tuple[str, CampaignParser]] = {}
+        self.survey_parser = SurveyParser(self)
         self.trigger_parsers = OrderedDict()
         self.user_models_module = (
             importlib.import_module(user_data_model_module_name)
             if user_data_model_module_name
             else None
         )
-        indices = self.reader.get_sheets_by_name("content_index")
 
+        indices = sheet_reader.get_sheets_by_name("content_index")
         if not indices:
             LOGGER.critical("No content index sheet provided")
-
+        survey_reader = get_survey_reader()
+        self.reader = CompositeSheetReader([survey_reader, sheet_reader])
+        indices = self.reader.get_sheets_by_name("content_index")
         for sheet in indices:
             self._process_content_index_table(sheet)
 
@@ -133,6 +137,8 @@ class ContentIndexParser:
                         logging_prefix,
                         self.create_trigger_parser(row),
                     )
+                elif row.type == "create_survey":
+                    self._add_survey(row, logging_prefix)
                 elif row.type == "ignore_row":
                     self._process_ignore_row(row.sheet_name[0])
                 else:
@@ -161,6 +167,7 @@ class ContentIndexParser:
         ]
         self.campaign_parsers.pop(sheet_name, None)
         self.trigger_parsers.pop(sheet_name, None)
+        self.survey_parser.delete_survey(sheet_name)
 
     def _populate_missing_templates(self):
         for logging_prefix, row in self.flow_definition_rows:
@@ -376,6 +383,7 @@ class ContentIndexParser:
         self.parse_all_flows(rapidpro_container)
         self.parse_all_campaigns(rapidpro_container)
         self.parse_all_triggers(rapidpro_container)
+        self.parse_all_surveys(rapidpro_container)
 
         return rapidpro_container
 
@@ -391,6 +399,11 @@ class ContentIndexParser:
         rows = SheetParser(sheet.table, TriggerRowModel).parse_all()
         return TriggerParser(sheet_name, rows)
 
+    def _add_survey(self, row, logging_prefix):
+        survey_name = row.new_name or row.data_sheet
+        sheet = self.data_sheets[row.data_sheet]
+        self.survey_parser.add_survey(survey_name, sheet, logging_prefix=logging_prefix)
+
     def parse_all_campaigns(self, rapidpro_container):
         for logging_prefix, campaign_parser in self.campaign_parsers.values():
             sheet_name = campaign_parser.campaign.name
@@ -398,6 +411,9 @@ class ContentIndexParser:
             with logging_context(f"{logging_prefix} | {sheet_name}"):
                 campaign = campaign_parser.parse()
                 rapidpro_container.add_campaign(campaign)
+
+    def parse_all_surveys(self, rapidpro_container):
+        self.survey_parser.parse_all(rapidpro_container)
 
     def parse_all_triggers(self, rapidpro_container):
         for logging_prefix, trigger_parser in self.trigger_parsers.values():

@@ -13,12 +13,12 @@ class TemplateSheetParser:
     def __init__(self, row_model):
         self.row_model = row_model
 
-    def parse_sheet(self, template_data_table, flow_definition_table):
+    def parse_sheet(self, template_data_table, flow_definition_table, rapidpro_container=None):
         template_sheet_parser = SheetParser(
             template_data_table, row_model=self.row_model
         )
         template_rows = template_sheet_parser.parse_all()
-        rapidpro_container = RapidProContainer()
+        rapidpro_container = rapidpro_container or RapidProContainer()
 
         for row in template_rows:
             parser = FlowParser(

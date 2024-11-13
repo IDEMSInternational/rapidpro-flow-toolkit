@@ -1,0 +1,3 @@
+"row_id","type","from","loop_variable","condition","condition_var","condition_type","condition_name","include_if","message_text","data_sheet","data_row_id","template_arguments","choices","save_name","image","audio","video","obj_name","obj_id","node_name","_nodeId","no_response"
+,"insert_as_block","start",,,,,,,"template_survey_question_type_{{type}}",,,,,,,,,,,,,
+,"save_value",,,,,,,,"@results.variable",,,,,"{{variable}}",,,,,,,,
