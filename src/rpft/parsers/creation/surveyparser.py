@@ -77,6 +77,7 @@ class Survey:
             if prefix:
                 apply_variable_renaming(row, prefix)
             apply_variable_substitutions(row, variables, prefix)
+            row.expiration_message = row.expiration_message or self.survey_config.expiration_message
 
     def get_survey_variables(self):
         '''
@@ -99,6 +100,7 @@ class Survey:
 
 class SurveyParser:
     QUESTION_TEMPLATE_NAME = "template_survey_question_wrapper"
+    SURVEY_TEMPLATE_NAME = "template_survey_wrapper"
 
     def __init__(self, content_index_parser):
         """
@@ -133,13 +135,14 @@ class SurveyParser:
     def parse_all(self, rapidpro_container=None):
         rapidpro_container = rapidpro_container or RapidProContainer()
         for name in self.surveys:
-            self.parse(name, rapidpro_container)
+            self.parse_survey(name, rapidpro_container)
         return rapidpro_container
 
-    def parse(self, name, rapidpro_container=None):
+    def parse_survey(self, name, rapidpro_container=None):
         rapidpro_container = rapidpro_container or RapidProContainer()
         survey = self.surveys[name]
         survey.preprocess_data_rows()
+        self.parse_survey_wrapper(survey, rapidpro_container)
 
         with logging_context(f"{survey.logging_prefix} | survey {name}"):
             for row in survey.question_data_sheet.rows.values():
@@ -172,3 +175,27 @@ class SurveyParser:
         flow_parser.parse()
 
         return rapidpro_container
+
+    def parse_survey_wrapper(self, survey, rapidpro_container):
+        context = {
+            "questions": list(survey.question_data_sheet.rows.values()),
+            "survey_id": survey.survey_id,
+        }
+        template_arguments = []
+        template_sheet = self.content_index_parser.get_template_sheet(
+            SurveyParser.SURVEY_TEMPLATE_NAME
+        )
+        context = self.content_index_parser.map_template_arguments_to_context(
+            template_sheet.argument_definitions,
+            template_arguments,
+            context,
+        )
+
+        flow_parser = FlowParser(
+            rapidpro_container,
+            f"survey - {survey.name}",
+            template_sheet.table,
+            context=context,
+            content_index_parser=self.content_index_parser,
+        )
+        flow_parser.parse()

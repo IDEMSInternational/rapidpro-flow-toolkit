@@ -67,9 +67,10 @@ class TestSurveyParser(TestTemplate):
             "create_survey,survey_sheet,survey_data,,,,\n"
         )
         survey_data = csv_join(
-            "ID,type,question,variable,completion_variable",
-            "name,text,Enter your name,name,name_complete",
-            "else,text,Enter something else,else,else_complete",
+            "ID,type,question,variable,completion_variable,expiration_message",
+            "name,text,Enter your name,name,name_complete,",
+            "else,text,Enter something else,else,else_complete,You waited too long",
+            "age,text,Enter your age,,,",
         )
 
         render_output = (
@@ -86,6 +87,49 @@ class TestSurveyParser(TestTemplate):
                 ("set_contact_field", "name"),
             ],
             Context(inputs=["My name"]),
+        )
+
+        self.assertFlowMessages(
+            render_output,
+            "survey - survey_data - question - age",
+            [
+                ("send_msg", "Enter your age"),
+                ("set_contact_field", "sq_surveydata_age"),
+            ],
+            Context(inputs=["23"]),
+        )
+
+        self.assertFlowMessages(
+            render_output,
+            "survey - survey_data",
+            [
+                ('enter_flow', 'survey - surveydata - question - name'),
+                ('enter_flow', 'survey - surveydata - question - else'),
+                ("send_msg", "You waited too long"),
+                ("set_run_result", "expired"),
+            ],
+            Context(inputs=["completed", "expired"]),
+        )
+
+        self.assertFlowMessages(
+            render_output,
+            "survey - survey_data",
+            [
+                ('enter_flow', 'survey - surveydata - question - name'),
+                ('enter_flow', 'survey - surveydata - question - else'),
+                ('enter_flow', 'survey - surveydata - question - age'),
+                ("set_run_result", "proceed"),
+            ],
+            Context(inputs=["completed", "completed", "completed"]),
+        )
+
+        self.assertFlowMessages(
+            render_output,
+            "survey - survey_data",
+            [
+                ('enter_flow', 'survey - surveydata - question - name'),
+            ],
+            Context(inputs=["completed"], variables={"@child.results.stop": "yes"}),
         )
 
 

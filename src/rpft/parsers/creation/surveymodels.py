@@ -11,6 +11,8 @@ from rpft.parsers.creation.commonmodels import (
 class SurveyConfig(ParserModel):
     # Prefix to apply to all variable names in the survey
     variable_prefix: str = ""
+    # Message to send when a question flow expires
+    expiration_message: str = ""
 
 
 class MCQChoice(ParserModel):
@@ -52,7 +54,7 @@ class SurveyQuestionModel(ParserModel):
     # If blank, message from survey configuration is used
     expiration_message: str = ""
     # MCQ specific fields
-    options: List[MCQChoice] = []
+    choices: List[MCQChoice] = []
     ## Make question skippable
     # Adds an additional choice allowing use to skip the question.
     skipoption: SkipOption = SkipOption()
