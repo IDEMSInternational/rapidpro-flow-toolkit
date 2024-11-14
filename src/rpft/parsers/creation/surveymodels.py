@@ -39,22 +39,26 @@ class SkipOption(ParserModel):
 
 
 class SurveyQuestionModel(ParserModel):
+    # type of the question
     type: str
     # question text
     question: str
     # Variable to store the user input in
+    # If blank, generated from the question ID as sq_{survey_id}_{question_id}
+    # The survey_id/question_id is the survey's name/question's ID
+    # in all lowercase with non-alphanumeric characters removed
     variable: str = ""
     # Variable indicating whether question has been completed
-    # If blank, generated from the question ID
+    # If blank, generated from the question ID as {variable}_complete
     completion_variable: str = ""
-    # Conditions required to present the question, otherwise skipped.
-    # If blank, generated from the question ID
-    relevant: List[Condition] = []
+    # MCQ specific fields
+    choices: List[MCQChoice] = []
+
     # Message to send when question flow expires
     # If blank, message from survey configuration is used
     expiration_message: str = ""
-    # MCQ specific fields
-    choices: List[MCQChoice] = []
+    # Conditions required to present the question, otherwise skipped.
+    relevant: List[Condition] = []
     ## Make question skippable
     # Adds an additional choice allowing use to skip the question.
     skipoption: SkipOption = SkipOption()

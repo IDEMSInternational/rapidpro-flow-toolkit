@@ -92,7 +92,10 @@ class ContentIndexParser:
                 if not self.tag_matcher.matches(row.tags):
                     continue
 
-                if len(row.sheet_name) != 1 and row.type != "data_sheet":
+                if len(row.sheet_name) != 1 and row.type not in [
+                    "data_sheet",
+                    "create_survey",
+                ]:
                     LOGGER.critical(
                         f"For {row.type} rows, exactly one sheet_name has to be"
                         " specified"
@@ -403,10 +406,7 @@ class ContentIndexParser:
         survey_name = row.new_name or row.data_sheet
         sheet = self.data_sheets[row.data_sheet]
         self.survey_parser.add_survey(
-            survey_name,
-            sheet,
-            row.survey_config,
-            logging_prefix=logging_prefix
+            survey_name, sheet, row.survey_config, logging_prefix=logging_prefix
         )
 
     def parse_all_campaigns(self, rapidpro_container):

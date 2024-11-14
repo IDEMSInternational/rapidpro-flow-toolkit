@@ -30,33 +30,46 @@ def apply_to_all_str(obj, func, inplace=False):
         return obj
 
 
-def apply_variable_renaming(survey_question, prefix):
-    '''
+def apply_prefix_renaming(survey_question, prefix):
+    """
     For all variables which are created in this survey question,
     apply the prefix to its name.
-    '''
+    """
     survey_question.variable = prefix + survey_question.variable
     survey_question.completion_variable = prefix + survey_question.completion_variable
     for assg in survey_question.postprocessing.assignments:
         assg.variable = prefix + assg.variable
 
 
-def apply_variable_substitutions(survey_question, variables, prefix):
-    '''
+def apply_prefix_substitutions(survey_question, variables, prefix):
+    """
     Wherever any of these variable appears in this survey (in a condition,
     message text or elsewhere), apply the prefix to it.
+    """
+
+    def replace_vars(s):
+        for var in variables:
+            s = re.sub(
+                f"fields.{var}([^a-zA-Z0-9_]|$)",
+                f"fields.{prefix}{var}\\1",
+                s,
+            )
+        return s
+
+    apply_to_all_str(survey_question, replace_vars, inplace=True)
+
+
+def apply_shorthand_substitutions(survey_question, survey_id):
+    """
     Wherever @answer appears, replace it with the variable of this
     survey question where the user answer is stored.
-    '''
+    """
+
     def replace_vars(s):
+        s = s.replace("@answerid", f"{survey_question.variable}")
         s = s.replace("@answer", f"@fields.{survey_question.variable}")
-        if prefix:
-            for var in variables:
-                s = re.sub(
-                    f"fields.{var}([^a-zA-Z0-9_]|$)",
-                    f"fields.{prefix}{var}\\1",
-                    s,
-                )
+        s = s.replace("@prefixid", f"sq_{survey_id}")
+        s = s.replace("@prefix", f"@fields.sq_{survey_id}")
         return s
 
     apply_to_all_str(survey_question, replace_vars, inplace=True)
@@ -71,31 +84,41 @@ class Survey:
         self.logging_prefix = logging_prefix
 
     def preprocess_data_rows(self):
+        self.initialize_survey_variables()
+        for row in self.question_data_sheet.rows.values():
+            apply_shorthand_substitutions(row, self.survey_id)
+            row.expiration_message = (
+                row.expiration_message or self.survey_config.expiration_message
+            )
+
+        # Apply all prefix replacements
         variables = self.get_survey_variables()
         prefix = self.survey_config.variable_prefix
         for row in self.question_data_sheet.rows.values():
             if prefix:
-                apply_variable_renaming(row, prefix)
-            apply_variable_substitutions(row, variables, prefix)
-            row.expiration_message = row.expiration_message or self.survey_config.expiration_message
+                apply_prefix_renaming(row, prefix)
+            apply_prefix_substitutions(row, variables, prefix)
 
     def get_survey_variables(self):
-        '''
-        Get list of variables that are created in this survey.
-        '''
+        """Get list of variables that are created in this survey."""
+
         variables = []
         for row in self.question_data_sheet.rows.values():
-            if not row.variable:
-                question_id = name_to_id(row.ID)
-                row.variable = f"sq_{self.survey_id}_{question_id}"
-            if not row.completion_variable:
-                row.completion_variable = f"{row.variable}_complete"
             variables += [row.variable, row.completion_variable]
             assignment_variables = [
                 assg.variable for assg in row.postprocessing.assignments
             ]
             variables += assignment_variables
         return list(set(variables))
+
+    def initialize_survey_variables(self):
+        """Initialize empty variable names with defaults."""
+        for row in self.question_data_sheet.rows.values():
+            if not row.variable:
+                question_id = name_to_id(row.ID)
+                row.variable = f"sq_{self.survey_id}_{question_id}"
+            if not row.completion_variable:
+                row.completion_variable = f"{row.variable}_complete"
 
 
 class SurveyParser:
@@ -179,6 +202,7 @@ class SurveyParser:
     def parse_survey_wrapper(self, survey, rapidpro_container):
         context = {
             "questions": list(survey.question_data_sheet.rows.values()),
+            "survey_name": survey.name,
             "survey_id": survey.survey_id,
         }
         template_arguments = []

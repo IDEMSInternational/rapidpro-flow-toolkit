@@ -2,7 +2,7 @@
 ,"begin_for",,"question;i",,,,,,"{@questions@}",,,,,,,,,,,,
 "q{{i}}start","split_by_value",,,,,,,"{@i==0@}","{{question.completion_variable}}",,,,,,,,,,,,
 "q{{i}}start","split_by_value","q{{i-1}}start;q{{i-1}}end",,"yes;",,,,"{@i!=0@}","{{question.completion_variable}}",,,,,,,,,,,,
-"q{{i}}flow","start_new_flow","q{{i}}start",,,,,,,"survey - {{survey_id}} - question - {{question.ID}}",,,,,,,,,,,,
+"q{{i}}flow","start_new_flow","q{{i}}start",,,,,,,"survey - {{survey_name}} - question - {{question.ID}}",,,,,,,,,,,,
 ,"send_message","q{{i}}flow",,"Expired",,,,"{@question.expiration_message!=""""@}","{{question.expiration_message}}",,,,,,,,,,,,
 ,"save_flow_result",,,,,,,"{@question.expiration_message!=""""@}","yes",,,,"expired",,,,,,,,
 ,"hard_exit",,,,,,,"{@question.expiration_message!=""""@}",,,,,,,,,,,,,

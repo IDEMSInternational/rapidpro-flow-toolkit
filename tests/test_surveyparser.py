@@ -11,8 +11,9 @@ from rpft.parsers.creation.commonmodels import (
 from rpft.parsers.creation.globalrowmodels import SurveyQuestionRowModel
 from rpft.parsers.creation.surveymodels import PostProcessing, SurveyConfig
 from rpft.parsers.creation.surveyparser import (
-    apply_variable_substitutions,
-    apply_variable_renaming,
+    apply_prefix_substitutions,
+    apply_prefix_renaming,
+    apply_shorthand_substitutions,
     apply_to_all_str,
     Survey,
 )
@@ -64,7 +65,7 @@ class TestSurveyParser(TestTemplate):
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
             "data_sheet,survey_data,,,,SurveyQuestionRowModel,\n"
-            "create_survey,survey_sheet,survey_data,,,,\n"
+            "create_survey,,survey_data,,Survey Name,,\n"
         )
         survey_data = csv_join(
             "ID,type,question,variable,completion_variable,expiration_message",
@@ -81,7 +82,7 @@ class TestSurveyParser(TestTemplate):
 
         self.assertFlowMessages(
             render_output,
-            "survey - survey_data - question - name",
+            "survey - Survey Name - question - name",
             [
                 ("send_msg", "Enter your name"),
                 ("set_contact_field", "name"),
@@ -91,20 +92,20 @@ class TestSurveyParser(TestTemplate):
 
         self.assertFlowMessages(
             render_output,
-            "survey - survey_data - question - age",
+            "survey - Survey Name - question - age",
             [
                 ("send_msg", "Enter your age"),
-                ("set_contact_field", "sq_surveydata_age"),
+                ("set_contact_field", "sq_surveyname_age"),
             ],
             Context(inputs=["23"]),
         )
 
         self.assertFlowMessages(
             render_output,
-            "survey - survey_data",
+            "survey - Survey Name",
             [
-                ('enter_flow', 'survey - surveydata - question - name'),
-                ('enter_flow', 'survey - surveydata - question - else'),
+                ('enter_flow', 'survey - Survey Name - question - name'),
+                ('enter_flow', 'survey - Survey Name - question - else'),
                 ("send_msg", "You waited too long"),
                 ("set_run_result", "expired"),
             ],
@@ -113,11 +114,11 @@ class TestSurveyParser(TestTemplate):
 
         self.assertFlowMessages(
             render_output,
-            "survey - survey_data",
+            "survey - Survey Name",
             [
-                ('enter_flow', 'survey - surveydata - question - name'),
-                ('enter_flow', 'survey - surveydata - question - else'),
-                ('enter_flow', 'survey - surveydata - question - age'),
+                ('enter_flow', 'survey - Survey Name - question - name'),
+                ('enter_flow', 'survey - Survey Name - question - else'),
+                ('enter_flow', 'survey - Survey Name - question - age'),
                 ("set_run_result", "proceed"),
             ],
             Context(inputs=["completed", "completed", "completed"]),
@@ -125,9 +126,9 @@ class TestSurveyParser(TestTemplate):
 
         self.assertFlowMessages(
             render_output,
-            "survey - survey_data",
+            "survey - Survey Name",
             [
-                ('enter_flow', 'survey - surveydata - question - name'),
+                ('enter_flow', 'survey - Survey Name - question - name'),
             ],
             Context(inputs=["completed"], variables={"@child.results.stop": "yes"}),
         )
@@ -180,11 +181,15 @@ class TestSurveyPreprocessing(TestCase):
                     value="5",
                     variable="@fields.sq_s1_question1b",
                 ),
+                Condition(
+                    value="6",
+                    variable="@prefix_question0",
+                ),
             ],
             postprocessing=PostProcessing(
                 assignments=[
                     Assignment(
-                        variable="new_variable",
+                        variable="@answerid_bucket",
                         value="@answer",
                     ),
                     Assignment(
@@ -233,11 +238,15 @@ class TestSurveyPreprocessing(TestCase):
                     value="5",
                     variable="@fields.sq_s1_question1b",
                 ),
+                Condition(
+                    value="6",
+                    variable="@fields.sq_s1_question0",
+                ),
             ],
             postprocessing=PostProcessing(
                 assignments=[
                     Assignment(
-                        variable="pre_new_variable",
+                        variable="pre_sq_question2_bucket",
                         value="@fields.pre_sq_question2",
                     ),
                     Assignment(
@@ -272,8 +281,9 @@ class TestSurveyPreprocessing(TestCase):
 
         question2_copy = copy.deepcopy(question2)
         prefix = "pre_"
-        apply_variable_renaming(question2_copy, prefix)
-        apply_variable_substitutions(
+        apply_shorthand_substitutions(question2_copy, "s1")
+        apply_prefix_renaming(question2_copy, prefix)
+        apply_prefix_substitutions(
             question2_copy,
             [
                 "sq_s1_question1",
