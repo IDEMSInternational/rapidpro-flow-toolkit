@@ -1,7 +1,17 @@
 from typing import List
 
 from rpft.parsers.common.rowparser import ParserModel
-from rpft.parsers.creation.commonmodels import Condition, ConditionsWithMessage, Assignment
+from rpft.parsers.creation.commonmodels import (
+    Assignment,
+    Condition,
+    ConditionsWithMessage,
+)
+
+
+class SurveyConfig(ParserModel):
+    # Prefix to apply to all variable names in the survey
+    variable_prefix: str = ""
+
 
 class MCQChoice(ParserModel):
     # Text rendered to user

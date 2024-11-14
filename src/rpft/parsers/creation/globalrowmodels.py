@@ -1,5 +1,5 @@
 from rpft.parsers.creation.datarowmodel import DataRowModel
-from rpft.parsers.creation.surveyrowmodels import SurveyQuestionModel
+from rpft.parsers.creation.surveymodels import SurveyQuestionModel
 
 
 class SurveyQuestionRowModel(DataRowModel, SurveyQuestionModel):
