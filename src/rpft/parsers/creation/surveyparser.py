@@ -76,7 +76,14 @@ def apply_shorthand_substitutions(survey_question, survey_id):
 
 
 class Survey:
-    def __init__(self, name, question_data_sheet, survey_config, template_arguments=None, logging_prefix=None):
+    def __init__(
+        self,
+        name,
+        question_data_sheet,
+        survey_config,
+        template_arguments=None,
+        logging_prefix=None,
+    ):
         self.name = name
         self.survey_id = name_to_id(name)
         self.question_data_sheet = copy.deepcopy(question_data_sheet)
@@ -144,14 +151,18 @@ class SurveyParser:
         self.surveys = {}
         self.content_index_parser = content_index_parser
 
-    def add_survey(self, name, data_sheet, survey_config, template_arguments, logging_prefix=""):
+    def add_survey(
+        self, name, data_sheet, survey_config, template_arguments, logging_prefix=""
+    ):
         with logging_context(logging_prefix):
             if name in self.surveys:
                 LOGGER.warning(
                     f"Duplicate survey definition sheet '{name}'. "
                     "Overwriting previous definition."
                 )
-        self.surveys[name] = Survey(name, data_sheet, survey_config, template_arguments, logging_prefix)
+        self.surveys[name] = Survey(
+            name, data_sheet, survey_config, template_arguments, logging_prefix
+        )
 
     def delete_survey(self, name):
         self.surveys.pop(name, None)
@@ -165,7 +176,7 @@ class SurveyParser:
     def parse_survey(self, name, rapidpro_container=None):
         rapidpro_container = rapidpro_container or RapidProContainer()
         survey = self.surveys[name]
-        
+
         with logging_context(f"{survey.logging_prefix} | survey {name}"):
             survey.preprocess_data_rows()
             self.parse_survey_wrapper(survey, rapidpro_container)

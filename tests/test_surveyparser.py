@@ -85,6 +85,7 @@ class TestSurveyParser(TestTemplate):
             render_output,
             "survey - Survey Name - question - name",
             [
+                ("set_run_result", "dummy"),
                 ("send_msg", "Enter your name"),
                 ("set_contact_field", "name"),
                 ("set_contact_field", "name_complete"),
@@ -96,6 +97,7 @@ class TestSurveyParser(TestTemplate):
             render_output,
             "survey - Survey Name - question - age",
             [
+                ("set_run_result", "dummy"),
                 ("send_msg", "Enter your age"),
                 ("set_contact_field", "sq_surveyname_age"),
                 ("set_contact_field", "sq_surveyname_age_complete"),
@@ -136,9 +138,79 @@ class TestSurveyParser(TestTemplate):
             Context(inputs=["completed"], variables={"@child.results.stop": "yes"}),
         )
 
+    def test_stop_condition(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
+            "data_sheet,survey_data,,,,SurveyQuestionRowModel,\n"
+            "create_survey,,survey_data,,Survey Name,,\n"
+        )
+        survey_data = csv_join(
+            "ID,type,question,variable,completion_variable,stop.conditions.1.condition,stop.conditions.1.message,stop.conditions.2.condition,stop.conditions.2.message",  # noqa: E501
+            "age,text,Enter your age,,,18|@answer|has_number_lt|,You are too young,25|@answer|has_number_gt|,You are too old",  # noqa: E501
+            "name,text,Enter your name,,,,",
+        )
+
+        render_output = (
+            ContentIndexParser(MockSheetReader(ci_sheet, {"survey_data": survey_data}))
+            .parse_all()
+            .render()
+        )
+
+        self.assertFlowMessages(
+            render_output,
+            "survey - Survey Name - question - age",
+            [
+                ("set_run_result", "dummy"),
+                ("send_msg", "Enter your age"),
+                ("set_contact_field", "sq_surveyname_age"),
+                ("set_contact_field", "sq_surveyname_age_complete"),
+                ("set_run_result", "stop"),
+                ("send_msg", "You are too young"),
+            ],
+            Context(inputs=["15"], variables={"@fields.sq_surveyname_age": "15"}),
+        )
+
+        self.assertFlowMessages(
+            render_output,
+            "survey - Survey Name - question - name",
+            [
+                ("set_run_result", "dummy"),
+                ("send_msg", "Enter your name"),
+                ("set_contact_field", "sq_surveyname_name"),
+                ("set_contact_field", "sq_surveyname_name_complete"),
+            ],
+            Context(inputs=["21"]),
+        )
+
+        self.assertFlowMessages(
+            render_output,
+            "survey - Survey Name - question - age",
+            [
+                ("set_run_result", "dummy"),
+                ("send_msg", "Enter your age"),
+                ("set_contact_field", "sq_surveyname_age"),
+                ("set_contact_field", "sq_surveyname_age_complete"),
+                ("set_run_result", "stop"),
+                ("send_msg", "You are too old"),
+            ],
+            Context(inputs=["30"], variables={"@fields.sq_surveyname_age": "30"}),
+        )
+
+        self.assertFlowMessages(
+            render_output,
+            "survey - Survey Name - question - name",
+            [
+                ("set_run_result", "dummy"),
+                ("send_msg", "Enter your name"),
+                ("set_contact_field", "sq_surveyname_name"),
+                ("set_contact_field", "sq_surveyname_name_complete"),
+            ],
+            Context(inputs=["My name"]),
+        )
+
     def test_template_overwrite(self):
         ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,template_arguments,status\n"
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,template_arguments,status\n"  # noqa: E501
             "data_sheet,survey_data,,,,SurveyQuestionRowModel,,\n"
             "template_definition,template_survey_wrapper,,,,,end_flow,\n"
             "template_definition,template_survey_question_type_text,,,,,,\n"
@@ -151,7 +223,7 @@ class TestSurveyParser(TestTemplate):
         template_survey_wrapper = csv_join(
             "row_id,type,from,message_text,condition\n",
             ",send_message,start,Here's the survey,\n",
-            ",start_new_flow,,survey - {{survey_name}} - question - {{questions.0.ID}},\n",
+            ",start_new_flow,,survey - {{survey_name}} - question - {{questions.0.ID}},\n",  # noqa: E501
             ",start_new_flow,,{{end_flow}},Completed\n",
         )
         template_survey_question_type_text = csv_join(
@@ -194,12 +266,6 @@ class TestSurveyParser(TestTemplate):
             Context(inputs=["completed", "completed"]),
         )
 
-    def test_question_template(self):
-        survey_data = csv_join(
-            "ID,type,messages.1.text,messages.2.text",
-            "name,text,Some context,Enter your name",
-        )
-
 
 class TestSurveyPreprocessing(TestCase):
     def test_apply_to_all_str(self):
@@ -238,7 +304,8 @@ class TestSurveyPreprocessing(TestCase):
             variable="sq_question2",
             completion_variable="sq_question2_completion",
             messages=[
-                Message(text="Previously you answered @fields.sq_s1_question1. "
+                Message(
+                    text="Previously you answered @fields.sq_s1_question1. "
                     "Now answer Question 2:",
                 )
             ],
@@ -298,7 +365,8 @@ class TestSurveyPreprocessing(TestCase):
             variable="pre_sq_question2",
             completion_variable="pre_sq_question2_completion",
             messages=[
-                Message(text="Previously you answered @fields.pre_sq_s1_question1. "
+                Message(
+                    text="Previously you answered @fields.pre_sq_s1_question1. "
                     "Now answer Question 2:",
                 )
             ],

@@ -173,6 +173,24 @@ def find_destination_uuid(current_node, context):
                         ) <= number <= float(case["arguments"][1]):
                             category_uuid = case["category_uuid"]
                             break
+                    elif case["type"] == "has_number_lt":
+                        # This might differ from the RapidPro implementation.
+                        try:
+                            number = float(operand)
+                        except ValueError:
+                            number = None
+                        if number is not None and number < float(case["arguments"][0]):
+                            category_uuid = case["category_uuid"]
+                            break
+                    elif case["type"] == "has_number_gt":
+                        # This might differ from the RapidPro implementation.
+                        try:
+                            number = float(operand)
+                        except ValueError:
+                            number = None
+                        if number is not None and number > float(case["arguments"][0]):
+                            category_uuid = case["category_uuid"]
+                            break
 
             # Find the category matching the case and get its exit_uuid
             exit_uuid = None

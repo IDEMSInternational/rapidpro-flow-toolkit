@@ -406,7 +406,11 @@ class ContentIndexParser:
         survey_name = row.new_name or row.data_sheet
         sheet = self.data_sheets[row.data_sheet]
         self.survey_parser.add_survey(
-            survey_name, sheet, row.survey_config, row.template_arguments, logging_prefix=logging_prefix
+            survey_name,
+            sheet,
+            row.survey_config,
+            row.template_arguments,
+            logging_prefix=logging_prefix,
         )
 
     def parse_all_campaigns(self, rapidpro_container):
