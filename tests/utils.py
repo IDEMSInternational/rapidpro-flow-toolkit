@@ -222,7 +222,7 @@ action_value_fields = {
     "send_email": (lambda x: x["subject"]),
     "send_msg": (lambda x: x["text"]),
     "set_contact_channel": (lambda x: x["channel"]["name"]),
-    "set_contact_field": (lambda x: x["field"]["name"]),
+    "set_contact_field": (lambda x: x["field"]["key"]),
     "set_contact_language": (lambda x: x["language"]),
     "set_contact_name": (lambda x: x["name"]),
     "set_contact_status": (lambda x: x["status"]),

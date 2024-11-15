@@ -284,7 +284,7 @@ class SetContactFieldAction(Action):
         super()._assign_fields_from_dict(data_copy)
 
     def main_value(self):
-        return self.field.name
+        return self.field.key
 
     def render(self):
         return {
@@ -298,7 +298,7 @@ class SetContactFieldAction(Action):
         return {
             "type": "save_value",
             "mainarg_value": self.value,
-            "save_name": self.field.name,
+            "save_name": self.field.key,
         }
 
 
