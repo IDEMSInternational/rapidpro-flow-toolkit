@@ -87,6 +87,7 @@ class TestSurveyParser(TestTemplate):
             [
                 ("send_msg", "Enter your name"),
                 ("set_contact_field", "name"),
+                ("set_contact_field", "name_complete"),
             ],
             Context(inputs=["My name"]),
         )
@@ -97,6 +98,7 @@ class TestSurveyParser(TestTemplate):
             [
                 ("send_msg", "Enter your age"),
                 ("set_contact_field", "sq_surveyname_age"),
+                ("set_contact_field", "sq_surveyname_age_complete"),
             ],
             Context(inputs=["23"]),
         )
@@ -132,6 +134,70 @@ class TestSurveyParser(TestTemplate):
                 ('enter_flow', 'survey - Survey Name - question - name'),
             ],
             Context(inputs=["completed"], variables={"@child.results.stop": "yes"}),
+        )
+
+    def test_template_overwrite(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,template_arguments,status\n"
+            "data_sheet,survey_data,,,,SurveyQuestionRowModel,,\n"
+            "template_definition,template_survey_wrapper,,,,,end_flow,\n"
+            "template_definition,template_survey_question_type_text,,,,,,\n"
+            "create_survey,,survey_data,,Survey Name,,my_end_flow,\n"
+        )
+        survey_data = csv_join(
+            "ID,type,question",
+            "name,text,Enter your name",
+        )
+        template_survey_wrapper = csv_join(
+            "row_id,type,from,message_text,condition\n",
+            ",send_message,start,Here's the survey,\n",
+            ",start_new_flow,,survey - {{survey_name}} - question - {{questions.0.ID}},\n",
+            ",start_new_flow,,{{end_flow}},Completed\n",
+        )
+        template_survey_question_type_text = csv_join(
+            "row_id,type,from,message_text,save_name\n",
+            ",send_message,start,Here's the question,\n",
+            ",send_message,,{{messages.0.text}},\n",
+            ",wait_for_response,,,input\n",
+        )
+        sheet_dict = {
+            "survey_data": survey_data,
+            "template_survey_wrapper": template_survey_wrapper,
+            "template_survey_question_type_text": template_survey_question_type_text,
+        }
+        render_output = (
+            ContentIndexParser(MockSheetReader(ci_sheet, sheet_dict))
+            .parse_all()
+            .render()
+        )
+
+        self.assertFlowMessages(
+            render_output,
+            "survey - Survey Name - question - name",
+            [
+                ("send_msg", "Here's the question"),
+                ("send_msg", "Enter your name"),
+                ("set_contact_field", "sq_surveyname_name"),
+                ("set_contact_field", "sq_surveyname_name_complete"),
+            ],
+            Context(inputs=["My name"]),
+        )
+
+        self.assertFlowMessages(
+            render_output,
+            "survey - Survey Name",
+            [
+                ("send_msg", "Here's the survey"),
+                ("enter_flow", "survey - Survey Name - question - name"),
+                ("enter_flow", "my_end_flow"),
+            ],
+            Context(inputs=["completed", "completed"]),
+        )
+
+    def test_question_template(self):
+        survey_data = csv_join(
+            "ID,type,messages.1.text,messages.2.text",
+            "name,text,Some context,Enter your name",
         )
 
 

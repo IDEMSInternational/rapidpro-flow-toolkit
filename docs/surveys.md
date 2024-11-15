@@ -11,11 +11,14 @@ Each survey consist of questions. Questions have an underlying data model which 
 
 ### Basic question fields
 
+These are the basic fields of a question definition (can be used as column headers for question data sheets).
+
 - `ID`: Identifier, used for flow and variable name generation.
 - `type`: Question type. Pre-defined types include `text`, `mcq`, ..., but custom ones can be used if the specific templates are defined by the user.
 - `messages`: The question text. This is a list of multiple messages, each message having a `text` and an optional `attachment`.
-	- `question`: Shorthand for `messages.1.text`; you may use this instead of `messages` if none of your question send more than 1 message.
-	- `attachment`: Shorthand for `messages.1.attachment`; you may use this instead of `messages` if none of your question send more than 1 message.
+	- `question`: Shorthand for `messages.1.text`; you may use this instead of `messages` if none of your questions send more than 1 message.
+	- `attachment`: Shorthand for `messages.1.attachment`; you may use this instead of `messages` if none of your questions send more than 1 message.
+	- Note that these shorthands can NOT be used within template definitions.
 - `variable`: Variable to store the user input in. If blank, generated from the question ID as `sq_{survey_id}_{question_id}`. The survey_id/question_id is the survey's name/question ID, **in all lowercase with non-alphanumeric characters removed**
 - `completion_variable`: Variable indicating whether question has been completed. If blank, generated from the variable as `{variable}_complete`
 - `choices`: For multiple choice questions: a list of choices
@@ -33,6 +36,8 @@ Therefore we have the following shorthands, which can be used within any field o
 
 
 ### Special question fields
+
+These are the more complex fields of a question definition (can be used as column headers for question data sheets).
 
 #### `tags`: Tags for filtering
 
@@ -90,9 +95,10 @@ Then, create a row of type `create_survey`. For this, the following columns are 
 
 - `data_sheet`: A data sheet with questions
 - `new_name`: Name of the survey. If not provided, the name of the `data_sheet` is used.
-- `template arguments`: A SurveyConfig object, see `src/rpft/parsers/creation/surveymodels.py`
+- `config`: A SurveyConfig object, see `src/rpft/parsers/creation/surveymodels.py`
     - `variable_prefix`: Prefix to apply to all RapidPro variables that are created by the survey. For each `SurveyQuestion`, this is the `variable`, `completion_variable` and `postprocessing.assignments.*.variable`. Ideally, avoid this feature in favor of using auto-generated variable names, `@answer`, `@answerid` and `@prefix`.
     - `expiration_message`: Message to send when a question flow expires. If a question does not specify an expiration message, this message is used by default.
+- `template arguments`: Template arguments to be passed down to the survey template
 
 This will create one flow for each question, named `survey - {survey name} - question - {question ID}`, as well as a survey flow `survey - {survey name}` that invokes each question via `start_new_flow`. This is achieved via templating. The templates can be customized if needed.
 
@@ -106,3 +112,6 @@ We define global templates that are used by surveys. These templates can be foun
 - `template_survey_wrapper`: Flow rendering all the questions.
 
 The user can overwrite these by defining a template of the same name in the content index, thereby using their own custom templates. There is no constraint on what `{type}` can be, therefore the user can also create their own question types.
+
+In the content index, a `create_survey` row can have `template_arguments`. If present, these are passed to the `template_survey_wrapper` template when creating a survey. Currently, it is not possible to pass template arguments to the `template_survey_question_wrapper` template.
+Because `template_survey_question_block_{type}` is used as a block within `template_survey_question_wrapper`, any context that is available in the latter (in particular, the instance of the SurveyQuestionModel) will also be available in the former.

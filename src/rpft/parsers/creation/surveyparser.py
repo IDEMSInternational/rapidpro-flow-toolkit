@@ -76,12 +76,13 @@ def apply_shorthand_substitutions(survey_question, survey_id):
 
 
 class Survey:
-    def __init__(self, name, question_data_sheet, survey_config, logging_prefix=None):
+    def __init__(self, name, question_data_sheet, survey_config, template_arguments=None, logging_prefix=None):
         self.name = name
         self.survey_id = name_to_id(name)
         self.question_data_sheet = copy.deepcopy(question_data_sheet)
         self.survey_config = survey_config
         self.logging_prefix = logging_prefix
+        self.template_arguments = template_arguments or []
 
     def preprocess_data_rows(self):
         self.initialize_survey_variables()
@@ -143,14 +144,14 @@ class SurveyParser:
         self.surveys = {}
         self.content_index_parser = content_index_parser
 
-    def add_survey(self, name, data_sheet, survey_config, logging_prefix=""):
+    def add_survey(self, name, data_sheet, survey_config, template_arguments, logging_prefix=""):
         with logging_context(logging_prefix):
             if name in self.surveys:
                 LOGGER.warning(
                     f"Duplicate survey definition sheet '{name}'. "
                     "Overwriting previous definition."
                 )
-        self.surveys[name] = Survey(name, data_sheet, survey_config, logging_prefix)
+        self.surveys[name] = Survey(name, data_sheet, survey_config, template_arguments, logging_prefix)
 
     def delete_survey(self, name):
         self.surveys.pop(name, None)
@@ -164,10 +165,11 @@ class SurveyParser:
     def parse_survey(self, name, rapidpro_container=None):
         rapidpro_container = rapidpro_container or RapidProContainer()
         survey = self.surveys[name]
-        survey.preprocess_data_rows()
-        self.parse_survey_wrapper(survey, rapidpro_container)
-
+        
         with logging_context(f"{survey.logging_prefix} | survey {name}"):
+            survey.preprocess_data_rows()
+            self.parse_survey_wrapper(survey, rapidpro_container)
+
             for row in survey.question_data_sheet.rows.values():
                 with logging_context(
                     f"{survey.logging_prefix} | survey {name} | question {row.ID}"
@@ -205,13 +207,12 @@ class SurveyParser:
             "survey_name": survey.name,
             "survey_id": survey.survey_id,
         }
-        template_arguments = []
         template_sheet = self.content_index_parser.get_template_sheet(
             SurveyParser.SURVEY_TEMPLATE_NAME
         )
         context = self.content_index_parser.map_template_arguments_to_context(
             template_sheet.argument_definitions,
-            template_arguments,
+            survey.template_arguments,
             context,
         )
 

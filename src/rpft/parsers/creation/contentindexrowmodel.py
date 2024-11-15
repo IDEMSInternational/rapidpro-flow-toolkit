@@ -32,13 +32,15 @@ class ContentIndexRowModel(ParserModel):
     tags: List[str] = []
 
     def field_name_to_header_name(field):
-        if field in ["template_argument_definitions", "survey_config"]:
+        if field == "template_argument_definitions":
             return "template_arguments"
+        if field == "survey_config":
+            return "config"
 
     def header_name_to_field_name_with_context(header, row):
         if row["type"] == "template_definition" and header == "template_arguments":
             return "template_argument_definitions"
-        if row["type"] == "create_survey" and header == "template_arguments":
+        if row["type"] == "create_survey" and header == "config":
             return "survey_config"
         else:
             return header
