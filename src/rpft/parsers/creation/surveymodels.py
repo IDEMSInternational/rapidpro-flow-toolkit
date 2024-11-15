@@ -86,7 +86,7 @@ class SurveyQuestionModel(ParserModel):
     def header_name_to_field_name_with_context(header, row):
         if header == "question":
             return "messages.1.text"
-        elif header == "attachment":
-            return "messages.1.attachment"
+        elif header == "image":
+            return "messages.1.image"
         else:
             return header

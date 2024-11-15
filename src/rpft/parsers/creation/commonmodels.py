@@ -39,4 +39,7 @@ class Expiration(ParserModel):
 
 class Message(ParserModel):
     text: str
-    attachment: str = ""
+    image: str = ""
+    audio: str = ""
+    video: str = ""
+    attachments: List[str] = []

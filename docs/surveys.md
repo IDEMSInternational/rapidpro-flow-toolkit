@@ -7,7 +7,9 @@ A basic usage example can be found in `TestSurveyParser.test_basic_survey` in `t
 
 ## The question data sheet
 
-Each survey consist of questions. Questions have an underlying data model which is defined in `SurveyQuestionModel` in `src/rpft/parsers/creation/surveymodels.py`. Each question has an associated variable that the user input is stored in.
+Each survey consist of questions. Questions have an underlying data model `SurveyQuestionRowModel`. This consists of the fields defined in `SurveyQuestionModel` in `src/rpft/parsers/creation/surveymodels.py` and an additional `ID` field.
+
+Each question consists of the question text, an associated variable that the user input is stored in, and a variety of other fields.
 
 ### Basic question fields
 
@@ -15,7 +17,7 @@ These are the basic fields of a question definition (can be used as column heade
 
 - `ID`: Identifier, used for flow and variable name generation.
 - `type`: Question type. Pre-defined types include `text`, `mcq`, ..., but custom ones can be used if the specific templates are defined by the user.
-- `messages`: The question text. This is a list of multiple messages, each message having a `text` and an optional `attachment`.
+- `messages`: The question text. This is a list of multiple messages, each message having a `text` and optional `image`/`audio`/`video` attachment fields, as well as a list `attachments` of generic attachments.
 	- `question`: Shorthand for `messages.1.text`; you may use this instead of `messages` if none of your questions send more than 1 message.
 	- `attachment`: Shorthand for `messages.1.attachment`; you may use this instead of `messages` if none of your questions send more than 1 message.
 	- Note that these shorthands can NOT be used within template definitions.
@@ -107,11 +109,16 @@ This will create one flow for each question, named `survey - {survey name} - que
 
 We define global templates that are used by surveys. These templates can be found in `src/rpft/parsers/creation/survey_templates/`. They are as follows:
 
-- `template_survey_question_block_{type}`: For each question input type `{type}`, there is a template to read the user data. These are included into the `template_survey_question_wrapper` via `insert_as_block`
-- `template_survey_question_wrapper`: Question functionality that is common to all input types. Invoked by the survey via `start_new_flow`
 - `template_survey_wrapper`: Flow rendering all the questions.
+	- Receives the following context variables that can be used in the template:
+		- `questions`: a list of `SurveyQuestionRowModel`
+		- `survey_name`: Name of the survey
+		- `survey_id`: ID of the survey (generated from name)
+	- In the content index, a `create_survey` row can have `template_arguments`. If present, these are passed to the `template_survey_wrapper` template when creating a survey.
+- `template_survey_question_wrapper`: Question functionality that is common to all input types. Invoked by the survey via `start_new_flow`
+	- Receives the fields of the `SurveyQuestionRowModel` as its context variables
+	- Currently, it is not possible to pass template arguments to this template.
+- `template_survey_question_block_{type}`: For each question input type `{type}`, there is a template to read the user data. These are included into the `template_survey_question_wrapper` via `insert_as_block`
+	- Because this template is inserted as a block, any context that is available in `template_survey_question_wrapper` (in particular, `question`) is also be available in this template.
 
 The user can overwrite these by defining a template of the same name in the content index, thereby using their own custom templates. There is no constraint on what `{type}` can be, therefore the user can also create their own question types.
-
-In the content index, a `create_survey` row can have `template_arguments`. If present, these are passed to the `template_survey_wrapper` template when creating a survey. Currently, it is not possible to pass template arguments to the `template_survey_question_wrapper` template.
-Because `template_survey_question_block_{type}` is used as a block within `template_survey_question_wrapper`, any context that is available in the latter (in particular, the instance of the SurveyQuestionModel) will also be available in the former.
