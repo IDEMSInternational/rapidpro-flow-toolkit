@@ -7,6 +7,7 @@ from rpft.parsers.creation.commonmodels import (
     Condition,
     ConditionsWithMessage,
     ConditionWithMessage,
+    Message,
 )
 from rpft.parsers.creation.globalrowmodels import SurveyQuestionRowModel
 from rpft.parsers.creation.surveymodels import PostProcessing, SurveyConfig
@@ -57,9 +58,9 @@ class TestSurveyParser(TestTemplate):
         datamodelB = ci_parser.get_data_sheet_row("survey_data", "else")
 
         self.assertEqual(datamodelA.type, "text")
-        self.assertEqual(datamodelA.question, "Enter your name")
+        self.assertEqual(datamodelA.messages[0].text, "Enter your name")
         self.assertEqual(datamodelB.type, "text")
-        self.assertEqual(datamodelB.question, "Enter something else")
+        self.assertEqual(datamodelB.messages[0].text, "Enter something else")
 
     def test_basic_survey(self):
         ci_sheet = (
@@ -68,7 +69,7 @@ class TestSurveyParser(TestTemplate):
             "create_survey,,survey_data,,Survey Name,,\n"
         )
         survey_data = csv_join(
-            "ID,type,question,variable,completion_variable,expiration_message",
+            "ID,type,question,variable,completion_variable,expiration.message",
             "name,text,Enter your name,name,name_complete,",
             "else,text,Enter something else,else,else_complete,You waited too long",
             "age,text,Enter your age,,,",
@@ -170,8 +171,11 @@ class TestSurveyPreprocessing(TestCase):
             type="qtype",
             variable="sq_question2",
             completion_variable="sq_question2_completion",
-            question="Previously you answered @fields.sq_s1_question1. "
-            "Now answer Question 2:",
+            messages=[
+                Message(text="Previously you answered @fields.sq_s1_question1. "
+                    "Now answer Question 2:",
+                )
+            ],
             relevant=[
                 Condition(
                     value="4",
@@ -227,8 +231,11 @@ class TestSurveyPreprocessing(TestCase):
             type="qtype",
             variable="pre_sq_question2",
             completion_variable="pre_sq_question2_completion",
-            question="Previously you answered @fields.pre_sq_s1_question1. "
-            "Now answer Question 2:",
+            messages=[
+                Message(text="Previously you answered @fields.pre_sq_s1_question1. "
+                    "Now answer Question 2:",
+                )
+            ],
             relevant=[
                 Condition(
                     value="4",
@@ -301,14 +308,18 @@ class TestSurveyPreprocessing(TestCase):
         question1 = SurveyQuestionRowModel(
             ID="question1",
             type="qtype",
-            question="Tell us the answer to Question 1",
+            messages=[
+                Message(text="Tell us the answer to Question 1")
+            ]
         )
         question1_replaced = SurveyQuestionRowModel(
             ID="question1",
             variable="pre_sq_s1_question1",
             completion_variable="pre_sq_s1_question1_complete",
             type="qtype",
-            question="Tell us the answer to Question 1",
+            messages=[
+                Message(text="Tell us the answer to Question 1")
+            ]
         )
 
         survey = Survey(

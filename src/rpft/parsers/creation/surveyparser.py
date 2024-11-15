@@ -87,8 +87,8 @@ class Survey:
         self.initialize_survey_variables()
         for row in self.question_data_sheet.rows.values():
             apply_shorthand_substitutions(row, self.survey_id)
-            row.expiration_message = (
-                row.expiration_message or self.survey_config.expiration_message
+            row.expiration.message = (
+                row.expiration.message or self.survey_config.expiration_message
             )
 
         # Apply all prefix replacements

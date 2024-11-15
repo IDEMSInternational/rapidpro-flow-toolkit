@@ -13,11 +13,14 @@ Each survey consist of questions. Questions have an underlying data model which 
 
 - `ID`: Identifier, used for flow and variable name generation.
 - `type`: Question type. Pre-defined types include `text`, `mcq`, ..., but custom ones can be used if the specific templates are defined by the user.
-- `question`: The question text.
+- `messages`: The question text. This is a list of multiple messages, each message having a `text` and an optional `attachment`.
+	- `question`: Shorthand for `messages.1.text`; you may use this instead of `messages` if none of your question send more than 1 message.
+	- `attachment`: Shorthand for `messages.1.attachment`; you may use this instead of `messages` if none of your question send more than 1 message.
 - `variable`: Variable to store the user input in. If blank, generated from the question ID as `sq_{survey_id}_{question_id}`. The survey_id/question_id is the survey's name/question ID, **in all lowercase with non-alphanumeric characters removed**
 - `completion_variable`: Variable indicating whether question has been completed. If blank, generated from the variable as `{variable}_complete`
 - `choices`: For multiple choice questions: a list of choices
-- `expiration_message`: Message that gets send when the user doesn't respond in a long time
+- `expiration.message`: Message that gets send when the user doesn't respond in a long time
+- `expiration.time`: [not implemented]
 
 It is possible to reuse questions across multiple surveys (see `tags` below). In that case, we need to make sure that each copy of a question gets a unique name for its variables. Auto-generating the variable names from the question ID solves the question of creating unique variable names, however, we also need a way to refer to these variable names independent of the `surveyid` which is used for this. 
 

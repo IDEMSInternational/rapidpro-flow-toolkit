@@ -5,6 +5,8 @@ from rpft.parsers.creation.commonmodels import (
     Assignment,
     Condition,
     ConditionsWithMessage,
+    Expiration,
+    Message,
 )
 
 
@@ -42,7 +44,7 @@ class SurveyQuestionModel(ParserModel):
     # type of the question
     type: str
     # question text
-    question: str
+    messages: List[Message]
     # Variable to store the user input in
     # If blank, generated from the question ID as sq_{survey_id}_{question_id}
     # The survey_id/question_id is the survey's name/question's ID
@@ -56,7 +58,7 @@ class SurveyQuestionModel(ParserModel):
 
     # Message to send when question flow expires
     # If blank, message from survey configuration is used
-    expiration_message: str = ""
+    expiration: Expiration = Expiration()
     # Conditions required to present the question, otherwise skipped.
     relevant: List[Condition] = []
     ## Make question skippable
@@ -80,3 +82,11 @@ class SurveyQuestionModel(ParserModel):
     postprocessing: PostProcessing = PostProcessing()
     # tags allowing to filter questions to appear in a survey
     tags: List[str] = []
+
+    def header_name_to_field_name_with_context(header, row):
+        if header == "question":
+            return "messages.1.text"
+        elif header == "attachment":
+            return "messages.1.attachment"
+        else:
+            return header

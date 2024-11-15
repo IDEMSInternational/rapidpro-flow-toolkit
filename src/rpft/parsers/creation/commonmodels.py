@@ -28,3 +28,15 @@ class Assignment(ParserModel):
     # Assign a value to a variable
     variable: str
     value: str
+
+
+class Expiration(ParserModel):
+    # Time after which a flow expires
+    time: str = ""
+    # Message to send when the flow expires
+    message: str = ""
+
+
+class Message(ParserModel):
+    text: str
+    attachment: str = ""
