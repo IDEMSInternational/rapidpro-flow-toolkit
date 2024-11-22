@@ -199,7 +199,7 @@ class TestParsing(TestCase):
         self.assertEqual(node_1["actions"][0]["type"], "set_contact_field")
         self.assertEqual(node_1["actions"][0]["field"]["key"], "test_variable")
         self.assertEqual(node_1["actions"][0]["field"]["name"], "test variable")
-        self.assertEqual(node_1["actions"][0]["value"], "test value ")
+        self.assertEqual(node_1["actions"][0]["value"], "test value")
 
         node_2 = nodes[2]
         self.assertEqual(node_1["exits"][0]["destination_uuid"], node_2["uuid"])

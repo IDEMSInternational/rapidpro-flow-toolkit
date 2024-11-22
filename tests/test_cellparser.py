@@ -114,9 +114,19 @@ class TestCellParser(unittest.TestCase):
     def setUp(self):
         self.parser = CellParser()
 
+    def test_strings_without_templates_are_not_changed(self):
+        self.assertEqual(
+            CellParser().parse_as_string("plain string"),
+            "plain string",
+        )
+
+    def test_strings_are_trimmed(self):
+        self.assertEqual(
+            CellParser().parse_as_string(" plain string "),
+            "plain string",
+        )
+
     def test_parse_as_string(self):
-        out = self.parser.parse_as_string("plain string")
-        self.assertEqual(out, "plain string")
         out = self.parser.parse_as_string("{{var}} :)", context={"var": 15})
         self.assertEqual(out, "15 :)")
 
