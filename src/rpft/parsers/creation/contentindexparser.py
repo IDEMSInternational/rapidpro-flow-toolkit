@@ -1,6 +1,5 @@
 import importlib
 from collections import OrderedDict
-import copy
 from typing import Dict, List
 
 from rpft.logger.logger import get_logger, logging_context
@@ -13,7 +12,7 @@ from rpft.parsers.creation.contentindexrowmodel import ContentIndexRowModel
 from rpft.parsers.creation.flowparser import FlowParser
 from rpft.parsers.creation.global_templates import get_survey_reader
 from rpft.parsers.creation.tagmatcher import TagMatcher
-from rpft.parsers.creation.surveyparser import SurveyParser
+from rpft.parsers.creation.surveyparser import Survey, SurveyParser
 from rpft.parsers.creation.triggerparser import TriggerParser
 from rpft.parsers.creation.triggerrowmodel import TriggerRowModel
 from rpft.parsers.sheets import CompositeSheetReader, Sheet
@@ -44,11 +43,29 @@ class DataSheet:
         }
 
 
+class ChatbotDefinition:
+    def __init__(self, flow_definitions, data_sheets, templates, surveys):
+        self.flow_definitions = flow_definitions
+        self.data_sheets = data_sheets
+        self.templates = templates
+        self.surveys = surveys
+
+    def get_data_sheet_rows(self, sheet_name):
+        return self.data_sheets[sheet_name].rows
+
+    def get_data_sheet_row(self, sheet_name, row_id):
+        return self.data_sheets[sheet_name].rows[row_id]
+
+    def get_template(self, name):
+        return self.templates[name]
+
+
 class ParserError(Exception):
     pass
 
 
 class ContentIndexParser:
+
     def __init__(
         self,
         sheet_reader=None,
@@ -60,7 +77,7 @@ class ContentIndexParser:
         self.data_sheets = {}
         self.flow_definition_rows: List[ContentIndexRowModel] = []
         self.campaign_parsers: Dict[str, tuple[str, CampaignParser]] = {}
-        self.survey_parser = SurveyParser(self)
+        self.surveys = {}
         self.trigger_parsers = OrderedDict()
         self.user_models_module = (
             importlib.import_module(user_data_model_module_name)
@@ -78,6 +95,12 @@ class ContentIndexParser:
             self._process_content_index_table(sheet)
 
         self._populate_missing_templates()
+        self.definition = ChatbotDefinition(
+            self.flow_definition_rows,
+            self.data_sheets,
+            self.template_sheets,
+            self.surveys,
+        )
 
     def _process_content_index_table(self, sheet: Sheet):
         rows = SheetParser(sheet.table, ContentIndexRowModel).parse_all()
@@ -170,7 +193,7 @@ class ContentIndexParser:
         ]
         self.campaign_parsers.pop(sheet_name, None)
         self.trigger_parsers.pop(sheet_name, None)
-        self.survey_parser.delete_survey(sheet_name)
+        self.surveys.pop(sheet_name, None)
 
     def _populate_missing_templates(self):
         for logging_prefix, row in self.flow_definition_rows:
@@ -347,26 +370,6 @@ class ContentIndexParser:
     def get_template_sheet(self, name):
         return self.template_sheets[name]
 
-    def get_node_group(
-        self, template_name, data_sheet, data_row_id, template_arguments, context=None
-    ):
-        if (data_sheet and data_row_id) or (not data_sheet and not data_row_id):
-            with logging_context(f"{template_name}"):
-                return self._parse_flow(
-                    template_name,
-                    data_sheet,
-                    data_row_id,
-                    template_arguments,
-                    RapidProContainer(),
-                    context=context or {},
-                    parse_as_block=True,
-                )
-        else:
-            LOGGER.critical(
-                "For insert_as_block, either both data_sheet and data_row_id or neither"
-                " have to be provided."
-            )
-
     def data_sheets_to_dict(self):
         sheets = {}
 
@@ -403,14 +406,21 @@ class ContentIndexParser:
         return TriggerParser(sheet_name, rows)
 
     def _add_survey(self, row, logging_prefix):
-        survey_name = row.new_name or row.data_sheet
-        sheet = self.data_sheets[row.data_sheet]
-        self.survey_parser.add_survey(
-            survey_name,
-            sheet,
+        name = row.new_name or row.data_sheet
+
+        with logging_context(logging_prefix):
+            if name in self.surveys:
+                LOGGER.warning(
+                    f"Duplicate survey definition sheet '{name}'. "
+                    "Overwriting previous definition."
+                )
+
+        self.surveys[name] = Survey(
+            name,
+            self.data_sheets[row.data_sheet],
             row.survey_config,
             row.template_arguments,
-            logging_prefix=logging_prefix,
+            logging_prefix,
         )
 
     def parse_all_campaigns(self, rapidpro_container):
@@ -422,7 +432,7 @@ class ContentIndexParser:
                 rapidpro_container.add_campaign(campaign)
 
     def parse_all_surveys(self, rapidpro_container):
-        self.survey_parser.parse_all(rapidpro_container)
+        SurveyParser.parse_all(self.definition, rapidpro_container)
 
     def parse_all_triggers(self, rapidpro_container):
         for logging_prefix, trigger_parser in self.trigger_parsers.values():
@@ -435,139 +445,4 @@ class ContentIndexParser:
                     rapidpro_container.add_trigger(trigger)
 
     def parse_all_flows(self, rapidpro_container):
-        flows = {}
-
-        for logging_prefix, row in self.flow_definition_rows:
-            with logging_context(f"{logging_prefix} | {row.sheet_name[0]}"):
-                if row.data_sheet and not row.data_row_id:
-                    data_rows = self.get_data_sheet_rows(row.data_sheet)
-
-                    for data_row_id in data_rows.keys():
-                        with logging_context(f'with data_row_id "{data_row_id}"'):
-                            flow = self._parse_flow(
-                                row.sheet_name[0],
-                                row.data_sheet,
-                                data_row_id,
-                                row.template_arguments,
-                                rapidpro_container,
-                                row.new_name,
-                            )
-
-                            if flow.name in flows:
-                                LOGGER.warning(
-                                    f"Multiple definitions of flow '{flow.name}'. "
-                                    "Overwriting."
-                                )
-
-                            flows[flow.name] = flow
-                elif not row.data_sheet and row.data_row_id:
-                    LOGGER.critical(
-                        "For create_flow, if data_row_id is provided, data_sheet must"
-                        " also be provided."
-                    )
-                else:
-                    flow = self._parse_flow(
-                        row.sheet_name[0],
-                        row.data_sheet,
-                        row.data_row_id,
-                        row.template_arguments,
-                        rapidpro_container,
-                        row.new_name,
-                    )
-
-                    if flow.name in flows:
-                        LOGGER.warning(
-                            f"Multiple definitions of flow '{flow.name}'. "
-                            "Overwriting."
-                        )
-
-                    flows[flow.name] = flow
-
-        for flow in flows.values():
-            rapidpro_container.add_flow(flow)
-
-    def _parse_flow(
-        self,
-        sheet_name,
-        data_sheet,
-        data_row_id,
-        template_arguments,
-        rapidpro_container,
-        new_name="",
-        parse_as_block=False,
-        context=None,
-    ):
-        base_name = new_name or sheet_name
-
-        context = copy.copy(context or {})
-        if data_sheet and data_row_id:
-            flow_name = " - ".join([base_name, data_row_id])
-            context.update(dict(self.get_data_sheet_row(data_sheet, data_row_id)))
-        else:
-            if data_sheet or data_row_id:
-                LOGGER.warn(
-                    "For create_flow, if no data_sheet is provided, "
-                    "data_row_id should be blank as well."
-                )
-
-            flow_name = base_name
-
-        template_sheet = self.get_template_sheet(sheet_name)
-        context = self.map_template_arguments_to_context(
-            template_sheet.argument_definitions,
-            template_arguments,
-            context,
-        )
-        flow_parser = FlowParser(
-            rapidpro_container,
-            flow_name,
-            template_sheet.table,
-            context=context,
-            content_index_parser=self,
-        )
-
-        if parse_as_block:
-            return flow_parser.parse_as_block()
-        else:
-            return flow_parser.parse(add_to_container=False)
-
-    def map_template_arguments_to_context(self, arg_defs, args, context) -> dict:
-        """
-        Map template arguments, which are positional, to the arguments from the template
-        definition, and add the values of the arguments to the context with the
-        appropriate variable name (from the definition).
-        """
-        if len(args) > len(arg_defs):
-            # Once the row parser is cleaned up to eliminate trailing '' entries, this
-            # won't be necessary
-            extra_args = args[len(arg_defs) :]
-            non_empty_extra_args = [ea for ea in extra_args if ea]
-
-            if non_empty_extra_args:
-                LOGGER.warning("Too many arguments provided to template")
-
-            args = args[: len(arg_defs)]
-
-        args_padding = [""] * (len(arg_defs) - len(args))
-
-        for arg_def, arg in zip(arg_defs, args + args_padding):
-            if arg_def.name in context:
-                LOGGER.critical(
-                    f'Template argument "{arg_def.name}" doubly defined '
-                    f'in context: "{context}"'
-                )
-
-            arg_value = arg if arg != "" else arg_def.default_value
-
-            if arg_value == "":
-                LOGGER.critical(
-                    f'Required template argument "{arg_def.name}" not provided'
-                )
-
-            context[arg_def.name] = (
-                self.get_data_sheet_rows(arg_value)
-                if arg_def.type == "sheet"
-                else arg_value
-            )
-
-        return context
+        FlowParser.parse_all(self.definition, rapidpro_container)

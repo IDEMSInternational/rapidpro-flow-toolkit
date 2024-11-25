@@ -3,6 +3,7 @@ import re
 
 from rpft.logger.logger import get_logger, logging_context
 from rpft.parsers.common.rowparser import ParserModel
+from rpft.parsers.creation import map_template_arguments
 from rpft.parsers.creation.flowparser import FlowParser
 from rpft.rapidpro.models.containers import RapidProContainer
 
@@ -133,7 +134,7 @@ class SurveyParser:
     QUESTION_TEMPLATE_NAME = "template_survey_question_wrapper"
     SURVEY_TEMPLATE_NAME = "template_survey_wrapper"
 
-    def __init__(self, content_index_parser):
+    def __init__(self, definition):
         """
         Args:
             content_index_parser: a ContentIndexParser.
@@ -147,91 +148,76 @@ class SurveyParser:
             to the ContentIndexParser to find the data/template to create this
             block. It may be preferable to have a shared data class instead.
         """
-
-        self.surveys = {}
-        self.content_index_parser = content_index_parser
-
-    def add_survey(
-        self, name, data_sheet, survey_config, template_arguments, logging_prefix=""
-    ):
-        with logging_context(logging_prefix):
-            if name in self.surveys:
-                LOGGER.warning(
-                    f"Duplicate survey definition sheet '{name}'. "
-                    "Overwriting previous definition."
-                )
-        self.surveys[name] = Survey(
-            name, data_sheet, survey_config, template_arguments, logging_prefix
+        self.definition = definition
+        self.survey_template = definition.get_template(
+            SurveyParser.SURVEY_TEMPLATE_NAME
+        )
+        self.question_template = definition.get_template(
+            SurveyParser.QUESTION_TEMPLATE_NAME
         )
 
-    def delete_survey(self, name):
-        self.surveys.pop(name, None)
+    @classmethod
+    def parse_all(cls, definition, container: RapidProContainer):
+        for survey in definition.surveys.values():
+            SurveyParser(definition).parse_survey(survey, container)
 
-    def parse_all(self, rapidpro_container=None):
-        rapidpro_container = rapidpro_container or RapidProContainer()
-        for name in self.surveys:
-            self.parse_survey(name, rapidpro_container)
-        return rapidpro_container
+        return container
 
-    def parse_survey(self, name, rapidpro_container=None):
-        rapidpro_container = rapidpro_container or RapidProContainer()
-        survey = self.surveys[name]
-
-        with logging_context(f"{survey.logging_prefix} | survey {name}"):
+    def parse_survey(self, survey: Survey, container: RapidProContainer):
+        with logging_context(f"{survey.logging_prefix} | survey {survey.name}"):
             survey.preprocess_data_rows()
-            self.parse_survey_wrapper(survey, rapidpro_container)
+            self.parse_survey_wrapper(survey, container)
 
             for row in survey.question_data_sheet.rows.values():
                 with logging_context(
-                    f"{survey.logging_prefix} | survey {name} | question {row.ID}"
+                    f"{survey.logging_prefix}"
+                    f" | survey {survey.name}"
+                    f" | question {row.ID}"
                 ):
-                    self.parse_question(row, name, rapidpro_container)
-        return rapidpro_container
+                    self.parse_question(row, survey.name, container)
 
-    def parse_question(self, row, survey_name, rapidpro_container=None):
-        rapidpro_container = rapidpro_container or RapidProContainer()
-        template_arguments = []
-        template_sheet = self.content_index_parser.get_template_sheet(
-            SurveyParser.QUESTION_TEMPLATE_NAME
-        )
-        context = self.content_index_parser.map_template_arguments_to_context(
-            template_sheet.argument_definitions,
-            template_arguments,
+        return container
+
+    def parse_question(self, row, survey_name, container: RapidProContainer):
+        context = map_template_arguments(
+            self.question_template.argument_definitions,
+            [],
             dict(row),
+            self.definition.data_sheets,
         )
-
         flow_parser = FlowParser(
-            rapidpro_container,
+            container,
             f"survey - {survey_name} - question - {row.ID}",
-            template_sheet.table,
+            self.question_template.table,
             context=context,
-            content_index_parser=self.content_index_parser,
+            definition=self.definition,
         )
 
         flow_parser.parse()
 
-        return rapidpro_container
+        return container
 
-    def parse_survey_wrapper(self, survey, rapidpro_container):
+    def parse_survey_wrapper(
+        self,
+        survey,
+        container: RapidProContainer,
+    ):
         context = {
             "questions": list(survey.question_data_sheet.rows.values()),
             "survey_name": survey.name,
             "survey_id": survey.survey_id,
         }
-        template_sheet = self.content_index_parser.get_template_sheet(
-            SurveyParser.SURVEY_TEMPLATE_NAME
-        )
-        context = self.content_index_parser.map_template_arguments_to_context(
-            template_sheet.argument_definitions,
+        context = map_template_arguments(
+            self.survey_template.argument_definitions,
             survey.template_arguments,
             context,
+            self.definition.data_sheets,
         )
-
         flow_parser = FlowParser(
-            rapidpro_container,
+            container,
             f"survey - {survey.name}",
-            template_sheet.table,
+            self.survey_template.table,
             context=context,
-            content_index_parser=self.content_index_parser,
+            definition=self.definition,
         )
         flow_parser.parse()
