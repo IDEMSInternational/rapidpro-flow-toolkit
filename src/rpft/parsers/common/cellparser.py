@@ -97,39 +97,38 @@ class CellParser:
         else:
             return self.split_into_lists(value)
 
-    def parse_as_string(self, value, context={}, is_object=None):
-        # If context is None, template parsing is omitted entirely.
-        # is_object is a pass-by-reference boolean, realised via
-        # the class BooleanWrapper, to indicate to the caller
-        # whether the parsing result represents an object that
-        # is not to be processed any further.
+    def parse_as_string(self, value, context={}, is_object: BooleanWrapper = None):
+        # is_object indicates to the caller whether the parsing result represents an
+        # object that is not to be processed any further.
         if value is None:
             return ""
-        value = str(value)
-        if context is None or (not context and "{" not in value):
-            # This is a hacky optimization.
-            return value
-        stripped_value = value.strip()
+
+        stripped = str(value).strip()
+
+        if context is None or (not context and "{" not in stripped):
+            return stripped
+
         env = self.env
-        if stripped_value.startswith("{@") and stripped_value.endswith("@}"):
-            # Special case: Return a python object rather than a string,
-            # if possible.
-            # Ensure this is a single template, not e.g. '{@ x @} {@ y @}'
-            if not stripped_value[2:].find("{@") == -1:
-                LOGGER.critical(
-                    'Cell may not contain nested "{{@" templates.'
-                    f'Cell content: "{stripped_value}"'
-                )
-            if is_object is not None:
-                is_object.boolean = True
+
+        # Special case: Return a Python object rather than a string, if possible.
+        if stripped.startswith("{@") and stripped.endswith("@}"):
             env = self.native_env
 
+            # Ensure this is a single template, not e.g. '{@ x @} {@ y @}'
+            if not stripped[2:].find("{@") == -1:
+                LOGGER.critical(
+                    'Cell may not contain nested "{{@" templates.'
+                    f'Cell content: "{stripped}"'
+                )
+
+            if is_object is not None:
+                is_object.boolean = True
+
         try:
-            template = env.from_string(stripped_value)
-            return template.render(context)
+            return env.from_string(stripped).render(context)
         except Exception as e:
             LOGGER.critical(
-                f'Error while parsing cell "{stripped_value}" with context "{context}":'
+                f'Error while parsing cell "{stripped}" with context "{context}":'
                 f" {str(e)}"
             )
 
