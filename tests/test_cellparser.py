@@ -125,19 +125,34 @@ class TestCellParser(unittest.TestCase):
             CellParser().parse_as_string(" plain string "),
             "plain string",
         )
-
-    def test_parse_as_string(self):
-        out = self.parser.parse_as_string("{{var}} :)", context={"var": 15})
-        self.assertEqual(out, "15 :)")
-
-        instance = OuterModel(strings=["a", "b"], inner=InnerModel(str_field="xyz"))
-        context = {"instance": instance}
-        out = self.parser.parse_as_string("{{instance.strings[1]}}", context=context)
-        self.assertEqual(out, "b")
-        out = self.parser.parse_as_string(
-            "{{instance.inner.str_field}}", context=context
+        self.assertEqual(
+            CellParser().parse_as_string(" {{var}} string ", context={"var": "abc"}),
+            "abc string",
         )
-        self.assertEqual(out, "xyz")
+
+    def test_template_variable_substitution(self):
+        self.assertEqual(
+            CellParser().parse_as_string("{{var}} :)", context={"var": 15}),
+            "15 :)",
+        )
+
+    def test_template_variable_substitution_of_nested_objects(self):
+        context = {
+            "instance": OuterModel(
+                strings=["a", "b"],
+                inner=InnerModel(str_field="xyz"),
+            )
+        }
+        parser = CellParser()
+
+        self.assertEqual(
+            parser.parse_as_string("{{instance.strings[1]}}", context=context),
+            "b",
+        )
+        self.assertEqual(
+            parser.parse_as_string("{{instance.inner.str_field}}", context=context),
+            "xyz",
+        )
 
     def test_parse(self):
         out = self.parser.parse("a;b;c")
