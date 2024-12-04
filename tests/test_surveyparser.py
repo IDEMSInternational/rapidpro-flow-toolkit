@@ -51,11 +51,11 @@ class TestSurveyParser(TestTemplate):
             "name,text,Enter your name",
             "else,text,Enter something else",
         )
-        ci_parser = ContentIndexParser(
+        definition = ContentIndexParser(
             MockSheetReader(ci_sheet, {"survey_data": survey_data})
-        )
-        datamodelA = ci_parser.get_data_sheet_row("survey_data", "name")
-        datamodelB = ci_parser.get_data_sheet_row("survey_data", "else")
+        ).definition
+        datamodelA = definition.get_data_sheet_row("survey_data", "name")
+        datamodelB = definition.get_data_sheet_row("survey_data", "else")
 
         self.assertEqual(datamodelA.type, "text")
         self.assertEqual(datamodelA.messages[0].text, "Enter your name")

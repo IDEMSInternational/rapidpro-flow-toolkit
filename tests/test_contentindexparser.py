@@ -74,12 +74,12 @@ class TestTemplateDefinition(TestCase):
         self.assertTemplateDefinition()
 
     def assertTemplateDefinition(self):
-        template_sheet = self.parser.get_template_sheet("my_template")
+        template_sheet = self.parser.template_sheets["my_template"]
 
         self.assertEqual(template_sheet.table[0][1], "send_message")
         self.assertEqual(template_sheet.table[0][3], "Some text")
         with self.assertRaises(KeyError):
-            self.parser.get_template_sheet("my_template2")
+            self.parser.template_sheets["my_template2"]
 
 
 class TestParsing(TestTemplate):
@@ -109,11 +109,11 @@ class TestParsing(TestTemplate):
         ci_parser = ContentIndexParser(MockSheetReader(ci_sheet, sheet_dict))
 
         self.assertEqual(
-            ci_parser.get_template_sheet("my_template").table[0][3],
+            ci_parser.template_sheets["my_template"].table[0][3],
             "Some text",
         )
         self.assertEqual(
-            ci_parser.get_template_sheet("my_template2").table[0][3],
+            ci_parser.template_sheets["my_template2"].table[0][3],
             "Other text",
         )
 
@@ -127,12 +127,12 @@ class TestParsing(TestTemplate):
             "rowA,1A,2A",
             "rowB,1B,2B",
         )
-        ci_parser = ContentIndexParser(
+        definition = ContentIndexParser(
             MockSheetReader(ci_sheet, {"simpledata": simpledata}),
             "tests.datarowmodels.simplemodel",
-        )
-        datamodelA = ci_parser.get_data_sheet_row("simpledata", "rowA")
-        datamodelB = ci_parser.get_data_sheet_row("simpledata", "rowB")
+        ).definition
+        datamodelA = definition.get_data_sheet_row("simpledata", "rowA")
+        datamodelB = definition.get_data_sheet_row("simpledata", "rowB")
 
         self.assertEqual(datamodelA.value1, "1A")
         self.assertEqual(datamodelA.value2, "2A")
@@ -770,12 +770,12 @@ class TestConcatOperation(TestCase):
         self.check_concat()
 
     def check_concat(self):
-        parser = ContentIndexParser(
+        definition = ContentIndexParser(
             MockSheetReader(self.ci_sheet, self.sheet_dict),
             "tests.datarowmodels.simplemodel",
-        )
-        datamodelA = parser.get_data_sheet_row("simpledata", "rowA")
-        datamodelB = parser.get_data_sheet_row("simpledata", "rowB")
+        ).definition
+        datamodelA = definition.get_data_sheet_row("simpledata", "rowA")
+        datamodelB = definition.get_data_sheet_row("simpledata", "rowB")
 
         self.assertEqual(datamodelA.value1, "1A")
         self.assertEqual(datamodelA.value2, "2A")
@@ -859,7 +859,7 @@ class TestOperation(TestCase):
         self.create_parser()
 
         self.assertRowsExistInOrder(["rowC", "rowD", "rowA", "rowB"])
-        rows = self.ci_parser.get_data_sheet_rows("simpledata")
+        rows = self.ci_parser.definition.get_data_sheet_rows("simpledata")
         self.assertEqual(rows["rowA"].value1, "orange")
         self.assertEqual(rows["rowA"].value2, "fruit")
         self.assertEqual(rows["rowB"].value1, "potato")
@@ -895,7 +895,7 @@ class TestOperation(TestCase):
         )
 
     def assertRowContent(self):
-        rows = self.ci_parser.get_data_sheet_rows("simpledata")
+        rows = self.ci_parser.definition.get_data_sheet_rows("simpledata")
 
         self.assertEqual(rows["rowA"].value1, "orange")
         self.assertEqual(rows["rowA"].value2, "fruit")
@@ -903,14 +903,14 @@ class TestOperation(TestCase):
         self.assertEqual(rows["rowC"].value2, "fruit")
 
     def assertRowsExistInOrder(self, exp_keys):
-        rows = self.ci_parser.get_data_sheet_rows("simpledata")
+        rows = self.ci_parser.definition.get_data_sheet_rows("simpledata")
 
         self.assertEqual(len(rows), len(exp_keys))
         self.assertEqual(list(rows.keys()), exp_keys)
 
     def assertOriginalDataNotModified(self, name):
         self.assertEqual(
-            list(self.ci_parser.get_data_sheet_rows(name).keys()),
+            list(self.ci_parser.definition.get_data_sheet_rows(name).keys()),
             ["rowA", "rowB", "rowC", "rowD"],
         )
 

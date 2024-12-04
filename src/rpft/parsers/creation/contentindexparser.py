@@ -361,15 +361,6 @@ class ContentIndexParser:
 
         return DataSheet(new_row_data, data_sheet.row_model)
 
-    def get_data_sheet_row(self, sheet_name, row_id):
-        return self.data_sheets[sheet_name].rows[row_id]
-
-    def get_data_sheet_rows(self, sheet_name):
-        return self.data_sheets[sheet_name].rows
-
-    def get_template_sheet(self, name):
-        return self.template_sheets[name]
-
     def data_sheets_to_dict(self):
         sheets = {}
 
