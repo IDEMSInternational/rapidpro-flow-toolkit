@@ -316,7 +316,6 @@ class FlowParser:
         flow_uuid=None,
         context=None,
         sheet_parser=None,
-        content_index_parser=None,
         definition=None,
     ):
         """
@@ -330,7 +329,6 @@ class FlowParser:
         sheet_parser: SheetParser to be used to generate the flow;
             note that a SheetParser contains a table by iself, and if this argument is
             provided, the table argument is ignored.
-        content_index_parser: Required if there are insert_as_block rows.
         """
 
         self.rapidpro_container = rapidpro_container
