@@ -68,10 +68,10 @@ def get_logger():
 
 
 def initialize_main_logger(file_path="errors.log"):
+    logging.basicConfig(level=logging.INFO)
     LOGGER = logging.getLogger(LOGGER_NAME)
-    LOGGER.setLevel(logging.INFO)
-    context_filter = ContextFilter()
-    LOGGER.addFilter(context_filter)
+    # LOGGER.setLevel(logging.INFO)
+    LOGGER.addFilter(ContextFilter())
     # We're currently not using the context_variables, so don't print them.
     # If needed, add "Context: %(context_variables)s" to the format string below
     stdout_formatter = logging.Formatter(
