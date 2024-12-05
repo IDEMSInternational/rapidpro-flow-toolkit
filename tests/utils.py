@@ -322,3 +322,7 @@ def find_final_destination(flow, node, context):
         destination_uuid = find_destination_uuid(node, context)
         node = find_node_by_uuid(flow, destination_uuid)
     return destination_uuid
+
+
+def csv_join(*args):
+    return "\n".join(args) + "\n"

@@ -7,11 +7,7 @@ from rpft.parsers.sheets import CompositeSheetReader, CSVSheetReader, XLSXSheetR
 from rpft.rapidpro.models.triggers import RapidProTriggerError
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
-from tests.utils import Context, traverse_flow
-
-
-def csv_join(*args):
-    return "\n".join(args) + "\n"
+from tests.utils import Context, csv_join, traverse_flow
 
 
 class TestTemplate(TestCase):

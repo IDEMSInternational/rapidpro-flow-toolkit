@@ -10,13 +10,12 @@ from rpft.parsers.creation.campaigneventrowmodel import CampaignEventRowModel
 from rpft.parsers.creation.campaignparser import CampaignParser
 from rpft.parsers.creation.contentindexrowmodel import ContentIndexRowModel
 from rpft.parsers.creation.flowparser import FlowParser
-from rpft.parsers.creation.global_templates import get_survey_reader
 from rpft.parsers.creation.models import ChatbotDefinition
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.creation.surveyparser import Survey, SurveyParser
 from rpft.parsers.creation.triggerparser import TriggerParser
 from rpft.parsers.creation.triggerrowmodel import TriggerRowModel
-from rpft.parsers.sheets import CompositeSheetReader, Sheet
+from rpft.parsers.sheets import Sheet
 from rpft.rapidpro.models.containers import RapidProContainer
 
 LOGGER = get_logger()
@@ -56,6 +55,7 @@ class ContentIndexParser:
         user_data_model_module_name=None,
         tag_matcher=TagMatcher(),
     ):
+        self.reader = sheet_reader
         self.tag_matcher = tag_matcher
         self.template_sheets = {}
         self.data_sheets = {}
@@ -68,13 +68,11 @@ class ContentIndexParser:
             if user_data_model_module_name
             else None
         )
+        indices = self.reader.get_sheets_by_name("content_index")
 
-        indices = sheet_reader.get_sheets_by_name("content_index")
         if not indices:
             LOGGER.critical("No content index sheet provided")
-        survey_reader = get_survey_reader()
-        self.reader = CompositeSheetReader([survey_reader, sheet_reader])
-        indices = self.reader.get_sheets_by_name("content_index")
+
         for sheet in indices:
             self._process_content_index_table(sheet)
 

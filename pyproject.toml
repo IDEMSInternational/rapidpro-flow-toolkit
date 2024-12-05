@@ -45,6 +45,3 @@ Repository = "https://github.com/IDEMSInternational/rapidpro-flow-toolkit"
 
 [project.scripts]
 rpft = "rpft.cli:main"
-
-[tool.setuptools.package-data]
-"rpft.parsers.creation.survey_templates" = ["*.csv"]

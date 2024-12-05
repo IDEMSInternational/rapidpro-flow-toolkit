@@ -18,12 +18,11 @@ from rpft.parsers.creation.surveyparser import (
     apply_to_all_str,
     Survey,
 )
+from rpft.parsers.sheets import CompositeSheetReader, CSVSheetReader
+
+from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
-from tests.utils import Context, traverse_flow
-
-
-def csv_join(*args):
-    return "\n".join(args) + "\n"
+from tests.utils import Context, csv_join, traverse_flow
 
 
 class TestTemplate(TestCase):
@@ -42,9 +41,9 @@ class TestTemplate(TestCase):
 
 class TestSurveyParser(TestTemplate):
     def test_basic_global_model(self):
-        ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
-            "data_sheet,survey_data,,,,SurveyQuestionRowModel,\n"
+        ci_sheet = csv_join(
+            "type,sheet_name,data_model",
+            "data_sheet,survey_data,SurveyQuestionRowModel",
         )
         survey_data = csv_join(
             "ID,type,question",
@@ -63,10 +62,10 @@ class TestSurveyParser(TestTemplate):
         self.assertEqual(datamodelB.messages[0].text, "Enter something else")
 
     def test_basic_survey(self):
-        ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
-            "data_sheet,survey_data,,,,SurveyQuestionRowModel,\n"
-            "create_survey,,survey_data,,Survey Name,,\n"
+        ci_sheet = csv_join(
+            "type,sheet_name,data_sheet,new_name,data_model",
+            "data_sheet,survey_data,,,SurveyQuestionRowModel",
+            "create_survey,,survey_data,Survey Name,",
         )
         survey_data = csv_join(
             "ID,type,question,variable,completion_variable,expiration.message",
@@ -75,14 +74,21 @@ class TestSurveyParser(TestTemplate):
             "age,text,Enter your age,,,",
         )
 
-        render_output = (
-            ContentIndexParser(MockSheetReader(ci_sheet, {"survey_data": survey_data}))
+        output = (
+            ContentIndexParser(
+                CompositeSheetReader(
+                    [
+                        CSVSheetReader(TESTS_ROOT / "input/survey_templates"),
+                        MockSheetReader(ci_sheet, {"survey_data": survey_data}),
+                    ],
+                )
+            )
             .parse_all()
             .render()
         )
 
         self.assertFlowMessages(
-            render_output,
+            output,
             "survey - Survey Name - question - name",
             [
                 ("set_run_result", "dummy"),
@@ -94,7 +100,7 @@ class TestSurveyParser(TestTemplate):
         )
 
         self.assertFlowMessages(
-            render_output,
+            output,
             "survey - Survey Name - question - age",
             [
                 ("set_run_result", "dummy"),
@@ -106,11 +112,11 @@ class TestSurveyParser(TestTemplate):
         )
 
         self.assertFlowMessages(
-            render_output,
+            output,
             "survey - Survey Name",
             [
-                ('enter_flow', 'survey - Survey Name - question - name'),
-                ('enter_flow', 'survey - Survey Name - question - else'),
+                ("enter_flow", "survey - Survey Name - question - name"),
+                ("enter_flow", "survey - Survey Name - question - else"),
                 ("send_msg", "You waited too long"),
                 ("set_run_result", "expired"),
             ],
@@ -118,31 +124,31 @@ class TestSurveyParser(TestTemplate):
         )
 
         self.assertFlowMessages(
-            render_output,
+            output,
             "survey - Survey Name",
             [
-                ('enter_flow', 'survey - Survey Name - question - name'),
-                ('enter_flow', 'survey - Survey Name - question - else'),
-                ('enter_flow', 'survey - Survey Name - question - age'),
+                ("enter_flow", "survey - Survey Name - question - name"),
+                ("enter_flow", "survey - Survey Name - question - else"),
+                ("enter_flow", "survey - Survey Name - question - age"),
                 ("set_run_result", "proceed"),
             ],
             Context(inputs=["completed", "completed", "completed"]),
         )
 
         self.assertFlowMessages(
-            render_output,
+            output,
             "survey - Survey Name",
             [
-                ('enter_flow', 'survey - Survey Name - question - name'),
+                ("enter_flow", "survey - Survey Name - question - name"),
             ],
             Context(inputs=["completed"], variables={"@child.results.stop": "yes"}),
         )
 
     def test_stop_condition(self):
-        ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
-            "data_sheet,survey_data,,,,SurveyQuestionRowModel,\n"
-            "create_survey,,survey_data,,Survey Name,,\n"
+        ci_sheet = csv_join(
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model",
+            "data_sheet,survey_data,,,,SurveyQuestionRowModel",
+            "create_survey,,survey_data,,Survey Name,",
         )
         survey_data = csv_join(
             "ID,type,question,variable,completion_variable,stop.conditions.1.condition,stop.conditions.1.message,stop.conditions.2.condition,stop.conditions.2.message",  # noqa: E501
@@ -150,14 +156,21 @@ class TestSurveyParser(TestTemplate):
             "name,text,Enter your name,,,,",
         )
 
-        render_output = (
-            ContentIndexParser(MockSheetReader(ci_sheet, {"survey_data": survey_data}))
+        output = (
+            ContentIndexParser(
+                CompositeSheetReader(
+                    [
+                        CSVSheetReader(TESTS_ROOT / "input/survey_templates"),
+                        MockSheetReader(ci_sheet, {"survey_data": survey_data}),
+                    ]
+                )
+            )
             .parse_all()
             .render()
         )
 
         self.assertFlowMessages(
-            render_output,
+            output,
             "survey - Survey Name - question - age",
             [
                 ("set_run_result", "dummy"),
@@ -171,7 +184,7 @@ class TestSurveyParser(TestTemplate):
         )
 
         self.assertFlowMessages(
-            render_output,
+            output,
             "survey - Survey Name - question - name",
             [
                 ("set_run_result", "dummy"),
@@ -183,7 +196,7 @@ class TestSurveyParser(TestTemplate):
         )
 
         self.assertFlowMessages(
-            render_output,
+            output,
             "survey - Survey Name - question - age",
             [
                 ("set_run_result", "dummy"),
@@ -197,7 +210,7 @@ class TestSurveyParser(TestTemplate):
         )
 
         self.assertFlowMessages(
-            render_output,
+            output,
             "survey - Survey Name - question - name",
             [
                 ("set_run_result", "dummy"),
@@ -209,22 +222,22 @@ class TestSurveyParser(TestTemplate):
         )
 
     def test_template_overwrite(self):
-        ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,template_arguments,status\n"  # noqa: E501
-            "data_sheet,survey_data,,,,SurveyQuestionRowModel,,\n"
-            "template_definition,template_survey_wrapper,,,,,end_flow,\n"
-            "template_definition,template_survey_question_type_text,,,,,,\n"
-            "create_survey,,survey_data,,Survey Name,,my_end_flow,\n"
+        ci_sheet = csv_join(
+            "type,sheet_name,data_sheet,new_name,data_model,template_arguments",
+            "data_sheet,survey_data,,,SurveyQuestionRowModel,",
+            "template_definition,template_survey_wrapper,,,,end_flow",
+            "template_definition,template_survey_question_type_text,,,,",
+            "create_survey,,survey_data,Survey Name,,my_end_flow",
         )
         survey_data = csv_join(
             "ID,type,question",
             "name,text,Enter your name",
         )
         template_survey_wrapper = csv_join(
-            "row_id,type,from,message_text,condition\n",
-            ",send_message,start,Here's the survey,\n",
-            ",start_new_flow,,survey - {{survey_name}} - question - {{questions.0.ID}},\n",  # noqa: E501
-            ",start_new_flow,,{{end_flow}},Completed\n",
+            "type,from,message_text,condition",
+            "send_message,start,Here's the survey,",
+            "start_new_flow,,survey - {{survey_name}} - question - {{questions.0.ID}},",
+            "start_new_flow,,{{end_flow}},Completed",
         )
         template_survey_question_type_text = csv_join(
             "row_id,type,from,message_text,save_name\n",
@@ -237,14 +250,21 @@ class TestSurveyParser(TestTemplate):
             "template_survey_wrapper": template_survey_wrapper,
             "template_survey_question_type_text": template_survey_question_type_text,
         }
-        render_output = (
-            ContentIndexParser(MockSheetReader(ci_sheet, sheet_dict))
+        output = (
+            ContentIndexParser(
+                CompositeSheetReader(
+                    [
+                        CSVSheetReader(TESTS_ROOT / "input/survey_templates"),
+                        MockSheetReader(ci_sheet, sheet_dict),
+                    ]
+                )
+            )
             .parse_all()
             .render()
         )
 
         self.assertFlowMessages(
-            render_output,
+            output,
             "survey - Survey Name - question - name",
             [
                 ("send_msg", "Here's the question"),
@@ -256,7 +276,7 @@ class TestSurveyParser(TestTemplate):
         )
 
         self.assertFlowMessages(
-            render_output,
+            output,
             "survey - Survey Name",
             [
                 ("send_msg", "Here's the survey"),
@@ -442,18 +462,14 @@ class TestSurveyPreprocessing(TestCase):
         question1 = SurveyQuestionRowModel(
             ID="question1",
             type="qtype",
-            messages=[
-                Message(text="Tell us the answer to Question 1")
-            ]
+            messages=[Message(text="Tell us the answer to Question 1")],
         )
         question1_replaced = SurveyQuestionRowModel(
             ID="question1",
             variable="pre_sq_s1_question1",
             completion_variable="pre_sq_s1_question1_complete",
             type="qtype",
-            messages=[
-                Message(text="Tell us the answer to Question 1")
-            ]
+            messages=[Message(text="Tell us the answer to Question 1")],
         )
 
         survey = Survey(
