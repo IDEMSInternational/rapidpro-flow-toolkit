@@ -43,3 +43,20 @@ class Message(ParserModel):
     audio: str = ""
     video: str = ""
     attachments: List[str] = []
+
+
+class ChatbotDefinition:
+    def __init__(self, flow_definitions, data_sheets, templates, surveys):
+        self.flow_definitions = flow_definitions
+        self.data_sheets = data_sheets
+        self.templates = templates
+        self.surveys = surveys
+
+    def get_data_sheet_rows(self, sheet_name):
+        return self.data_sheets[sheet_name].rows
+
+    def get_data_sheet_row(self, sheet_name, row_id):
+        return self.data_sheets[sheet_name].rows[row_id]
+
+    def get_template(self, name):
+        return self.templates[name]

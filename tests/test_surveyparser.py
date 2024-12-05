@@ -2,7 +2,7 @@ import copy
 from unittest import TestCase
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser, DataSheet
-from rpft.parsers.creation.commonmodels import (
+from rpft.parsers.creation.models import (
     Assignment,
     Condition,
     ConditionsWithMessage,

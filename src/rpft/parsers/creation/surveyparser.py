@@ -4,6 +4,7 @@ import re
 from rpft.logger.logger import get_logger, logging_context
 from rpft.parsers.common.rowparser import ParserModel
 from rpft.parsers.creation import map_template_arguments
+from rpft.parsers.creation.models import ChatbotDefinition
 from rpft.parsers.creation.flowparser import FlowParser
 from rpft.rapidpro.models.containers import RapidProContainer
 
@@ -134,20 +135,7 @@ class SurveyParser:
     QUESTION_TEMPLATE_NAME = "template_survey_question_wrapper"
     SURVEY_TEMPLATE_NAME = "template_survey_wrapper"
 
-    def __init__(self, definition):
-        """
-        Args:
-            content_index_parser: a ContentIndexParser.
-
-            This is required to have access to
-            - data_sheets: Dict[str, DataSheet], and
-            - template_sheets: Dict[str, TemplateSheet]
-            so that we instatiate the appropriate templates with the desired
-            data. We cannot store these directly here, because whenever the
-            FlowParser encounters an insert_as_block statement, it needs access
-            to the ContentIndexParser to find the data/template to create this
-            block. It may be preferable to have a shared data class instead.
-        """
+    def __init__(self, definition: ChatbotDefinition):
         self.definition = definition
         self.survey_template = definition.get_template(
             SurveyParser.SURVEY_TEMPLATE_NAME

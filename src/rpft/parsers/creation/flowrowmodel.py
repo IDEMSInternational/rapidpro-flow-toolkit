@@ -1,7 +1,7 @@
 from typing import List
 
 from rpft.parsers.common.rowparser import ParserModel
-from rpft.parsers.creation.commonmodels import Condition
+from rpft.parsers.creation.models import Condition
 
 
 class Webhook(ParserModel):
