@@ -8,9 +8,10 @@ from rpft.parsers.creation.models import (
     ConditionsWithMessage,
     ConditionWithMessage,
     Message,
+    PostProcessing,
+    SurveyConfig,
 )
 from rpft.parsers.creation.globalrowmodels import SurveyQuestionRowModel
-from rpft.parsers.creation.surveymodels import PostProcessing, SurveyConfig
 from rpft.parsers.creation.surveyparser import (
     apply_prefix_substitutions,
     apply_prefix_renaming,

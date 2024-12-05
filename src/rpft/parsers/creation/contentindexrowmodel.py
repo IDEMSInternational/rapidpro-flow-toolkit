@@ -1,7 +1,7 @@
 from typing import List
 
 from rpft.parsers.common.rowparser import ParserModel
-from rpft.parsers.creation.surveymodels import SurveyConfig
+from rpft.parsers.creation.models import SurveyConfig
 
 
 class TemplateArgument(ParserModel):
