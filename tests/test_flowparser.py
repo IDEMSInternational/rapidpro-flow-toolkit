@@ -43,7 +43,7 @@ class TestParsing(TestCase):
             FlowParser(
                 RapidProContainer(),
                 flow_name=flow_name,
-                sheet_parser=MockSheetParser(None, input_rows),
+                sheet_parser=MockSheetParser(input_rows),
             )
             .parse()
             .render()
@@ -341,7 +341,7 @@ class TestParsing(TestCase):
         FlowParser(
             container,
             flow_name="groups_and_flows",
-            sheet_parser=MockSheetParser(None, rows),
+            sheet_parser=MockSheetParser(rows),
         ).parse()
 
         # Render also invokes filling in all the flow/group UUIDs
@@ -1215,7 +1215,7 @@ class TestFlowParser(TestCase):
             FlowParser(
                 RapidProContainer(),
                 flow_name=flow_name,
-                sheet_parser=MockSheetParser(None, new_rows),
+                sheet_parser=MockSheetParser(new_rows),
             )
             .parse()
             .render()

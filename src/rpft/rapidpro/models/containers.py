@@ -52,6 +52,10 @@ class RapidProContainer:
         self.flows.append(flow)
         self.record_flow_uuid(flow.name, flow.uuid)
 
+    def add_flows(self, flows):
+        for flow in flows:
+            self.add_flow(flow)
+
     def add_campaign(self, campaign):
         self.campaigns.append(campaign)
 

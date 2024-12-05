@@ -1,0 +1,7 @@
+"row_id","type","from","loop_variable","condition","condition_var","condition_type","condition_name","include_if","message_text","choices","save_name","attachments","image","audio","video"
+,"save_flow_result",,,,,,,,"Block can’t start with for loop, see issue #47",,"dummy",,,,
+,"begin_for",,"message",,,,,,"{@messages@}",,,,,,
+,"send_message",,,,,,,"{{message.text}}","{{message.text}}",,,"{{message.attachments}}","{{message.image}}","{{message.audio}}","{{message.video}}"
+,"end_for",,,,,,,,,,,,,,
+,"send_message",,,,,,,"{@skipoption.text!=''@}","{{skipoption.text}}",,,,,,
+,"wait_for_response",,,,,,,,,,"input",,,,
