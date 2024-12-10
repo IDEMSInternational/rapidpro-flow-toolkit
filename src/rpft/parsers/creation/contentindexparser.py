@@ -99,7 +99,7 @@ class ContentIndexParser:
 
                 if len(row.sheet_name) != 1 and row.type not in [
                     "data_sheet",
-                    "create_survey",
+                    ContentIndexType.SURVEY,
                 ]:
                     LOGGER.critical(
                         f"For {row.type} rows, exactly one sheet_name has to be"
@@ -145,7 +145,7 @@ class ContentIndexParser:
                         logging_prefix,
                         self.create_trigger_parser(row),
                     )
-                elif row.type == "create_survey":
+                elif row.type == ContentIndexType.SURVEY:
                     self._add_survey(row, logging_prefix)
                 elif row.type == "ignore_row":
                     self._process_ignore_row(row.sheet_name[0])

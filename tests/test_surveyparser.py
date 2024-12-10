@@ -66,7 +66,7 @@ class TestSurveyParser(TestTemplate):
         ci_sheet = csv_join(
             "type,sheet_name,data_sheet,new_name,data_model",
             "data_sheet,survey_data,,,SurveyQuestionRowModel",
-            "create_survey,,survey_data,Survey Name,",
+            "survey,,survey_data,Survey Name,",
         )
         survey_data = csv_join(
             "ID,type,question,variable,completion_variable,expiration.message",
@@ -149,7 +149,7 @@ class TestSurveyParser(TestTemplate):
         ci_sheet = csv_join(
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model",
             "data_sheet,survey_data,,,,SurveyQuestionRowModel",
-            "create_survey,,survey_data,,Survey Name,",
+            "survey,,survey_data,,Survey Name,",
         )
         survey_data = csv_join(
             "ID,type,question,variable,completion_variable,stop.conditions.1.condition,stop.conditions.1.message,stop.conditions.2.condition,stop.conditions.2.message",  # noqa: E501
@@ -228,7 +228,7 @@ class TestSurveyParser(TestTemplate):
             "data_sheet,survey_data,,,SurveyQuestionRowModel,",
             "template_definition,template_survey_wrapper,,,,end_flow",
             "template_definition,template_survey_question_type_text,,,,",
-            "create_survey,,survey_data,Survey Name,,my_end_flow",
+            "survey,,survey_data,Survey Name,,my_end_flow",
         )
         survey_data = csv_join(
             "ID,type,question",
