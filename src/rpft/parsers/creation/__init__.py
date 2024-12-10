@@ -45,7 +45,7 @@ def map_template_arguments(template: TemplateSheet, args, context, data_sheets) 
 
         if arg_def.name in context and value != context[arg_def.name]:
             LOGGER.warn(
-                "Template argument redefined, "
+                "Template argument reassigned, "
                 + str(
                     {
                         "template": template.name,
