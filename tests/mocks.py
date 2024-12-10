@@ -31,15 +31,13 @@ class MockRowParser:
 
 
 class MockSheetParser(SheetParser):
-    def __init__(self, row_parser, rows, context={}):
+    def __init__(self, rows, context={}):
         """
         Args:
-            row_parser: parser to convert flat dicts to RowModel instances.
             rows: List of instances of the RowModel
             context: context used for template parsing
         """
 
-        self.row_parser = row_parser
         self.bookmarks = {}
         self.input_rows = rows
         self.iterator = iter(self.input_rows)
@@ -51,6 +49,9 @@ class MockSheetParser(SheetParser):
         except StopIteration:
             return (None, None) if return_index else None
         return (input_row, -1) if return_index else None
+
+    def get_row_data_sheet(self):
+        raise NotImplementedError
 
 
 class MockSheetReader(AbstractSheetReader):

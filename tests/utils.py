@@ -173,6 +173,24 @@ def find_destination_uuid(current_node, context):
                         ) <= number <= float(case["arguments"][1]):
                             category_uuid = case["category_uuid"]
                             break
+                    elif case["type"] == "has_number_lt":
+                        # This might differ from the RapidPro implementation.
+                        try:
+                            number = float(operand)
+                        except ValueError:
+                            number = None
+                        if number is not None and number < float(case["arguments"][0]):
+                            category_uuid = case["category_uuid"]
+                            break
+                    elif case["type"] == "has_number_gt":
+                        # This might differ from the RapidPro implementation.
+                        try:
+                            number = float(operand)
+                        except ValueError:
+                            number = None
+                        if number is not None and number > float(case["arguments"][0]):
+                            category_uuid = case["category_uuid"]
+                            break
 
             # Find the category matching the case and get its exit_uuid
             exit_uuid = None
@@ -222,7 +240,7 @@ action_value_fields = {
     "send_email": (lambda x: x["subject"]),
     "send_msg": (lambda x: x["text"]),
     "set_contact_channel": (lambda x: x["channel"]["name"]),
-    "set_contact_field": (lambda x: x["field"]["name"]),
+    "set_contact_field": (lambda x: x["field"]["key"]),
     "set_contact_language": (lambda x: x["language"]),
     "set_contact_name": (lambda x: x["name"]),
     "set_contact_status": (lambda x: x["status"]),
@@ -304,3 +322,7 @@ def find_final_destination(flow, node, context):
         destination_uuid = find_destination_uuid(node, context)
         node = find_node_by_uuid(flow, destination_uuid)
     return destination_uuid
+
+
+def csv_join(*args):
+    return "\n".join(args) + "\n"

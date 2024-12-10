@@ -223,7 +223,7 @@ def sheet_to_list_of_nested_dict(sheet, user_model):
 	rather than List[RowModel]).
 	'''
     row_parser = RowParser(user_model, CellParser())
-    sheet_parser = SheetParser(row_parser, sheet.table)
+    sheet_parser = SheetParser(sheet.table, row_parser)
     data_rows = sheet_parser.parse_all()  # list of row model
     return [row.dict() for row in data_rows]
     # Below is what the content index parser does:

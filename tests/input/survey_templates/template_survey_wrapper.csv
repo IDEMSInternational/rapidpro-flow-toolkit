@@ -1,0 +1,13 @@
+"row_id","type","from","loop_variable","condition","condition_var","condition_type","condition_name","include_if","message_text","data_sheet","data_row_id","choices","save_name","image","audio","video","obj_name","obj_id","node_name","_nodeId","no_response"
+,"begin_for",,"question;i",,,,,,"{@questions@}",,,,,,,,,,,,
+"q{{i}}start","split_by_value",,,,,,,"{@i==0@}","{{question.completion_variable}}",,,,,,,,,,,,
+"q{{i}}start","split_by_value","q{{i-1}}start;q{{i-1}}end",,"yes;",,,,"{@i!=0@}","{{question.completion_variable}}",,,,,,,,,,,,
+"q{{i}}flow","start_new_flow","q{{i}}start",,,,,,,"survey - {{survey_name}} - question - {{question.ID}}",,,,,,,,,,,,
+,"send_message","q{{i}}flow",,"Expired",,,,"{@question.expiration.message!=""""@}","{{question.expiration.message}}",,,,,,,,,,,,
+,"save_flow_result",,,,,,,"{@question.expiration.message!=""""@}","yes",,,,"expired",,,,,,,,
+,"hard_exit",,,,,,,"{@question.expiration.message!=""""@}",,,,,,,,,,,,,
+,"hard_exit","q{{i}}flow",,"Expired",,,,"{@question.expiration.message==""""@}",,,,,,,,,,,,,
+"q{{i}}end","split_by_value","q{{i}}flow",,"Completed",,,,,"@child.results.stop",,,,,,,,,,,,
+,"hard_exit","q{{i}}end",,"yes",,,,,,,,,,,,,,,,,
+,"end_for",,,,,,,,,,,,,,,,,,,,
+,"save_flow_result","q{{questions|length -1}}start;q{{questions|length -1}}end",,"yes;",,,,,"yes",,,,"proceed",,,,,,,,

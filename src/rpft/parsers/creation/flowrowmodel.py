@@ -1,16 +1,7 @@
 from typing import List
 
 from rpft.parsers.common.rowparser import ParserModel
-
-
-class Condition(ParserModel):
-    # Technically, value should be a list as a case may have multiple args
-    value: str = ""
-    variable: str = ""
-    type: str = ""
-    name: str = ""
-    # TODO: We could specify proper default values here, and write custom
-    # validators that replace '' with the actual default value.
+from rpft.parsers.creation.models import Condition
 
 
 class Webhook(ParserModel):

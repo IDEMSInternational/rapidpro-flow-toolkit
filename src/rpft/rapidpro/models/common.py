@@ -69,12 +69,17 @@ def generate_field_key(field_name):
     return field_key
 
 
+def generate_field_name(field_name):
+    # Field names may not contain underscores
+    return field_name.replace("_", " ")
+
+
 class ContactFieldReference:
     def from_dict(data):
         return ContactFieldReference(**data)
 
     def __init__(self, name, key=None, type=None):
-        self.name = name
+        self.name = generate_field_name(name)
         self.key = key or generate_field_key(name)
         self.type = type
 

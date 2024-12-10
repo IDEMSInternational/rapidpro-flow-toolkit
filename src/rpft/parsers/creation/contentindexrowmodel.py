@@ -1,6 +1,12 @@
+from enum import Enum
 from typing import List
 
 from rpft.parsers.common.rowparser import ParserModel
+from rpft.parsers.creation.models import SurveyConfig
+
+
+class ContentIndexType(Enum):
+    SURVEY = "survey"
 
 
 class TemplateArgument(ParserModel):
@@ -23,6 +29,7 @@ class ContentIndexRowModel(ParserModel):
     data_row_id: str = ""
     template_argument_definitions: List[TemplateArgument] = []  # internal name
     template_arguments: list = []
+    survey_config: SurveyConfig = SurveyConfig()
     operation: Operation = Operation()
     data_model: str = ""
     group: str = ""
@@ -30,11 +37,15 @@ class ContentIndexRowModel(ParserModel):
     tags: List[str] = []
 
     def field_name_to_header_name(field):
-        if "template_argument_definitions":
+        if field == "template_argument_definitions":
             return "template_arguments"
+        if field == "survey_config":
+            return "config"
 
     def header_name_to_field_name_with_context(header, row):
         if row["type"] == "template_definition" and header == "template_arguments":
             return "template_argument_definitions"
+        if row["type"] == ContentIndexType.SURVEY.value and header == "config":
+            return "survey_config"
         else:
             return header
