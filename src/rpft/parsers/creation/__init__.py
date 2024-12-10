@@ -1,45 +1,61 @@
 from rpft.logger.logger import get_logger
+from rpft.parsers.creation.models import TemplateSheet
 
 LOGGER = get_logger()
 
 
-def map_template_arguments(arg_defs, args, context, data_sheets) -> dict:
+def map_template_arguments(template: TemplateSheet, args, context, data_sheets) -> dict:
     """
     Map template arguments, which are positional, to the arguments from the template
     definition, and add the values of the arguments to the context with the appropriate
     variable name (from the definition).
     """
-    if len(args) > len(arg_defs):
+    arg_defs = template.argument_definitions
+
+    if arg_defs and len(args) > len(arg_defs):
         # Once the row parser is cleaned up to eliminate trailing '' entries, this
         # won't be necessary
         extra_args = args[len(arg_defs) :]
         non_empty_extra_args = [ea for ea in extra_args if ea]
 
         if non_empty_extra_args:
-            LOGGER.warning("Too many arguments provided to template")
+            LOGGER.warning(
+                "Too many template arguments provided, "
+                + str(
+                    {
+                        "template": template.name,
+                        "extra": non_empty_extra_args,
+                        "definition": arg_defs,
+                        "arguments": args,
+                    }
+                )
+            )
 
         args = args[: len(arg_defs)]
 
     args_padding = [""] * (len(arg_defs) - len(args))
 
     for arg_def, arg in zip(arg_defs, args + args_padding):
-        if arg_def.name in context:
-            LOGGER.critical(
-                f'Template argument "{arg_def.name}" doubly defined '
-                f'in context: "{context}"'
+        value = arg if arg != "" else arg_def.default_value
+
+        if value == "":
+            LOGGER.critical(f'Required template argument "{arg_def.name}" not provided')
+
+        value = data_sheets[value].rows if arg_def.type == "sheet" else value
+
+        if arg_def.name in context and value != context[arg_def.name]:
+            LOGGER.warn(
+                "Template argument redefined, "
+                + str(
+                    {
+                        "template": template.name,
+                        "name": arg_def.name,
+                        "before": context[arg_def.name],
+                        "after": value,
+                    }
+                )
             )
 
-        arg_value = arg if arg != "" else arg_def.default_value
-
-        if arg_value == "":
-            LOGGER.critical(
-                f'Required template argument "{arg_def.name}" not provided'
-            )
-
-        context[arg_def.name] = (
-            data_sheets[arg_value].rows
-            if arg_def.type == "sheet"
-            else arg_value
-        )
+        context[arg_def.name] = value
 
     return context

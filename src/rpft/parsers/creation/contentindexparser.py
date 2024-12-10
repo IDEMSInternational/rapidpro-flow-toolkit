@@ -8,9 +8,12 @@ from rpft.parsers.common.sheetparser import SheetParser
 from rpft.parsers.creation import globalrowmodels
 from rpft.parsers.creation.campaigneventrowmodel import CampaignEventRowModel
 from rpft.parsers.creation.campaignparser import CampaignParser
-from rpft.parsers.creation.contentindexrowmodel import ContentIndexRowModel
+from rpft.parsers.creation.contentindexrowmodel import (
+    ContentIndexRowModel,
+    ContentIndexType,
+)
 from rpft.parsers.creation.flowparser import FlowParser
-from rpft.parsers.creation.models import ChatbotDefinition
+from rpft.parsers.creation.models import ChatbotDefinition, TemplateSheet
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.creation.surveyparser import Survey, SurveyParser
 from rpft.parsers.creation.triggerparser import TriggerParser
@@ -19,12 +22,6 @@ from rpft.parsers.sheets import Sheet
 from rpft.rapidpro.models.containers import RapidProContainer
 
 LOGGER = get_logger()
-
-
-class TemplateSheet:
-    def __init__(self, table, argument_definitions):
-        self.table = table
-        self.argument_definitions = argument_definitions
 
 
 class DataSheet:
@@ -164,7 +161,9 @@ class ContentIndexParser:
         if sheet_name not in self.template_sheets or update_duplicates:
             sheet = self._get_sheet_or_die(sheet_name)
             self.template_sheets[sheet_name] = TemplateSheet(
-                sheet.table, row.template_argument_definitions
+                sheet_name,
+                sheet.table,
+                row.template_argument_definitions,
             )
 
     def _process_ignore_row(self, sheet_name):

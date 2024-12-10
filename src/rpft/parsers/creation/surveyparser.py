@@ -34,8 +34,8 @@ def apply_to_all_str(obj, func, inplace=False):
 
 def apply_prefix_renaming(survey_question, prefix):
     """
-    For all variables which are created in this survey question,
-    apply the prefix to its name.
+    For all variables which are created in this survey question, apply the prefix to its
+    name.
     """
     survey_question.variable = prefix + survey_question.variable
     survey_question.completion_variable = prefix + survey_question.completion_variable
@@ -45,8 +45,8 @@ def apply_prefix_renaming(survey_question, prefix):
 
 def apply_prefix_substitutions(survey_question, variables, prefix):
     """
-    Wherever any of these variable appears in this survey (in a condition,
-    message text or elsewhere), apply the prefix to it.
+    Wherever any of these variable appears in this survey (in a condition, message text
+    or elsewhere), apply the prefix to it.
     """
 
     def replace_vars(s):
@@ -63,8 +63,8 @@ def apply_prefix_substitutions(survey_question, variables, prefix):
 
 def apply_shorthand_substitutions(survey_question, survey_id):
     """
-    Wherever @answer appears, replace it with the variable of this
-    survey question where the user answer is stored.
+    Wherever @answer appears, replace it with the variable of this survey question where
+    the user answer is stored.
     """
 
     def replace_vars(s):
@@ -95,15 +95,16 @@ class Survey:
 
     def preprocess_data_rows(self):
         self.initialize_survey_variables()
+
         for row in self.question_data_sheet.rows.values():
             apply_shorthand_substitutions(row, self.survey_id)
             row.expiration.message = (
                 row.expiration.message or self.survey_config.expiration_message
             )
 
-        # Apply all prefix replacements
         variables = self.get_survey_variables()
         prefix = self.survey_config.variable_prefix
+
         for row in self.question_data_sheet.rows.values():
             if prefix:
                 apply_prefix_renaming(row, prefix)
@@ -111,14 +112,15 @@ class Survey:
 
     def get_survey_variables(self):
         """Get list of variables that are created in this survey."""
-
         variables = []
+
         for row in self.question_data_sheet.rows.values():
             variables += [row.variable, row.completion_variable]
             assignment_variables = [
                 assg.variable for assg in row.postprocessing.assignments
             ]
             variables += assignment_variables
+
         return list(set(variables))
 
     def initialize_survey_variables(self):
@@ -168,7 +170,7 @@ class SurveyParser:
 
     def parse_question(self, row, survey_name, container: RapidProContainer):
         context = map_template_arguments(
-            self.question_template.argument_definitions,
+            self.question_template,
             [],
             dict(row),
             self.definition.data_sheets,
@@ -196,7 +198,7 @@ class SurveyParser:
             "survey_id": survey.survey_id,
         }
         context = map_template_arguments(
-            self.survey_template.argument_definitions,
+            self.survey_template,
             survey.template_arguments,
             context,
             self.definition.data_sheets,

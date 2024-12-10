@@ -45,8 +45,21 @@ class Message(ParserModel):
     attachments: List[str] = []
 
 
+class TemplateSheet:
+    def __init__(self, name, table, argument_definitions):
+        self.name = name
+        self.table = table
+        self.argument_definitions = argument_definitions
+
+
 class ChatbotDefinition:
-    def __init__(self, flow_definitions, data_sheets, templates, surveys):
+    def __init__(
+        self,
+        flow_definitions,
+        data_sheets,
+        templates: List[TemplateSheet],
+        surveys,
+    ):
         self.flow_definitions = flow_definitions
         self.data_sheets = data_sheets
         self.templates = templates
@@ -58,7 +71,7 @@ class ChatbotDefinition:
     def get_data_sheet_row(self, sheet_name, row_id):
         return self.data_sheets[sheet_name].rows[row_id]
 
-    def get_template(self, name):
+    def get_template(self, name) -> TemplateSheet:
         return self.templates[name]
 
 

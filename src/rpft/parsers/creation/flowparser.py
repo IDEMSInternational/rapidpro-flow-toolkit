@@ -853,7 +853,7 @@ class FlowParser:
 
         template_sheet = definition.get_template(sheet_name)
         context = map_template_arguments(
-            template_sheet.argument_definitions,
+            template_sheet,
             template_arguments,
             context,
             definition.data_sheets,
