@@ -1,11 +1,11 @@
-from enum import StrEnum
+from enum import Enum
 from typing import List
 
 from rpft.parsers.common.rowparser import ParserModel
 from rpft.parsers.creation.models import SurveyConfig
 
 
-class ContentIndexType(StrEnum):
+class ContentIndexType(Enum):
     SURVEY = "survey"
 
 
@@ -45,7 +45,7 @@ class ContentIndexRowModel(ParserModel):
     def header_name_to_field_name_with_context(header, row):
         if row["type"] == "template_definition" and header == "template_arguments":
             return "template_argument_definitions"
-        if row["type"] == ContentIndexType.SURVEY and header == "config":
+        if row["type"] == ContentIndexType.SURVEY.value and header == "config":
             return "survey_config"
         else:
             return header
