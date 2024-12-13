@@ -1,0 +1,9 @@
+"row_id","type","from","loop_variable","condition","condition_var","condition_type","condition_name","include_if","message_text","template_arguments","choices","save_name"
+,"insert_as_block","start",,,,,,,"template_survey_question_type_{{type}}",,,
+,"save_value",,,,,,,,"@results.variable",,,"{{variable}}"
+0,"save_value",,,,,,,,"yes",,,"{{completion_variable}}"
+,"begin_for",,"cond;i",,,,,"{@stop.conditions|selectattr('message')|list@}","{@stop.conditions|selectattr('message')|list@}",,,
+"{{i+1}}","split_by_value","{{i}}",,,,,,,"{{cond.condition.variable}}",,,
+,"save_flow_result","{{i+1}}",,"{{cond.condition.value}}","{{cond.condition.variable}}","{{cond.condition.type}}","{{cond.condition.name}}",,"yes",,,"stop"
+,"send_message",,,,,,,,"{{cond.message}}",,,
+,"end_for",,,,,,,,,,,

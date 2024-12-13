@@ -5,6 +5,8 @@ from typing import List
 
 from pydantic.v1 import BaseModel
 
+from rpft.parsers.common.cellparser import CellParser
+
 
 class RowParserError(Exception):
     pass
@@ -122,10 +124,10 @@ class RowParser:
     TYPE_ANNOTATION_SEPARATOR = ":"
     DEFAULT_VALUE_SEPARATOR = "="
 
-    def __init__(self, model, cell_parser):
+    def __init__(self, model, cell_parser=None):
         self.model = model
         self.output = None  # Gets reinitialized with each call to parse_row
-        self.cell_parser = cell_parser
+        self.cell_parser = cell_parser or CellParser()
 
     def try_assign_as_kwarg(self, field, key, value, model):
         # If value can be interpreted as a (field, field_value) pair for a field of

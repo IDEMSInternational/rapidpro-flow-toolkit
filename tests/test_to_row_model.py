@@ -247,7 +247,7 @@ class TestFlowContainer(TestToRowModels):
                     }
                 ],
                 "mainarg_value": "my value",
-                "save_name": "my variable",
+                "save_name": "my_variable",
             }
         )
         case = row_data2.edges[0].condition

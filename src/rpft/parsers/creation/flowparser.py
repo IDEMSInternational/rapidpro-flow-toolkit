@@ -1,9 +1,11 @@
+import copy
 from collections import defaultdict
 
 from rpft.logger.logger import get_logger, logging_context
 from rpft.parsers.common.cellparser import CellParser
 from rpft.parsers.common.rowparser import RowParser
 from rpft.parsers.common.sheetparser import SheetParser
+from rpft.parsers.creation import map_template_arguments
 from rpft.parsers.creation.flowrowmodel import (
     Condition,
     Edge,
@@ -21,7 +23,7 @@ from rpft.rapidpro.models.actions import (
     SetRunResultAction,
     WhatsAppMessageTemplating,
 )
-from rpft.rapidpro.models.containers import FlowContainer
+from rpft.rapidpro.models.containers import FlowContainer, RapidProContainer
 from rpft.rapidpro.models.exceptions import (
     RapidProActionError,
     RapidProRouterError,
@@ -314,7 +316,7 @@ class FlowParser:
         flow_uuid=None,
         context=None,
         sheet_parser=None,
-        content_index_parser=None,
+        definition=None,
     ):
         """
         rapidpro_container: The parent RapidProContainer to contain the flow generated
@@ -327,7 +329,6 @@ class FlowParser:
         sheet_parser: SheetParser to be used to generate the flow;
             note that a SheetParser contains a table by iself, and if this argument is
             provided, the table argument is ignored.
-        content_index_parser: Required if there are insert_as_block rows.
         """
 
         self.rapidpro_container = rapidpro_container
@@ -339,14 +340,14 @@ class FlowParser:
         else:
             assert table is not None
             self.sheet_parser = SheetParser(
-                RowParser(FlowRowModel, CellParser()),
                 table,
-                self.context,
+                row_parser=RowParser(FlowRowModel, CellParser()),
+                context=self.context,
             )
         self.node_group_stack = [NodeGroup()]
         self.row_id_to_nodegroup = defaultdict()
         self.node_name_to_node_map = defaultdict()
-        self.content_index_parser = content_index_parser
+        self.definition = definition
 
     def current_node_group(self):
         # New stuff that's created is always added to the current NodeGroup,
@@ -453,19 +454,19 @@ class FlowParser:
         return False
 
     def _parse_insert_as_block_row(self, row):
-        if self.content_index_parser is None:
-            LOGGER.critical(
-                "insert_as_block only works if FlowParser has a ContentIndexParser"
-            )
-        node_group = self.content_index_parser.get_node_group(
+        node_group = self.get_node_group(
             row.mainarg_flow_name,
             row.data_sheet,
             row.data_row_id,
             row.template_arguments,
+            self.context,
         )
+
         for edge in row.edges:
             self._add_row_edge(edge, node_group.entry_node().uuid)
+
         self.append_node_group(node_group, row.row_id)
+
         if row.row_id:
             self.row_id_to_nodegroup[row.row_id] = node_group
 
@@ -797,3 +798,130 @@ class FlowParser:
             LOGGER.critical("Unexpected end of flow. Did you forget end_for/end_block?")
         self.current_node_group().add_nodes_to_flow(flow_container)
         return flow_container
+
+    def get_node_group(
+        self,
+        template_name,
+        data_sheet,
+        data_row_id,
+        template_arguments,
+        context=None,
+    ):
+        if (data_sheet and data_row_id) or (not data_sheet and not data_row_id):
+            with logging_context(f"{template_name}"):
+                return FlowParser._parse_flow(
+                    template_name,
+                    data_sheet,
+                    data_row_id,
+                    template_arguments,
+                    RapidProContainer(),
+                    context=context or {},
+                    parse_as_block=True,
+                    definition=self.definition,
+                )
+        else:
+            LOGGER.critical(
+                "For insert_as_block, either both data_sheet and data_row_id or neither"
+                " have to be provided."
+            )
+
+    def _parse_flow(
+        sheet_name,
+        data_sheet,
+        data_row_id,
+        template_arguments,
+        rapidpro_container,
+        new_name="",
+        parse_as_block=False,
+        context=None,
+        definition=None,
+    ):
+        base_name = new_name or sheet_name
+        context = copy.copy(context or {})
+
+        if data_sheet and data_row_id:
+            flow_name = " - ".join([base_name, data_row_id])
+            context.update(dict(definition.get_data_sheet_row(data_sheet, data_row_id)))
+        else:
+            if data_sheet or data_row_id:
+                LOGGER.warn(
+                    "For create_flow, if no data_sheet is provided, "
+                    "data_row_id should be blank as well."
+                )
+
+            flow_name = base_name
+
+        template_sheet = definition.get_template(sheet_name)
+        context = map_template_arguments(
+            template_sheet,
+            template_arguments,
+            context,
+            definition.data_sheets,
+        )
+        flow_parser = FlowParser(
+            rapidpro_container,
+            flow_name,
+            template_sheet.table,
+            context=context,
+            definition=definition,
+        )
+
+        if parse_as_block:
+            return flow_parser.parse_as_block()
+        else:
+            return flow_parser.parse(add_to_container=False)
+
+    @classmethod
+    def parse_all(cls, definition, rapidpro_container):
+        flows = {}
+
+        for logging_prefix, row in definition.flow_definitions:
+            with logging_context(f"{logging_prefix} | {row.sheet_name[0]}"):
+                if row.data_sheet and not row.data_row_id:
+                    data_rows = definition.get_data_sheet_rows(row.data_sheet)
+
+                    for data_row_id in data_rows.keys():
+                        with logging_context(f'with data_row_id "{data_row_id}"'):
+                            flow = cls._parse_flow(
+                                row.sheet_name[0],
+                                row.data_sheet,
+                                data_row_id,
+                                row.template_arguments,
+                                rapidpro_container,
+                                row.new_name,
+                                definition=definition,
+                            )
+
+                            if flow.name in flows:
+                                LOGGER.warning(
+                                    f"Multiple definitions of flow '{flow.name}'. "
+                                    "Overwriting."
+                                )
+
+                            flows[flow.name] = flow
+                elif not row.data_sheet and row.data_row_id:
+                    LOGGER.critical(
+                        "For create_flow, if data_row_id is provided, data_sheet must"
+                        " also be provided."
+                    )
+                else:
+                    flow = cls._parse_flow(
+                        row.sheet_name[0],
+                        row.data_sheet,
+                        row.data_row_id,
+                        row.template_arguments,
+                        rapidpro_container,
+                        row.new_name,
+                        definition=definition,
+                    )
+
+                    if flow.name in flows:
+                        LOGGER.warning(
+                            f"Multiple definitions of flow '{flow.name}'. "
+                            "Overwriting."
+                        )
+
+                    flows[flow.name] = flow
+
+        for flow in flows.values():
+            rapidpro_container.add_flow(flow)
