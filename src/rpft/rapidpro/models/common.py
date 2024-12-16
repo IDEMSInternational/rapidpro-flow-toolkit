@@ -4,6 +4,7 @@ from rpft.rapidpro.models.exceptions import RapidProActionError
 from rpft.rapidpro.utils import generate_new_uuid
 
 
+FIELD_KEY_MAX_LENGTH = 36
 RESERVED_FIELD_KEYS = [
     "created_by",
     "created_on",
@@ -91,19 +92,21 @@ class FlowReference:
 
 
 def generate_field_key(field_name):
-    field_key = field_name.strip().lower().replace(" ", "_")
+    key = field_name.strip().lower().replace(" ", "_")
 
-    if not len(field_key) <= 36:
+    if len(key) > FIELD_KEY_MAX_LENGTH:
         raise RapidProActionError(
-            "Contact field keys should be no longer than 36 characters."
+            "Contact field key length limit exceeded",
+            {"length": len(key), "limit": FIELD_KEY_MAX_LENGTH, "key": key}
         )
 
-    if not re.search("[A-Za-z]", field_key):
+    if not re.search("[A-Za-z]", key):
         raise RapidProActionError(
-            "Contact field keys should contain at least one letter."
+            "Contact field key without letter characters detected",
+            {"key": key, "name": field_name}
         )
 
-    return field_key
+    return key
 
 
 def generate_field_name(field_name):
