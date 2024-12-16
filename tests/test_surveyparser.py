@@ -70,9 +70,9 @@ class TestSurveyParser(TestTemplate):
         )
         survey_data = csv_join(
             "ID,type,question,variable,completion_variable,expiration.message",
-            "name,text,Enter your name,name,name_complete,",
-            "else,text,Enter something else,else,else_complete,You waited too long",
-            "age,text,Enter your age,,,",
+            "first,text,First question?,first,first_complete,",
+            "second,text,Second question?,second,second_complete,You waited too long",
+            "third,text,Third question?,,,",
         )
 
         output = (
@@ -90,34 +90,34 @@ class TestSurveyParser(TestTemplate):
 
         self.assertFlowMessages(
             output,
-            "survey - Survey Name - question - name",
+            "survey - Survey Name - question - first",
             [
                 ("set_run_result", "dummy"),
-                ("send_msg", "Enter your name"),
-                ("set_contact_field", "name"),
-                ("set_contact_field", "name_complete"),
+                ("send_msg", "First question?"),
+                ("set_contact_field", "first"),
+                ("set_contact_field", "first_complete"),
             ],
-            Context(inputs=["My name"]),
+            Context(inputs=["First answer"]),
         )
 
         self.assertFlowMessages(
             output,
-            "survey - Survey Name - question - age",
+            "survey - Survey Name - question - third",
             [
                 ("set_run_result", "dummy"),
-                ("send_msg", "Enter your age"),
-                ("set_contact_field", "sq_surveyname_age"),
-                ("set_contact_field", "sq_surveyname_age_complete"),
+                ("send_msg", "Third question?"),
+                ("set_contact_field", "sq_surveyname_third"),
+                ("set_contact_field", "sq_surveyname_third_complete"),
             ],
-            Context(inputs=["23"]),
+            Context(inputs=["Third answer"]),
         )
 
         self.assertFlowMessages(
             output,
             "survey - Survey Name",
             [
-                ("enter_flow", "survey - Survey Name - question - name"),
-                ("enter_flow", "survey - Survey Name - question - else"),
+                ("enter_flow", "survey - Survey Name - question - first"),
+                ("enter_flow", "survey - Survey Name - question - second"),
                 ("send_msg", "You waited too long"),
                 ("set_run_result", "expired"),
             ],
@@ -128,9 +128,9 @@ class TestSurveyParser(TestTemplate):
             output,
             "survey - Survey Name",
             [
-                ("enter_flow", "survey - Survey Name - question - name"),
-                ("enter_flow", "survey - Survey Name - question - else"),
-                ("enter_flow", "survey - Survey Name - question - age"),
+                ("enter_flow", "survey - Survey Name - question - first"),
+                ("enter_flow", "survey - Survey Name - question - second"),
+                ("enter_flow", "survey - Survey Name - question - third"),
                 ("set_run_result", "proceed"),
             ],
             Context(inputs=["completed", "completed", "completed"]),
@@ -140,7 +140,7 @@ class TestSurveyParser(TestTemplate):
             output,
             "survey - Survey Name",
             [
-                ("enter_flow", "survey - Survey Name - question - name"),
+                ("enter_flow", "survey - Survey Name - question - first"),
             ],
             Context(inputs=["completed"], variables={"@child.results.stop": "yes"}),
         )

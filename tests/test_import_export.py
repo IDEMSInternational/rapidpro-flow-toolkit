@@ -121,20 +121,26 @@ class TestImportExport(unittest.TestCase):
 
     def test_campaign_events(self):
         self.maxDiff = None
-        filenamesList = self.data_dir.glob("campaigns/event_*.json")
-        for filename in filenamesList:
+
+        for filename in self.data_dir.glob("campaigns/event_*.json"):
             with open(filename, "r") as f:
                 data = json.load(f)
-            event = CampaignEvent.from_dict(data)
-            render_output = event.render()
-            self.assertEqual(render_output, data, msg=filename)
+
+            self.assertEqual(
+                CampaignEvent.from_dict(data).render(),
+                data,
+                msg=filename,
+            )
 
     def test_campaigns(self):
         self.maxDiff = None
-        filenamesList = self.data_dir.glob("campaigns/campaign_*.json")
-        for filename in filenamesList:
+
+        for filename in self.data_dir.glob("campaigns/campaign_*.json"):
             with open(filename, "r") as f:
                 data = json.load(f)
-            campaign = Campaign.from_dict(data)
-            render_output = campaign.render()
-            self.assertEqual(render_output, data, msg=filename)
+
+            self.assertEqual(
+                Campaign.from_dict(data).render(),
+                data,
+                msg=filename,
+            )

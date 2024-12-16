@@ -4,6 +4,40 @@ from rpft.rapidpro.models.exceptions import RapidProActionError
 from rpft.rapidpro.utils import generate_new_uuid
 
 
+RESERVED_FIELD_KEYS = [
+    "created_by",
+    "created_on",
+    "discord",
+    "ext",
+    "facebook",
+    "fcm",
+    "first_name",
+    "freshchat",
+    "groups",
+    "has",
+    "id",
+    "instagram",
+    "is",
+    "jiochat",
+    "language",
+    "line",
+    "mailto",
+    "modified_by",
+    "name",
+    "rocketchat",
+    "scheme",
+    "tel",
+    "telegram",
+    "twitter",
+    "twitterid",
+    "uuid",
+    "viber",
+    "vk",
+    "wechat",
+    "whatsapp",
+]
+
+
 def mangle_string(string):
     string = re.sub(r"[. ]", "_", string)
     string = re.sub(r"[^A-Za-z0-9\_\-]+", "", string)
@@ -58,14 +92,17 @@ class FlowReference:
 
 def generate_field_key(field_name):
     field_key = field_name.strip().lower().replace(" ", "_")
+
     if not len(field_key) <= 36:
         raise RapidProActionError(
             "Contact field keys should be no longer than 36 characters."
         )
+
     if not re.search("[A-Za-z]", field_key):
         raise RapidProActionError(
             "Contact field keys should contain at least one letter."
         )
+
     return field_key
 
 
@@ -75,22 +112,50 @@ def generate_field_name(field_name):
 
 
 class ContactFieldReference:
-    def from_dict(data):
-        return ContactFieldReference(**data)
 
-    def __init__(self, name, key=None, type=None):
-        self.name = generate_field_name(name)
+    def __init__(self, name, key=None, value_type=None):
         self.key = key or generate_field_key(name)
-        self.type = type
+        self.name = generate_field_name(name)
+        self.value_type = value_type
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
 
     def render(self):
-        render_dict = {"name": self.name, "key": self.key}
-        if self.type:
-            render_dict["type"] = type
-        return render_dict
+        data = {"key": self.key}
 
-    def render_with_label(self):
-        return {"label": self.name, "key": self.key}
+        if self.value_type:
+            data["type"] = self.value_type
+
+        return data
+
+
+class SystemContactField(ContactFieldReference):
+
+    def render(self):
+        data = super().render()
+        data["label"] = self.name
+
+        return data
+
+
+class UserContactField(ContactFieldReference):
+
+    def __init__(self, name, key=None, value_type=None):
+        super().__init__(name, key, value_type)
+
+        if self.key in RESERVED_FIELD_KEYS:
+            raise RapidProActionError(
+                "Reserved name used as user contact field key",
+                {"name": name, "key": self.key},
+            )
+
+    def render(self):
+        data = super().render()
+        data["name"] = self.name
+
+        return data
 
 
 class Group:

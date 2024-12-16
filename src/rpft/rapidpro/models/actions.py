@@ -1,10 +1,10 @@
 import copy
 
 from rpft.rapidpro.models.common import (
-    ContactFieldReference,
     FlowReference,
     Group,
     mangle_string,
+    UserContactField,
 )
 from rpft.rapidpro.models.exceptions import RapidProActionError
 from rpft.rapidpro.utils import generate_new_uuid
@@ -246,7 +246,7 @@ class SendMessageAction(Action):
                     attachments = []
                     break
 
-        out_dict = {
+        data = {
             "type": "send_message",
             "mainarg_message_text": self.text,
             "choices": self.quick_replies,
@@ -255,32 +255,39 @@ class SendMessageAction(Action):
             "video": attachment_by_type.get("video", ""),
             "attachments": attachments,
         }
+
         if hasattr(self, "templating") and self.templating:
-            out_dict.update(
-                {
-                    "wa_template": WhatsAppMessageTemplating.to_whats_app_templating_dict(
-                        self.templating
-                    )
-                }
+            data["wa_template"] = (
+                WhatsAppMessageTemplating.to_whats_app_templating_dict(self.templating)
             )
-        return out_dict
+
+        return data
 
 
 class SetContactFieldAction(Action):
+
+    VALUE_LENGTH_LIMIT = 640
+
     def __init__(self, field_name, value):
         super().__init__("set_contact_field")
-        self.field = ContactFieldReference(field_name)
+        self.field = UserContactField(field_name)
         self.value = value
-        if len(value) > 640:
+
+        if len(value) > SetContactFieldAction.VALUE_LENGTH_LIMIT:
             raise RapidProActionError(
-                "Contact fields are limited to 640 characters, but value has length"
-                f" {len(value)}"
+                "Contact field value length limit exceeded",
+                {
+                    "length": len(value),
+                    "limit": SetContactFieldAction.VALUE_LENGTH_LIMIT,
+                    "name": field_name,
+                    "value": value,
+                },
             )
 
     def _assign_fields_from_dict(self, data):
         assert "field" in data
         data_copy = copy.deepcopy(data)
-        data_copy["field"] = ContactFieldReference(**data_copy["field"])
+        data_copy["field"] = UserContactField(**data_copy["field"])
         super()._assign_fields_from_dict(data_copy)
 
     def main_value(self):

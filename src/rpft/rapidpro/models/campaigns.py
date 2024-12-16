@@ -1,7 +1,7 @@
 import copy
 
 from rpft.rapidpro.utils import generate_new_uuid
-from rpft.rapidpro.models.common import Group, FlowReference, ContactFieldReference
+from rpft.rapidpro.models.common import FlowReference, Group, SystemContactField
 
 
 class CampaignEvent:
@@ -27,29 +27,35 @@ class CampaignEvent:
         self.unit = unit
         self.event_type = event_type
         self.delivery_hour = delivery_hour
-        self.message = message  # dict, keys: language IDs, values: message text
-        self.relative_to = relative_to or ContactFieldReference(
-            relative_to_label, relative_to_key
+        # dict, keys: language IDs, values: message text
+        self.message = message
+        self.relative_to = relative_to or SystemContactField(
+            relative_to_label,
+            relative_to_key,
         )
         self.start_mode = start_mode
         self.flow = flow or FlowReference(flow_name, flow_uuid)
         self.base_language = base_language
+
         if event_type == "M" and (message is None or base_language is None):
             raise ValueError(
                 "CampaignEvent must have a message and base_language if the event_type"
                 " is M"
             )
+
         if event_type == "F" and self.flow is None:
             raise ValueError("CampaignEvent must have a flow if the event_type is F")
 
     def from_dict(data):
         data_copy = copy.deepcopy(data)
-        # What is called 'label' here is normally it's called 'name' for contact fields.
-        data_copy["relative_to"] = ContactFieldReference(
-            data_copy["relative_to"]["label"], data_copy["relative_to"]["key"]
+        data_copy["relative_to"] = SystemContactField(
+            data_copy["relative_to"]["label"],
+            data_copy["relative_to"]["key"],
         )
+
         if "flow" in data_copy:
             data_copy["flow"] = FlowReference(**data_copy["flow"])
+
         return CampaignEvent(**data_copy)
 
     def record_global_uuids(self, uuid_dict):
@@ -61,21 +67,24 @@ class CampaignEvent:
             self.flow.assign_uuid(uuid_dict)
 
     def render(self):
-        render_dict = {
+        data = {
             "uuid": self.uuid,
             "offset": self.offset,
             "unit": self.unit,
             "event_type": self.event_type,
             "delivery_hour": self.delivery_hour,
             "message": self.message,
-            "relative_to": self.relative_to.render_with_label(),
+            "relative_to": self.relative_to.render(),
             "start_mode": self.start_mode,
         }
+
         if self.event_type == "F" and self.flow:
-            render_dict.update({"flow": self.flow.render()})
+            data["flow"] = self.flow.render()
+
         if self.event_type == "M" and self.base_language:
-            render_dict.update({"base_language": self.base_language})
-        return render_dict
+            data["base_language"] = self.base_language
+
+        return data
 
 
 class Campaign:
