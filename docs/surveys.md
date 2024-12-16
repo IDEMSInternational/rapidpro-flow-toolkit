@@ -24,7 +24,7 @@ These are the basic fields of a question definition (can be used as column heade
 - `variable`: Variable to store the user input in. If blank, generated from the question ID as `sq_{survey_id}_{question_id}`. The survey_id/question_id is the survey's name/question ID, **in all lowercase with non-alphanumeric characters removed**
 - `completion_variable`: Variable indicating whether question has been completed. If blank, generated from the variable as `{variable}_complete`
 - `choices`: For multiple choice questions: a list of choices
-- `expiration.message`: Message that gets send when the user doesn't respond in a long time
+- `expiration.message`: Message that gets sent when the user doesn't respond in a long time
 - `expiration.time`: [not implemented]
 
 It is possible to reuse questions across multiple surveys (see `tags` below). In that case, we need to make sure that each copy of a question gets a unique name for its variables. Auto-generating the variable names from the question ID solves the question of creating unique variable names, however, we also need a way to refer to these variable names independent of the `surveyid` which is used for this.
