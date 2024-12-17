@@ -332,35 +332,40 @@ class SwitchRouter(BaseRouter):
     def get_exit_edge_pairs(self, row_id):
         pairs = []
         covered_category_uuids = set()
+
         for category in self.get_categories():
-            for case in self.cases:
-                # Find the case matching the category.
-                if case.category_uuid == category.uuid:
+            for case_ in self.cases:
+                if case_.category_uuid == category.uuid:
                     covered_category_uuids.add(category.uuid)
                     arg_idx = 1 if self.operand == "@contact.groups" else 0
+
                     if self.operand in ["@contact.groups", "@child.run.status"]:
                         # For groups and expired/complete, var/type/name are implicit
-                        condition = Condition(value=case.arguments[arg_idx])
+                        condition = Condition(value=case_.arguments[arg_idx])
                     else:
-                        value = ""
-                        if case.type not in RouterCase.NO_ARGS_TESTS:
-                            value = case.arguments[arg_idx]
+                        value = (
+                            case_.arguments[arg_idx]
+                            if case_.type not in RouterCase.NO_ARGS_TESTS
+                            and case_.arguments[arg_idx] is not None
+                            else ""
+                        )
                         condition = Condition(
                             value=value,
                             variable=self.operand,
-                            type=case.type,
+                            type=case_.type,
                             name=category.name,
                         )
                     pairs.append(
                         (category.exit, Edge(from_=row_id, condition=condition))
                     )
                     break
+
         if self.default_category.uuid not in covered_category_uuids:
             # Sometimes, the default category is already covered by a specific case.
             # In that case, its edge has already been covered.
-            pairs.append(
-                (self.default_category.exit, Edge(from_=row_id))
-            )  # By convention, the condition is blank rather than 'Other'
+            # By convention, the condition is blank rather than 'Other'
+            pairs.append((self.default_category.exit, Edge(from_=row_id)))
+
         if self.no_response_category:
             pairs.append(
                 (
@@ -368,6 +373,7 @@ class SwitchRouter(BaseRouter):
                     Edge(from_=row_id, condition=Condition(value=category.name)),
                 )
             )
+
         return pairs
 
 
