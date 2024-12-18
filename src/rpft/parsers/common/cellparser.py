@@ -1,3 +1,5 @@
+import re
+
 from jinja2 import Environment, contextfilter
 from jinja2.nativetypes import NativeEnvironment
 
@@ -48,20 +50,7 @@ class CellParser:
             output = self.split_by_separator(string, CellParser.SEPARATORS[1])
         else:
             output = [self.split_by_separator(s, CellParser.SEPARATORS[1]) for s in l1]
-        return self.cleanse(output)
-
-    def cleanse(self, nested_list):
-        # Unescape escaped characters
-        TEMP_CHARACTER = "\1"
-        if type(nested_list) is str:
-            string = nested_list.strip()
-            string = string.replace(CellParser.ESCAPE_CHARACTER * 2, TEMP_CHARACTER)
-            for sep in CellParser.SEPARATORS:
-                string = string.replace(CellParser.ESCAPE_CHARACTER + sep, sep)
-            string = string.replace(TEMP_CHARACTER, CellParser.ESCAPE_CHARACTER)
-            return string
-        else:
-            return [self.cleanse(item) for item in nested_list]
+        return unescape(output)
 
     def split_by_separator(self, string, sep):
         pos = 0
@@ -157,3 +146,12 @@ class CellParser:
                 "Error while converting nested list into string: "
                 "Invalid type of list element."
             )
+
+
+def unescape(nested_list):
+    """Unescape escaped characters"""
+    return (
+        re.sub(r"\\(.{1})", r"\g<1>", nested_list.strip())
+        if type(nested_list) is str
+        else [unescape(item) for item in nested_list]
+    )
