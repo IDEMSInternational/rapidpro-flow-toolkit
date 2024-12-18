@@ -1,7 +1,7 @@
-import unittest
+from unittest import TestCase
 from typing import List
 
-from rpft.parsers.common.cellparser import CellParser
+from rpft.parsers.common.cellparser import CellParser, unescape
 from rpft.parsers.common.rowparser import ParserModel
 
 
@@ -14,16 +14,12 @@ class OuterModel(ParserModel):
     strings: List[str]
 
 
-class TestStringSplitter(unittest.TestCase):
+class TestStringSplitter(TestCase):
     def setUp(self):
         self.parser = CellParser()
 
     def compare_split_by_separator(self, string, exp):
         out = self.parser.split_by_separator(string, "|")
-        self.assertEqual(out, exp)
-
-    def compare_cleanse(self, string, exp):
-        out = self.parser.cleanse(string)
         self.assertEqual(out, exp)
 
     def compare_split_into_lists(self, string, exp):
@@ -41,14 +37,21 @@ class TestStringSplitter(unittest.TestCase):
         self.compare_split_by_separator("a|", ["a"])
         self.compare_split_by_separator("a\\|", "a\\|")
 
-    def test_cleanse(self):
-        self.compare_cleanse("a", "a")
-        self.compare_cleanse("a\\|", "a|")
-        self.compare_cleanse("a\\;", "a;")
-        self.compare_cleanse("a\\\\", "a\\")
-        self.compare_cleanse("a\\\\;", "a\\;")
-        self.compare_cleanse([[["a\\;"]]], [[["a;"]]])
-        self.compare_cleanse(["\\\\", "\\;"], ["\\", ";"])
+    def test_unescape(self):
+        tests = [
+            ("a", "a", "Strings without escape sequence should not change"),
+            (r"a\|", "a|", "Escape sequence should be removed"),
+            (r"a\;", "a;", "Escape sequence should be removed"),
+            (r"a\\", "a\\", "Escape sequence should be removed"),
+            (r"a\\;", r"a\;", "Escape sequence should be removed"),
+            ([[[r"a\;"]]], [[["a;"]]], "List items should be recursively cleansed"),
+            ([r"\\", r"\;"], ["\\", ";"], "List items should be recursively cleansed"),
+            (" a;\n", "a;", "White space must be removed"),
+            ([" a;\n"], ["a;"], "White space must be removed"),
+        ]
+
+        for data, expected, msg in tests:
+            self.assertEqual(unescape(data), expected, msg)
 
     SPLIT_TESTS = {
         # Not part of rejoin tests because of non-toplevel separator
@@ -104,13 +107,11 @@ class TestStringSplitter(unittest.TestCase):
             self.compare_join_from_lists(inp, outp)
 
     def test_string_stripping(self):
-        self.compare_cleanse(" a;\n", "a;")
-        self.compare_cleanse([" a;\n"], ["a;"])
         self.compare_split_into_lists(" a\n|\nb ", ["a", "b"])
         self.compare_split_into_lists("1; 2\n|\n3; 4", [["1", "2"], ["3", "4"]])
 
 
-class TestCellParser(unittest.TestCase):
+class TestCellParser(TestCase):
     def setUp(self):
         self.parser = CellParser()
 
@@ -176,7 +177,7 @@ class TestCellParser(unittest.TestCase):
         out = self.parser.parse("{{string|escape}}", context={"string": string})
         self.assertEqual(out, string)
 
-    def test_parse_native_tpye(self):
+    def test_parse_native_type(self):
         out = self.parser.parse_as_string('{@(1,2,[3,"a"])@}')
         self.assertEqual(out, (1, 2, [3, "a"]))
         out = self.parser.parse_as_string('  {@(1,2,[3,"a"])@} ')
