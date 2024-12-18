@@ -35,12 +35,12 @@ class SheetParser:
             raise ValueError("SheetParser: needs either row_parser or row_model")
         self.row_parser = row_parser or RowParser(row_model)
         self.bookmarks = {}
-        self.input_rows = []
-        for row_idx, row in enumerate(table):
-            row_dict = {h: e for h, e in zip(table.headers, row)}
-            self.input_rows.append((row_dict, row_idx + 2))
+        self.input_rows = [
+            ({h: e for h, e in zip(table.headers, row)}, row_idx)
+            for row_idx, row in enumerate(table, start=2)
+        ]
         self.iterator = iter(self.input_rows)
-        self.context = copy.deepcopy(context)
+        self.context = context if context is None else copy.deepcopy(context)
 
     def add_to_context(self, key, value):
         self.context[key] = value

@@ -1,3 +1,5 @@
+import re
+
 from jinja2 import Environment, contextfilter
 from jinja2.nativetypes import NativeEnvironment
 
@@ -157,3 +159,17 @@ class CellParser:
                 "Error while converting nested list into string: "
                 "Invalid type of list element."
             )
+
+
+class TemplatePreserver(CellParser):
+
+    def split_into_lists(self, string):
+        if "{{" in string or "{@" in string:
+            return [
+                item.strip()
+                for item in re.findall(
+                    r"(\{[{@][^\{\}]*[}@]\}|[^{}@|;]+) *[;|]? *", string
+                )
+            ]
+        else:
+            return super().split_into_lists(string)
