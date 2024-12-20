@@ -309,7 +309,7 @@ class RowParser:
                 # Otherwise leave it as a string
                 value = self.cell_parser.parse(value, context=template_context)
             else:
-                value = self.cell_parser.parse_as_string(
+                value, _ = self.cell_parser.parse_as_string(
                     value, context=template_context
                 )
         self.assign_value(field, key, value, model)

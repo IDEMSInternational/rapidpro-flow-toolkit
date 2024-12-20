@@ -13,9 +13,6 @@ class CellParserError(Exception):
 
 
 class CellParser:
-    class BooleanWrapper:
-        def __init__(self, val=False):
-            self.boolean = val
 
     # Separators by level
     # Note: split_into_lists currently assumes there are exactly two separators.
@@ -78,43 +75,44 @@ class CellParser:
             ]
 
     def parse(self, value, context={}):
-        is_object = CellParser.BooleanWrapper()
-        value = self.parse_as_string(value, context, is_object)
-        # {@ @} templating returns an object that is not processed further.
-        if is_object.boolean:
-            return value
-        else:
-            return self.split_into_lists(value)
+        value, is_object = self.parse_as_string(value, context)
 
-    def parse_as_string(self, value, context={}, is_object: BooleanWrapper = None):
-        # is_object indicates to the caller whether the parsing result represents an
-        # object that is not to be processed any further.
+        return value if is_object else self.split_into_lists(value)
+
+    def parse_as_string(self, value, context={}):
+        """
+        Render template in cell value, optionally, using the given context.
+
+        Returns a tuple consisting of the result of the rendering and a boolean that
+        indicates to the caller whether the parsing result represents an object that is
+        not to be processed any further. For example, templates that return Python types
+        other than string i.e {@ ... @}.
+        """
+        is_object = False
+
         if value is None:
-            return ""
+            return "", is_object
 
         stripped = str(value).strip()
 
         if context is None or (not context and "{" not in stripped):
-            return stripped
+            return stripped, is_object
 
         env = self.env
 
-        # Special case: Return a Python object rather than a string, if possible.
         if stripped.startswith("{@") and stripped.endswith("@}"):
             env = self.native_env
+            is_object = True
 
             # Ensure this is a single template, not e.g. '{@ x @} {@ y @}'
-            if not stripped[2:].find("{@") == -1:
+            if "{@" in stripped[2:]:
                 LOGGER.critical(
                     'Cell may not contain nested "{{@" templates.'
                     f'Cell content: "{stripped}"'
                 )
 
-            if is_object is not None:
-                is_object.boolean = True
-
         try:
-            return env.from_string(stripped).render(context)
+            return env.from_string(stripped).render(context), is_object
         except Exception as e:
             LOGGER.critical(
                 f'Error while parsing cell "{stripped}" with context "{context}":'
