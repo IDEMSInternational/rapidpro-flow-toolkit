@@ -1,6 +1,5 @@
 import logging
 from collections import ChainMap
-import sys
 
 
 LOGGER_NAME = "main"
@@ -39,12 +38,11 @@ class logging_context:
         logging_context_handler.add(self.processing_unit, **self.kwargs)
 
     def __exit__(self, exc_type, exc_value, exc_tb):
-        logging_context_handler.pop()
+        if exc_type is None:
+            logging_context_handler.pop()
 
 
 class ContextFilter(logging.Filter):
-    def __init__(self):
-        super(ContextFilter, self).__init__()
 
     def filter(self, record):
         record.processing_stack = " | ".join(
@@ -54,30 +52,12 @@ class ContextFilter(logging.Filter):
         return True
 
 
-class ShutdownHandler(logging.FileHandler):
-    def emit(self, record):
-        super().emit(record)
-        if record.levelno >= logging.CRITICAL:
-            # raise Exception(self.format(record))
-            print(f"{self.format(record)}", file=sys.stderr)
-            sys.exit(1)
-
-
-def get_logger():
-    return logging.getLogger(LOGGER_NAME)
-
-
 def initialize_main_logger(file_path="errors.log"):
-    LOGGER = logging.getLogger(LOGGER_NAME)
-    LOGGER.setLevel(logging.INFO)
-    context_filter = ContextFilter()
-    LOGGER.addFilter(context_filter)
-    # We're currently not using the context_variables, so don't print them.
-    # If needed, add "Context: %(context_variables)s" to the format string below
-    stdout_formatter = logging.Formatter(
-        "%(levelname)s: %(processing_stack)s: %(message)s\n"
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(levelname)s:%(name)s: %(processing_stack)s: %(message)s",
     )
-    stdout_handler = ShutdownHandler(file_path, "w")
-    stdout_handler.setFormatter(stdout_formatter)
-    LOGGER.addHandler(stdout_handler)
-    return LOGGER
+
+    for handler in logging.root.handlers:
+        handler.addFilter(ContextFilter())
+        handler.addFilter(logging.Filter("rpft.parsers"))

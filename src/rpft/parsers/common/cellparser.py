@@ -1,11 +1,11 @@
+import logging
 import re
 
 from jinja2 import Environment, contextfilter
 from jinja2.nativetypes import NativeEnvironment
 
-from rpft.logger.logger import get_logger
 
-LOGGER = get_logger()
+LOGGER = logging.getLogger(__name__)
 
 
 class CellParserError(Exception):
@@ -106,7 +106,7 @@ class CellParser:
 
             # Ensure this is a single template, not e.g. '{@ x @} {@ y @}'
             if "{@" in stripped[2:]:
-                LOGGER.critical(
+                raise Exception(
                     'Cell may not contain nested "{{@" templates.'
                     f'Cell content: "{stripped}"'
                 )
@@ -114,7 +114,7 @@ class CellParser:
         try:
             return env.from_string(stripped).render(context), is_object
         except Exception as e:
-            LOGGER.critical(
+            raise Exception(
                 f'Error while parsing cell "{stripped}" with context "{context}":'
                 f" {str(e)}"
             )
