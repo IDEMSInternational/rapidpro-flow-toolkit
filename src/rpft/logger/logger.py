@@ -2,9 +2,6 @@ import logging
 from collections import ChainMap
 
 
-LOGGER_NAME = "main"
-
-
 class LoggingContextHandler:
     def __init__(self):
         self.context_variables = []
@@ -26,7 +23,7 @@ class LoggingContextHandler:
         self.context_variables.pop()
 
 
-logging_context_handler = LoggingContextHandler()
+_context = LoggingContextHandler()
 
 
 class logging_context:
@@ -35,29 +32,26 @@ class logging_context:
         self.kwargs = kwargs
 
     def __enter__(self):
-        logging_context_handler.add(self.processing_unit, **self.kwargs)
+        _context.add(self.processing_unit, **self.kwargs)
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         if exc_type is None:
-            logging_context_handler.pop()
+            _context.pop()
 
 
 class ContextFilter(logging.Filter):
 
     def filter(self, record):
-        record.processing_stack = " | ".join(
-            logging_context_handler.get_processing_stack()
-        )
-        record.context_variables = logging_context_handler.get_context_variables()
+        record.processing_stack = " | ".join(_context.get_processing_stack())
+        record.context_variables = _context.get_context_variables()
         return True
 
 
 def initialize_main_logger(file_path="errors.log"):
+    handler = logging.FileHandler(file_path, "w")
+    handler.addFilter(ContextFilter())
     logging.basicConfig(
         level=logging.INFO,
         format="%(levelname)s:%(name)s: %(processing_stack)s: %(message)s",
+        handlers=[handler],
     )
-
-    for handler in logging.root.handlers:
-        handler.addFilter(ContextFilter())
-        handler.addFilter(logging.Filter("rpft.parsers"))

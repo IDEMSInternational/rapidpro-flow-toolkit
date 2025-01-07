@@ -1,12 +1,8 @@
 import copy
-import logging
 
 from rpft.parsers.common.rowdatasheet import RowDataSheet
 from rpft.parsers.common.rowparser import RowParser
 from rpft.logger.logger import logging_context
-
-
-LOGGER = logging.getLogger(__name__)
 
 
 class SheetParser:
@@ -44,7 +40,6 @@ class SheetParser:
             self.input_rows.append((row_dict, row_idx + 2))
         self.iterator = iter(self.input_rows)
         self.context = copy.deepcopy(context)
-        LOGGER.info("Sheet reader created")
 
     def add_to_context(self, key, value):
         self.context[key] = value
