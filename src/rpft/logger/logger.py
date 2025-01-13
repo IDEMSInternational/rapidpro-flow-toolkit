@@ -48,10 +48,17 @@ class ContextFilter(logging.Filter):
 
 
 def initialize_main_logger(file_path="errors.log"):
-    handler = logging.FileHandler(file_path, "w")
-    handler.addFilter(ContextFilter())
+    context_filter = ContextFilter()
+
+    file_handler = logging.FileHandler(file_path, "w")
+    file_handler.addFilter(context_filter)
+
+    console_handler = logging.StreamHandler()
+    console_handler.addFilter(context_filter)
+    console_handler.setLevel(logging.CRITICAL)
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(levelname)s:%(name)s: %(processing_stack)s: %(message)s",
-        handlers=[handler],
+        handlers=[file_handler, console_handler],
     )
