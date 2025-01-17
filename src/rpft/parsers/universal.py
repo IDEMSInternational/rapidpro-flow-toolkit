@@ -99,8 +99,8 @@ def parse_content_index(reader, name):
 def parse_sheet(model, sheet: Sheet):
     try:
         return SheetParser(
-            RowParser(model, TemplatePreserver()),
             sheet.table,
+            row_parser=RowParser(model, TemplatePreserver()),
             context=None,
         ).parse_all()
     except Exception as e:
@@ -236,11 +236,11 @@ def stream(
     headers: Sequence[str] = tuple(),
     rows: Sequence[Sequence[str]] = tuple(),
 ):
-    yield [(META_KEY, TABULATE_KEY, title, HEADERS_KEY), headers]
+    yield [META_KEY, TABULATE_KEY, title, HEADERS_KEY], headers
 
     for i, row in enumerate(rows):
         for h, v in zip(keypaths(headers), row):
-            yield [[title, i] + h, convert_cell(v)]
+            yield [title, i] + h, convert_cell(v)
 
 
 def keypaths(headers):
