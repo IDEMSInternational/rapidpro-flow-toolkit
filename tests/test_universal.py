@@ -4,6 +4,7 @@ from rpft.parsers.sheets import DatasetSheetReader
 from rpft.parsers.universal import (
     convert_cell,
     create_workbook,
+    parse_cell,
     parse_legacy_sheets,
     parse_table,
     parse_tables,
@@ -107,14 +108,14 @@ class TestConvertUniversalToTable(TestCase):
 
         table = tabulate(data)
 
-        self.assertEqual(table[1], ["prop1: val1 | prop2: val2"])
+        self.assertEqual(table[1], ["prop1; val1 | prop2; val2"])
 
     def test_object_with_single_property_within_cell_has_trailing_separator(self):
         data = [{"obj": {"k": "v"}}]
 
         table = tabulate(data)
 
-        self.assertEqual(table[1], ["k: v |"])
+        self.assertEqual(table[1], ["k; v |"])
 
     def test_objects_use_wide_layout_if_indicated_by_metadata(self):
         meta = {"headers": ["obj1.k1", "obj1.k2", "seq1.1.k1", "seq1.2.k2"]}
@@ -524,7 +525,6 @@ class TestConvertTableToNested(TestCase):
         parsed = parse_table(headers=["a"] * 4, rows=[("one", "2", "true", "3.4")])
 
         self.assertEqual(parsed["table"][0]["a"], ["one", 2, True, 3.4])
-        # self.assertEqual(parsed["_idems"]["tabulate"]["table"]["a"]["layout"], "wide")
 
     def test_columns_with_same_name_and_delimited_strings_is_2d_array(self):
         parsed = parse_table(headers=["a"] * 2, rows=[("one | 2", "true | 3.4")])
@@ -551,45 +551,75 @@ class TestConvertTableToNested(TestCase):
     def test_nested_object_with_nested_object(self):
         parsed = parse_table(
             headers=["obj.k1"] * 2,
-            rows=[["k2: 2 | k3: false", "k4: v4 | k5: true"]],
+            rows=[["k2; 2 | k3; false", "k4; v4 | k5; true"]],
         )
 
         self.assertEqual(
             parsed["table"][0]["obj"],
-            {"k1": [{"k2": 2, "k3": False}, {"k4": "v4", "k5": True}]},
+            {"k1": [[["k2", 2], ["k3", False]], [["k4", "v4"], ["k5", True]]]},
         )
 
 
 class TestCellConversion(TestCase):
 
+    def setUp(self):
+        self.func = convert_cell
+
     def test_convert_cell_string_to_number(self):
-        self.assertEqual(convert_cell("123"), 123)
-        self.assertEqual(convert_cell("1.23"), 1.23)
+        self.assertEqual(self.func("123"), 123)
+        self.assertEqual(self.func("1.23"), 1.23)
 
     def test_output_clean_string_if_no_conversion_possible(self):
-        self.assertEqual(convert_cell("one"), "one")
-        self.assertEqual(convert_cell(" one "), "one")
-        self.assertEqual(convert_cell(""), "")
-        self.assertEqual(convert_cell("http://example.com/"), "http://example.com/")
-        self.assertEqual(convert_cell("k1: v1"), "k1: v1")
+        self.assertEqual(self.func("one"), "one")
+        self.assertEqual(self.func(" one "), "one")
+        self.assertEqual(self.func(""), "")
+        self.assertEqual(self.func("http://example.com/"), "http://example.com/")
+        self.assertEqual(self.func("k1: v1"), "k1: v1")
 
     def test_raises_error_if_not_string_input(self):
-        self.assertRaises(TypeError, convert_cell, None)
-        self.assertRaises(TypeError, convert_cell, 123)
+        self.assertRaises(TypeError, self.func, None)
+        self.assertRaises(TypeError, self.func, 123)
 
     def test_convert_cell_string_to_bool(self):
-        self.assertEqual(convert_cell("true"), True)
-        self.assertEqual(convert_cell(" true "), True)
-        self.assertEqual(convert_cell("false"), False)
+        self.assertEqual(self.func("true"), True)
+        self.assertEqual(self.func(" true "), True)
+        self.assertEqual(self.func("false"), False)
 
     def test_convert_cell_string_to_list(self):
-        self.assertEqual(convert_cell("one | 2 | false"), ["one", 2, False])
-        self.assertEqual(convert_cell("one |"), ["one"])
-        self.assertEqual(convert_cell("|"), [])
-        self.assertEqual(convert_cell("| 2 |"), [2])
-        self.assertEqual(convert_cell("k1 | v1 : k2 | v2"), ["k1", "v1 : k2", "v2"])
+        self.assertEqual(self.func("one | 2 | false"), ["one", 2, False])
+        self.assertEqual(self.func("one ; 2 ; false"), ["one", 2, False])
+        self.assertEqual(self.func("one |"), ["one"])
+        self.assertEqual(self.func("|"), [""])
+        self.assertEqual(self.func("| 2 |"), ["", 2])
+        self.assertEqual(self.func("a||"), ["a", ""])
+        self.assertEqual(self.func("k1 | v1 : k2 | v2"), ["k1", "v1 : k2", "v2"])
 
-    def test_convert_cell_string_to_dict(self):
-        self.assertEqual(convert_cell("k1: v1 |"), {"k1": "v1"})
-        self.assertEqual(convert_cell("k1: k2: v2 |"), {"k1": "k2: v2"})
-        self.assertEqual(convert_cell("k1: 1 | k2: true"), {"k1": 1, "k2": True})
+    def test_convert_cell_string_to_list_of_lists(self):
+        self.assertEqual(self.func("k1; v1 |"), [["k1", "v1"]])
+        self.assertEqual(self.func("k1; k2; v2 |"), [["k1", "k2", "v2"]])
+        self.assertEqual(self.func("k1; 1 | k2; true"), [["k1", 1], ["k2", True]])
+
+    def test_inline_templates_are_preserved(self):
+        self.assertEqual(self.func("{{ template }}"), "{{ template }}")
+        self.assertEqual(self.func("{@ template @}"), "{@ template @}")
+        self.assertEqual(
+            self.func("{% if other_option!=" "%}1wc;1wt;1wb{%endif-%}"),
+            "{% if other_option!=" "%}1wc;1wt;1wb{%endif-%}",
+        )
+        self.assertEqual(self.func("{{ template }} |"), "{{ template }} |")
+        self.assertEqual(
+            self.func("{{ template }} | something | {{ blah }}"),
+            "{{ template }} | something | {{ blah }}",
+        )
+        self.assertEqual(
+            self.func(
+                "{{3*(steps.values()|length -1)}}|{{3*(steps.values()|length -1)+2}}"
+            ),
+            "{{3*(steps.values()|length -1)}}|{{3*(steps.values()|length -1)+2}}",
+        )
+
+
+class TestLarkCellConversion(TestCellConversion):
+
+    def setUp(self):
+        self.func = parse_cell
