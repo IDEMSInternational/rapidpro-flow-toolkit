@@ -7,6 +7,7 @@ from functools import singledispatch
 from typing import Any, List
 
 from benedict import benedict
+from lark import Lark, Transformer
 
 from rpft.parsers.common.cellparser import TemplatePreserver
 from rpft.parsers.common.rowparser import RowParser
@@ -19,13 +20,42 @@ from rpft.parsers.sheets import AbstractSheetReader, Sheet
 
 LOGGER = logging.getLogger(__name__)
 
-KEY_VALUE_SEP = ":"
+KEY_VALUE_SEP = ";"
 PROP_ACCESSOR = "."
 SEQ_ITEM_SEP = "|"
-DEINDEX_PATTERN = re.compile(r"(.*)\.\d+")
 META_KEY = "_idems"
 TABULATE_KEY = "tabulate"
 HEADERS_KEY = "headers"
+CELL_GRAMMAR = r"""
+?start    : TEMPLATE -> template
+          | seq
+          | item
+
+seq       : (item? "|" item?)+
+
+?item     : subseq
+          | value
+
+subseq    : (value? ";" value?)+
+
+?value    : NUMBER  -> number
+          | BOOLEAN -> boolean
+          | STRING  -> string
+          |         -> empty
+
+NUMBER    : SIGNED_NUMBER
+
+BOOLEAN   : "true"
+          | "false"
+
+TEMPLATE  : /.*{[{@%].*/
+
+STRING    : /(\\[|;]|[^|;])+/
+
+%import common (SIGNED_NUMBER, WS)
+%ignore WS
+"""
+PARSER = Lark(CELL_GRAMMAR)
 
 
 def parse_legacy_sheets(models_module: str, reader: AbstractSheetReader) -> dict:
@@ -277,7 +307,7 @@ def create_obj(pairs):
     return obj
 
 
-def convert_cell(s: str, recursive=True) -> Any:
+def convert_cell(s: str, delimiters=["|", ";"]) -> Any:
     if type(s) is not str:
         raise TypeError("Value to convert is not a string")
 
@@ -296,22 +326,60 @@ def convert_cell(s: str, recursive=True) -> Any:
     if clean in ("true", "false"):
         return clean == "true"
 
-    if recursive and KEY_VALUE_SEP in s and SEQ_ITEM_SEP in s:
-        try:
-            props = [p.split(KEY_VALUE_SEP, 1) for p in s.split(SEQ_ITEM_SEP) if p]
+    if is_template(clean):
+        return clean
 
-            return {k.strip(): convert_cell(v, recursive=False) for k, v in props}
-        except Exception:
-            pass
+    delim, *delims = delimiters if delimiters else [None]
 
-    if recursive and SEQ_ITEM_SEP in s:
-        try:
-            return [
-                convert_cell(item, recursive=False)
-                for item in s.split(SEQ_ITEM_SEP)
-                if item
-            ]
-        except Exception:
-            pass
+    if delim and delim in clean:
+        seq = [convert_cell(item, delimiters=delims) for item in clean.split(delim)]
+
+        return seq[:-1] if clean and clean[-1] == delim else seq
+
+    if any(s in clean for s in delims):
+        return convert_cell(clean, delimiters=delims)
 
     return clean
+
+
+def is_template(s: str) -> bool:
+    return bool(re.match("{{.*?}}|{@.*?@}|{%.*?%}", s))
+
+
+class CellTransformer(Transformer):
+
+    seq = subseq = list
+
+    def boolean(self, tokens):
+        return (tokens[0]).strip() == "true"
+
+    def empty(self, tokens):
+        return ""
+
+    def number(self, tokens):
+        token = (tokens[0]).strip()
+
+        try:
+            return int(token)
+        except Exception:
+            pass
+
+        try:
+            return float(token)
+        except Exception:
+            pass
+
+        raise Exception(f"Conversion to number failed, token={token}")
+
+    def string(self, tokens):
+        return re.sub(r"\\(.{1})", r"\g<1>", tokens[0].strip())
+
+    def template(self, tokens):
+        return self.string(tokens)
+
+
+def parse_cell(cell: str) -> Any:
+    if type(cell) is not str:
+        raise TypeError("Value to convert must be a string")
+
+    return CellTransformer().transform(PARSER.parse(cell)) if cell else ""

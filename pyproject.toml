@@ -30,6 +30,7 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
+    "lark",
     "Jinja2~=3.0.3",
     "google-api-python-client~=2.6.0",
     "google-auth-oauthlib~=0.4.4",
