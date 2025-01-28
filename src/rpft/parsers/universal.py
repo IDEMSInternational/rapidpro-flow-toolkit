@@ -1,4 +1,3 @@
-import importlib
 import logging
 import re
 from collections import defaultdict
@@ -9,14 +8,7 @@ from typing import Any, List
 from benedict import benedict
 from lark import Lark, Transformer
 
-from rpft.parsers.common.cellparser import TemplatePreserver
-from rpft.parsers.common.rowparser import RowParser
-from rpft.parsers.common.sheetparser import SheetParser
-from rpft.parsers.creation.campaigneventrowmodel import CampaignEventRowModel
-from rpft.parsers.creation.contentindexrowmodel import ContentIndexRowModel
-from rpft.parsers.creation.flowrowmodel import FlowTemplateStatement
-from rpft.parsers.creation.triggerrowmodel import TriggerRowModel
-from rpft.parsers.sheets import AbstractSheetReader, Sheet
+from rpft.parsers.sheets import AbstractSheetReader
 
 LOGGER = logging.getLogger(__name__)
 
@@ -56,128 +48,6 @@ STRING    : /(\\[|;]|[^|;])+/
 %ignore WS
 """
 PARSER = Lark(CELL_GRAMMAR)
-
-
-def parse_legacy_sheets(models_module: str, reader: AbstractSheetReader) -> dict:
-    """
-    Convert multiple sheets in the legacy format into a nested data structure
-    """
-    content_index: List[ContentIndexRowModel] = {
-        entry.sheet_name[0]: entry
-        for entry in parse_content_index(
-            reader,
-            "content_index",
-        )
-        if len(entry.sheet_name) == 1
-    }
-    model_finder = ModelFinder(models_module)
-    data = {}
-    meta = {}
-    unconverted = []
-
-    for name, sheet in reader.sheets.items():
-        if name in content_index:
-            model = model_finder.find_for_entry(content_index[name])
-
-            if sheet and model:
-                data[name] = to_dicts(parse_sheet(model, sheet))
-            else:
-                LOGGER.warning(
-                    "%s not found, %s",
-                    "Sheet" if not sheet else "Model",
-                    {"sheet": name, "model": model},
-                )
-        elif name == "content_index":
-            data[name] = to_dicts(parse_sheet(ContentIndexRowModel, sheet))
-        else:
-            data[name] = [list(sheet.table.headers)] + [list(r) for r in sheet.table]
-            unconverted += [name]
-
-        meta[name] = {HEADERS_KEY: sheet.table.headers}
-
-    LOGGER.info(
-        str(
-            {
-                "index": {"count": len(data)},
-                "sheets": {"count": len(reader.sheets)},
-                "unconverted": {"count": len(unconverted), "names": unconverted},
-            }
-        )
-    )
-
-    data[META_KEY] = {TABULATE_KEY: meta}
-
-    return data
-
-
-def parse_content_index(reader, name):
-    content_index: List[ContentIndexRowModel] = parse_sheet(
-        ContentIndexRowModel,
-        reader.get_sheet(name),
-    )
-    acc = []
-
-    for entry in content_index:
-        acc += [entry]
-
-        if entry.type == "content_index":
-            acc += parse_content_index(reader, entry.sheet_name[0])
-
-    return acc
-
-
-def parse_sheet(model, sheet: Sheet):
-    try:
-        return SheetParser(
-            sheet.table,
-            row_parser=RowParser(model, TemplatePreserver()),
-            context=None,
-        ).parse_all()
-    except Exception as e:
-        raise Exception(
-            "Parse failed",
-            {"sheet": sheet.name if sheet else None, "model": model},
-            e,
-        )
-
-
-def to_dicts(instances):
-    objs = []
-
-    for instance in instances:
-        obj = instance.dict(by_alias=True, exclude_unset=True)
-
-        if "template_argument_definitions" in obj:
-            obj["template_arguments"] = obj.pop("template_argument_definitions")
-
-        objs += [obj]
-
-    return objs
-
-
-class ModelFinder:
-    type_model_map = {
-        "content_index": ContentIndexRowModel,
-        "create_campaign": CampaignEventRowModel,
-        "create_flow": FlowTemplateStatement,
-        "create_triggers": TriggerRowModel,
-        "template_definition": FlowTemplateStatement,
-    }
-
-    def __init__(self, module=None):
-        self._module = importlib.import_module(module) if module else None
-
-    def find_for_entry(self, entry):
-        if entry.type in self.type_model_map:
-            return self.type_model_map.get(entry.type)
-
-        if entry.data_model:
-            try:
-                return getattr(self._module, entry.data_model)
-            except AttributeError:
-                pass
-
-        return None
 
 
 def create_workbook(data: dict) -> list:
