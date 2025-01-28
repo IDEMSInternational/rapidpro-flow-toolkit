@@ -39,17 +39,6 @@ def flows_to_sheets(args):
     )
 
 
-def legacy_sheets_to_uni(args):
-    data: dict = converters.legacy_sheets_to_uni(
-        args.input,
-        args.format,
-        data_models=args.models,
-    )
-
-    with open(args.output, "w", encoding="utf-8") as export:
-        json.dump(data, export, indent=2)
-
-
 def uni_to_sheets(args):
     with open(args.output, "wb") as handle:
         handle.write(converters.uni_to_sheets(args.input))
@@ -75,7 +64,6 @@ def create_parser():
     _add_create_command(sub)
     _add_convert_command(sub)
     _add_flows_to_sheets_command(sub)
-    _add_legacy_to_uni_command(sub)
     _add_uni_to_sheets_command(sub)
     _add_sheets_to_uni_command(sub)
 
@@ -186,36 +174,6 @@ def _add_flows_to_sheets_command(sub):
     parser.add_argument(
         "output",
         help=("output folder"),
-    )
-
-
-def _add_legacy_to_uni_command(sub):
-    parser = sub.add_parser(
-        "legacy-to-uni",
-        help="convert legacy sheets to nested JSON",
-    )
-
-    parser.set_defaults(func=legacy_sheets_to_uni)
-    parser.add_argument(
-        "input",
-        help=(
-            "location of workbook (xlsx, Google Sheets) or directory containing CSVs"
-        ),
-    )
-    parser.add_argument(
-        "output",
-        help=("location where JSON output file will be saved"),
-    )
-    parser.add_argument(
-        "--models",
-        help=("name of the Python module defining user data models"),
-    )
-    parser.add_argument(
-        "-f",
-        "--format",
-        choices=["csv", "google_sheets", "xlsx"],
-        help="input sheet format",
-        required=True,
     )
 
 
