@@ -142,17 +142,6 @@ class TestConvertUniversalToTable(TestCase):
             ["obj1_k1_v", "obj1_k2_v", "seq1_k1_v", "seq1_k2_v"],
         )
 
-    def test_2d_arrays_are_passed_through(self):
-        meta = {"headers": ["A", "B"]}
-        data = [
-            ["A", "B"],
-            ["a1", "b1"],
-        ]
-
-        table = tabulate(data, meta)
-
-        self.assertEqual(table, data)
-
     # TODO: test pointers/references
     # TODO: add explicit type information
     # TODO: integrate zero-knowledge type inference
@@ -181,6 +170,20 @@ class TestUniversalToWorkbook(TestCase):
             workbook[1][1],
             [["B", "A"], ["B1", "A1"]],
             "Columns should be ordered according to metadata",
+        )
+        self.assertEqual(
+            data,
+            {
+                "group1": [{"a": "a1", "b": "b1"}],
+                "group2": [{"A": "A1", "B": "B1"}],
+                "_idems": {
+                    "tabulate": {
+                        "group1": {"headers": ["a", "b"]},
+                        "group2": {"headers": ["B", "A"]},
+                    },
+                },
+            },
+            "Input data should not be mutated"
         )
 
 
