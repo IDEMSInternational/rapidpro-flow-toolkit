@@ -153,17 +153,3 @@ def unescape(nested_list):
         if type(nested_list) is str
         else [unescape(item) for item in nested_list]
     )
-
-
-class TemplatePreserver(CellParser):
-
-    def split_into_lists(self, string):
-        if "{{" in string or "{@" in string:
-            return [
-                item.strip()
-                for item in re.findall(
-                    r"(\{[{@][^\{\}]*[}@]\}|[^{}@|;]+) *[;|]? *", string
-                )
-            ]
-        else:
-            return super().split_into_lists(string)
