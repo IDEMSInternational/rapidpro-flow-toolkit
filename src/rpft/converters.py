@@ -5,7 +5,7 @@ import re
 import shutil
 from pathlib import Path
 
-from rpft.parsers.universal import create_workbook, parse_legacy_sheets, parse_tables
+from rpft.parsers.universal import create_workbook, parse_tables
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import (
@@ -50,15 +50,6 @@ def create_flows(input_files, output_file, sheet_format, data_models=None, tags=
             json.dump(flows, export, indent=4)
 
     return flows
-
-
-def legacy_sheets_to_uni(in_file, sheet_format, data_models=None) -> dict:
-    """
-    Convert legacy data sheets to universal format
-    """
-    reader = create_sheet_reader(sheet_format, in_file)
-
-    return parse_legacy_sheets(data_models, reader)
 
 
 def uni_to_sheets(infile) -> bytes:
