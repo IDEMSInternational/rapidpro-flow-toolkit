@@ -12,9 +12,9 @@ from rpft.parsers.sheets import AbstractSheetReader
 
 LOGGER = logging.getLogger(__name__)
 
-KEY_VALUE_SEP = ";"
+DELIM_LVL_1 = "|"
+DELIM_LVL_2 = ";"
 PROP_ACCESSOR = "."
-SEQ_ITEM_SEP = "|"
 META_KEY = "_idems"
 TABULATE_KEY = "tabulate"
 HEADERS_KEY = "headers"
@@ -51,26 +51,24 @@ PARSER = Lark(CELL_GRAMMAR)
 
 
 def create_workbook(data: dict) -> list:
-    meta = data.pop(META_KEY, {}).get(TABULATE_KEY, {})
+    meta = data.get(META_KEY, {}).get(TABULATE_KEY, {})
 
-    return [(k, tabulate(v, meta.get(k, {}))) for k, v in data.items()]
+    return [(k, tabulate(v, meta.get(k, {}))) for k, v in data.items() if k != META_KEY]
 
 
 def tabulate(data, meta: dict = {}) -> List[List[str]]:
     """
     Convert a nested data structure to a tabular form
     """
-    if all(type(item) is list for item in data):
-        return data
-
     headers = meta.get(HEADERS_KEY, []) or list(
-        {k: None for item in data for k, v in item.items()}.keys()
+        {k: None for item in data for k, _ in item.items()}.keys()
     )
+    paths = keypaths(headers)
     rows = []
 
     for item in data:
         obj = benedict(item)
-        rows += [[stringify(obj[kp]) for kp in keypaths(headers)]]
+        rows += [[stringify(obj[kp]) for kp in paths]]
 
     return [headers] + rows
 
@@ -83,19 +81,19 @@ def stringify(value) -> str:
 @stringify.register
 def _(value: dict) -> str:
 
-    s = " | ".join(
-        f"{stringify(k)}{KEY_VALUE_SEP} {stringify(v)}" for k, v in value.items()
+    s = f" {DELIM_LVL_1} ".join(
+        f"{stringify(k)}{DELIM_LVL_2} {stringify(v)}" for k, v in value.items()
     )
 
     if len(value) == 1:
-        s += " " + SEQ_ITEM_SEP
+        s += " " + DELIM_LVL_1
 
     return s
 
 
 @stringify.register
 def _(value: list) -> str:
-    return " | ".join(stringify(i) for i in value)
+    return f" {DELIM_LVL_1} ".join(stringify(i) for i in value)
 
 
 @stringify.register
@@ -177,7 +175,7 @@ def create_obj(pairs):
     return obj
 
 
-def convert_cell(s: str, delimiters=["|", ";"]) -> Any:
+def convert_cell(s: str, delimiters=[DELIM_LVL_1, DELIM_LVL_2]) -> Any:
     if type(s) is not str:
         raise TypeError("Value to convert is not a string")
 
