@@ -2,8 +2,8 @@ from unittest import TestCase
 
 from rpft.parsers.sheets import DatasetSheetReader
 from rpft.parsers.universal import (
+    bookify,
     convert_cell,
-    create_workbook,
     parse_cell,
     parse_table,
     parse_tables,
@@ -66,14 +66,37 @@ class TestConvertUniversalToTable(TestCase):
 
     def test_arrays_use_single_cell_layout_by_default(self):
         data = [
-            {
-                "choices": ["yes", "no", 1, False],
-            },
+            {"h1": ["yes", "no", 1, False]},
+            {"h1": ("yes", "no", 1, False)},
         ]
 
         table = tabulate(data)
 
         self.assertEqual(table[1], ["yes | no | 1 | false"])
+        self.assertEqual(table[2], ["yes | no | 1 | false"])
+
+    def test_single_item_array(self):
+        data = [{"k1": ["seq1v1"]}]
+
+        table = tabulate(data)
+
+        self.assertEqual(table[1][0], "seq1v1 |")
+
+    def test_nested_arrays_within_a_single_cell(self):
+        data = [
+            {"k1": ["seq1v1", ["seq2v1", "seq2v2"]]},
+        ]
+
+        table = tabulate(data)
+
+        self.assertEqual(table[1][0], "seq1v1 | seq2v1 ; seq2v2")
+
+    def test_raise_exception_if_too_much_nesting_for_a_single_cell(self):
+        data = [
+            {"k1": ["seq1v1", ["seq2v1", ["seq3v1"]]]},
+        ]
+
+        self.assertRaises(Exception, tabulate, data)
 
     def test_arrays_use_wide_layout_if_indicated_by_metadata(self):
         meta = {
@@ -160,7 +183,7 @@ class TestUniversalToWorkbook(TestCase):
             },
         }
 
-        workbook = create_workbook(data)
+        workbook = bookify(data)
 
         self.assertEqual(len(workbook), 2)
         self.assertEqual(workbook[0][0], "group1")
@@ -183,7 +206,7 @@ class TestUniversalToWorkbook(TestCase):
                     },
                 },
             },
-            "Input data should not be mutated"
+            "Input data should not be mutated",
         )
 
 
