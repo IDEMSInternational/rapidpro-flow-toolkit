@@ -4,7 +4,6 @@ from rpft.parsers.sheets import DatasetSheetReader
 from rpft.parsers.universal import (
     bookify,
     convert_cell,
-    parse_cell,
     parse_table,
     parse_tables,
     tabulate,
@@ -360,9 +359,3 @@ class TestCellConversion(TestCase):
             ),
             "{{3*(steps.values()|length -1)}}|{{3*(steps.values()|length -1)+2}}",
         )
-
-
-class TestLarkCellConversion(TestCellConversion):
-
-    def setUp(self):
-        self.func = parse_cell
