@@ -3,7 +3,7 @@ import re
 from collections import defaultdict
 from collections.abc import Sequence
 from functools import singledispatch
-from typing import Any, TypeAlias, Union
+from typing import Any
 
 from benedict import benedict
 from lark import Lark, Transformer
@@ -48,8 +48,8 @@ STRING    : /(\\[|;]|[^|;])+/
 %ignore WS
 """
 PARSER = Lark(CELL_GRAMMAR)
-Table: TypeAlias = list[list[str]]
-Book: TypeAlias = list[tuple[str, Table]]
+Table = list[list[str]]
+Book = list[tuple[str, Table]]
 
 
 def bookify(data: dict) -> Book:
@@ -97,7 +97,7 @@ def _(value: dict, **_) -> str:
 
 
 @stringify.register
-def _(value: Union[list, tuple], delimiters=[DELIM_LVL_1, DELIM_LVL_2]) -> str:
+def _(value: list, delimiters=[DELIM_LVL_1, DELIM_LVL_2]) -> str:
     delim, *delims = delimiters if delimiters else [None]
 
     if not delim:
@@ -106,6 +106,11 @@ def _(value: Union[list, tuple], delimiters=[DELIM_LVL_1, DELIM_LVL_2]) -> str:
     s = f" {delim} ".join(stringify(i, delimiters=delims) for i in value)
 
     return f"{s} {delim}" if len(value) == 1 else s
+
+
+@stringify.register
+def _(value: tuple, delimiters=[DELIM_LVL_1, DELIM_LVL_2]) -> str:
+    return stringify(list(value))
 
 
 @stringify.register
