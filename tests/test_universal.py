@@ -164,10 +164,6 @@ class TestConvertUniversalToTable(TestCase):
             ["obj1_k1_v", "obj1_k2_v", "seq1_k1_v", "seq1_k2_v"],
         )
 
-    # TODO: test pointers/references
-    # TODO: add explicit type information
-    # TODO: integrate zero-knowledge type inference
-
 
 class TestUniversalToWorkbook(TestCase):
     def test_assembly(self):

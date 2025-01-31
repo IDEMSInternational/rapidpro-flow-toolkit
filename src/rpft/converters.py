@@ -117,8 +117,6 @@ def flows_to_sheets(
 
 
 def create_sheet_reader(sheet_format, input_file):
-    sheet_format = sheet_format if sheet_format else detect_format(input_file)
-
     if sheet_format == "csv":
         sheet_reader = CSVSheetReader(input_file)
     elif sheet_format == "xlsx":
@@ -131,14 +129,6 @@ def create_sheet_reader(sheet_format, input_file):
         raise Exception(f"Format {sheet_format} currently unsupported.")
 
     return sheet_reader
-
-
-def detect_format(fp):
-    if bool(re.fullmatch(r"[a-z0-9_-]{44}", fp, re.IGNORECASE)):
-        return "google_sheets"
-
-    if Path(fp).suffix.lower() == ".xlsx":
-        return "xlsx"
 
 
 def sheets_to_csv(path, sheet_ids):
