@@ -10,8 +10,7 @@ from rpft.parsers.sheets import AbstractSheetReader
 
 LOGGER = logging.getLogger(__name__)
 
-DELIM_LVL_1 = "|"
-DELIM_LVL_2 = ";"
+DELIMS = "|;"
 PROP_ACCESSOR = "."
 META_KEY = "_idems"
 TABULATE_KEY = "tabulate"
@@ -52,31 +51,36 @@ def stringify(value, **_) -> str:
 
 
 @stringify.register
-def _(value: dict, **_) -> str:
-    s = f" {DELIM_LVL_1} ".join(
-        f"{stringify(k)}{DELIM_LVL_2} {stringify(v)}" for k, v in value.items()
+def _(value: dict, delimiters=DELIMS) -> str:
+    if len(delimiters) > 1:
+        d1, d2 = delimiters
+    else:
+        raise ValueError("Too few delimiters to stringify dict")
+
+    s = f" {d1} ".join(
+        f"{stringify(k)}{d2} {stringify(v, delimiters=[])}" for k, v in value.items()
     )
 
     if len(value) == 1:
-        s += " " + DELIM_LVL_1
+        s += " " + d1
 
     return s
 
 
 @stringify.register
-def _(value: list, delimiters=[DELIM_LVL_1, DELIM_LVL_2]) -> str:
-    delim, *delims = delimiters if delimiters else [None]
+def _(value: list, delimiters=DELIMS) -> str:
+    d, *delims = delimiters if delimiters else [None]
 
-    if not delim:
-        raise Exception("Value is too deeply nested")
+    if not d:
+        raise ValueError("Too few delimiters to stringify list")
 
-    s = f" {delim} ".join(stringify(i, delimiters=delims) for i in value)
+    s = f" {d} ".join(stringify(item, delimiters=delims) for item in value)
 
-    return f"{s} {delim}" if len(value) == 1 else s
+    return f"{s} {d}" if len(value) == 1 else s
 
 
 @stringify.register
-def _(value: tuple, delimiters=[DELIM_LVL_1, DELIM_LVL_2]) -> str:
+def _(value: tuple, delimiters=DELIMS) -> str:
     return stringify(list(value))
 
 
@@ -151,7 +155,7 @@ def create_obj(pairs):
     return obj
 
 
-def convert_cell(s: str, delimiters=[DELIM_LVL_1, DELIM_LVL_2]) -> Any:
+def convert_cell(s: str, delimiters=DELIMS) -> Any:
     if type(s) is not str:
         raise TypeError("Value to convert is not a string")
 
@@ -173,12 +177,12 @@ def convert_cell(s: str, delimiters=[DELIM_LVL_1, DELIM_LVL_2]) -> Any:
     if is_template(clean):
         return clean
 
-    delim, *delims = delimiters if delimiters else [None]
+    d, *delims = delimiters if delimiters else [None]
 
-    if delim and delim in clean:
-        seq = [convert_cell(item, delimiters=delims) for item in clean.split(delim)]
+    if d and d in clean:
+        seq = [convert_cell(item, delimiters=delims) for item in clean.split(d)]
 
-        return seq[:-1] if clean and clean[-1] == delim else seq
+        return seq[:-1] if clean and clean[-1] == d else seq
 
     if any(s in clean for s in delims):
         return convert_cell(clean, delimiters=delims)
