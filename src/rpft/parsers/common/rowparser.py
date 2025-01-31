@@ -3,7 +3,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from typing import List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from rpft.parsers.common.cellparser import CellParser
 
@@ -32,14 +32,6 @@ class ParserModel(BaseModel):
     def header_name_to_field_name_with_context(header, row):
         # This is used for models representing a full sheet row.
         return header
-
-
-def field_names(model: BaseModel) -> List[str]:
-    return [field.alias for field in model.model_fields.values()]
-
-
-def get_field(model: BaseModel, name: str) -> Field:
-    return next(field for field in model.model_fields.values() if field.alias == name)
 
 
 def get_list_child_model(model):
@@ -170,7 +162,7 @@ class RowParser:
             # Get the list of keys that are available for the target model
             # Note: The fields have a well defined ordering.
             # See https://pydantic-docs.helpmanual.io/usage/models/#field-ordering
-            model_fields = field_names(model)
+            model_fields = list(model.__fields__.keys())
 
             if type(value) is not list:
                 # It could be that an object is specified via a single element.
@@ -287,7 +279,7 @@ class RowParser:
         else:
             assert is_parser_model_type(model)
             key = model.header_name_to_field_name(field_name)
-            if key not in field_names(model):
+            if key not in model.model_fields:
                 raise ValueError(f"Field {key} doesn't exist in target type {model}.")
             child_model = model.model_fields[key].annotation
 
