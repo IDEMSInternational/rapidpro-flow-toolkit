@@ -5,7 +5,7 @@ import re
 import shutil
 from pathlib import Path
 
-from rpft.parsers.universal import create_workbook, parse_tables
+from rpft.parsers.universal import bookify, parse_tables
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import (
@@ -56,11 +56,11 @@ def uni_to_sheets(infile) -> bytes:
     with open(infile, "r") as handle:
         data = json.load(handle)
 
-    sheets = create_workbook(data)
+    sheets = bookify(data)
     book = Databook(
         [
-            Dataset(*sheet[1][1:], headers=sheet[1][0], title=sheet[0])
-            for sheet in sheets
+            Dataset(*table[1:], headers=table[0], title=name)
+            for name, table in sheets
         ]
     )
 
