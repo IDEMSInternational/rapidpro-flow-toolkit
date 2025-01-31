@@ -3,7 +3,7 @@ import re
 from collections import defaultdict
 from collections.abc import Sequence
 from functools import singledispatch
-from typing import Any, List
+from typing import Any, TypeAlias, Union
 
 from benedict import benedict
 from lark import Lark, Transformer
@@ -48,15 +48,20 @@ STRING    : /(\\[|;]|[^|;])+/
 %ignore WS
 """
 PARSER = Lark(CELL_GRAMMAR)
+Table: TypeAlias = list[list[str]]
+Book: TypeAlias = list[tuple[str, Table]]
 
 
-def create_workbook(data: dict) -> list:
+def bookify(data: dict) -> Book:
+    """
+    Convert a dict into a 'book' - a list of named tables.
+    """
     meta = data.get(META_KEY, {}).get(TABULATE_KEY, {})
 
     return [(k, tabulate(v, meta.get(k, {}))) for k, v in data.items() if k != META_KEY]
 
 
-def tabulate(data, meta: dict = {}) -> List[List[str]]:
+def tabulate(data, meta: dict = {}) -> Table:
     """
     Convert a nested data structure to a tabular form
     """
@@ -74,12 +79,12 @@ def tabulate(data, meta: dict = {}) -> List[List[str]]:
 
 
 @singledispatch
-def stringify(value) -> str:
+def stringify(value, **_) -> str:
     return str(value)
 
 
 @stringify.register
-def _(value: dict) -> str:
+def _(value: dict, **_) -> str:
 
     s = f" {DELIM_LVL_1} ".join(
         f"{stringify(k)}{DELIM_LVL_2} {stringify(v)}" for k, v in value.items()
@@ -92,12 +97,19 @@ def _(value: dict) -> str:
 
 
 @stringify.register
-def _(value: list) -> str:
-    return f" {DELIM_LVL_1} ".join(stringify(i) for i in value)
+def _(value: Union[list, tuple], delimiters=[DELIM_LVL_1, DELIM_LVL_2]) -> str:
+    delim, *delims = delimiters if delimiters else [None]
+
+    if not delim:
+        raise Exception("Value is too deeply nested")
+
+    s = f" {delim} ".join(stringify(i, delimiters=delims) for i in value)
+
+    return f"{s} {delim}" if len(value) == 1 else s
 
 
 @stringify.register
-def _(value: bool) -> str:
+def _(value: bool, **_) -> str:
     return str(value).lower()
 
 
