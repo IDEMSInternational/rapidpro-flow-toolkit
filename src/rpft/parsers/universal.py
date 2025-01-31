@@ -5,7 +5,6 @@ from functools import singledispatch
 from typing import Any
 
 from benedict import benedict
-from lark import Lark, Transformer
 
 from rpft.parsers.sheets import AbstractSheetReader
 
@@ -17,36 +16,6 @@ PROP_ACCESSOR = "."
 META_KEY = "_idems"
 TABULATE_KEY = "tabulate"
 HEADERS_KEY = "headers"
-CELL_GRAMMAR = r"""
-?start    : TEMPLATE -> template
-          | seq
-          | item
-
-seq       : (item? "|" item?)+
-
-?item     : subseq
-          | value
-
-subseq    : (value? ";" value?)+
-
-?value    : NUMBER  -> number
-          | BOOLEAN -> boolean
-          | STRING  -> string
-          |         -> empty
-
-NUMBER    : SIGNED_NUMBER
-
-BOOLEAN   : "true"
-          | "false"
-
-TEMPLATE  : /.*{[{@%].*/
-
-STRING    : /(\\[|;]|[^|;])+/
-
-%import common (SIGNED_NUMBER, WS)
-%ignore WS
-"""
-PARSER = Lark(CELL_GRAMMAR)
 Table = list[list[str]]
 Book = list[tuple[str, Table]]
 
@@ -219,42 +188,3 @@ def convert_cell(s: str, delimiters=[DELIM_LVL_1, DELIM_LVL_2]) -> Any:
 
 def is_template(s: str) -> bool:
     return bool(re.match("{{.*?}}|{@.*?@}|{%.*?%}", s))
-
-
-class CellTransformer(Transformer):
-
-    seq = subseq = list
-
-    def boolean(self, tokens):
-        return (tokens[0]).strip() == "true"
-
-    def empty(self, tokens):
-        return ""
-
-    def number(self, tokens):
-        token = (tokens[0]).strip()
-
-        try:
-            return int(token)
-        except Exception:
-            pass
-
-        try:
-            return float(token)
-        except Exception:
-            pass
-
-        raise Exception(f"Conversion to number failed, token={token}")
-
-    def string(self, tokens):
-        return re.sub(r"\\(.{1})", r"\g<1>", tokens[0].strip())
-
-    def template(self, tokens):
-        return self.string(tokens)
-
-
-def parse_cell(cell: str) -> Any:
-    if type(cell) is not str:
-        raise TypeError("Value to convert must be a string")
-
-    return CellTransformer().transform(PARSER.parse(cell)) if cell else ""
