@@ -1,7 +1,6 @@
 import logging
 import re
 from collections import defaultdict
-from collections.abc import Sequence
 from functools import singledispatch
 from typing import Any
 
@@ -85,7 +84,6 @@ def stringify(value, **_) -> str:
 
 @stringify.register
 def _(value: dict, **_) -> str:
-
     s = f" {DELIM_LVL_1} ".join(
         f"{stringify(k)}{DELIM_LVL_2} {stringify(v)}" for k, v in value.items()
     )
@@ -130,11 +128,7 @@ def parse_tables(reader: AbstractSheetReader) -> dict:
     return obj
 
 
-def parse_table(
-    title: str = None,
-    headers: Sequence[str] = tuple(),
-    rows: Sequence[Sequence[str]] = tuple(),
-):
+def parse_table(title: str = None, headers=tuple(), rows=tuple()):
     """
     Parse data in tabular form into a nested structure
     """
@@ -146,11 +140,7 @@ def parse_table(
     return create_obj(stream(title, headers, rows))
 
 
-def stream(
-    title: str = None,
-    headers: Sequence[str] = tuple(),
-    rows: Sequence[Sequence[str]] = tuple(),
-):
+def stream(title: str = None, headers=tuple(), rows=tuple()):
     yield [META_KEY, TABULATE_KEY, title, HEADERS_KEY], headers
 
     for i, row in enumerate(rows):
