@@ -9,11 +9,12 @@ Also known as a sheet in a spreadsheet (or workbook).
 | a  | b  |
 |----|----|
 | v1 | v2 |
-sheet1
+
+`data`
 
 ```json
 {
-  "sheet1": [
+  "data": [
     {"a": "v1", "b": "v2"}
   ]
 }
@@ -23,9 +24,8 @@ Additional tables (sheets) will be added as additional properties.
 
 ```json
 {
-  "sheet1": [...],
-  "sheet2": [...],
-  ...
+  "sheet1": [{}, {}],
+  "sheet2": [{}, {}]
 }
 ```
 
@@ -36,7 +36,8 @@ Refers to the following value types in JSON: `string`, `number`, `true` and `fal
 | string | number | true | false |
 |--------|--------|------|-------|
 | hello  | 123    | true | false |
-basic\_types
+
+`basic_types`
 
 ```json
 {
@@ -60,7 +61,8 @@ An ordered sequence of items. Also known as lists or arrays.
 | seq1 | seq1 | seq2.1 | seq2.2 | seq3     | seq4               |
 |------|------|--------|--------|----------|--------------------|
 | v1   | v2   | v1     | v2     | v1 \| v2 | v1 ; v2 \| v3 ; v4 |
-sequences
+
+`sequences`
 
 ```json
 {
@@ -90,7 +92,8 @@ An unordered collection of key-value pairs (properties). Also known as maps, dic
 | obj1.key1 | obj1.key2 | obj2                   |
 |-----------|-----------|------------------------|
 | v1        | v2        | key1 ; v1 \| key2 ; v2 |
-objects
+
+`objects`
 
 ```json
 {
@@ -120,7 +123,8 @@ All the previous notation can be combined to create fairly complicated structure
 | obj1.key1              | obj1.key1                      |
 |------------------------|--------------------------------|
 | 1 ; 2 ; 3 \| one ; two | active ; true \| debug ; false |
-nesting
+
+`nesting`
 
 ```json
 {
