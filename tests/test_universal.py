@@ -385,6 +385,6 @@ class TestCellConversion(TestCase):
 
     def test_delimiters_can_be_escaped(self):
         self.assertEqual(
-            self.func(r"1 ; 2 | 3 \| 4 | 5 \; 6"),
-            [[1, 2], "3 | 4", "5 ; 6"],
+            self.func(r"1 ; 2 | 3 \| 4 | 5 \; 6 \|"),
+            [[1, 2], "3 | 4", "5 ; 6 |"],
         )
