@@ -123,7 +123,7 @@ def stream(title: str = None, headers=tuple(), rows=tuple()):
 
     for i, row in enumerate(rows):
         for h, v in zip(keypaths(headers), row):
-            yield [title, i] + h, convert_cell(v)
+            yield [title, i] + h, parse_cell(v)
 
 
 def keypaths(headers):
@@ -160,7 +160,7 @@ def create_obj(pairs):
     return obj
 
 
-def convert_cell(s: str, delimiters=DELIMS, depth=0) -> Any:
+def parse_cell(s: str, delimiters=DELIMS, depth=0) -> Any:
     if type(s) is not str:
         raise TypeError("Value to convert is not a string")
 
@@ -186,14 +186,14 @@ def convert_cell(s: str, delimiters=DELIMS, depth=0) -> Any:
     pattern = rf"(?<!\\)\{d}"
 
     if d and re.search(pattern, clean):
-        seq = [convert_cell(item, depth=depth + 1) for item in re.split(pattern, clean)]
+        seq = [parse_cell(item, depth=depth + 1) for item in re.split(pattern, clean)]
 
         return seq[:-1] if clean and clean[-1] == d else seq
 
     delims = delimiters[depth + 1 :]
 
     if delims and re.search(rf"(?<!\\)[{''.join(delims)}]", clean):
-        return convert_cell(clean, depth=depth + 1)
+        return parse_cell(clean, depth=depth + 1)
 
     return re.sub(rf"\\([{DELIMS}])", r"\g<1>", clean)
 
