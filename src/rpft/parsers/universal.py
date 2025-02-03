@@ -47,7 +47,9 @@ def tabulate(data, meta: dict = {}) -> Table:
 
 @singledispatch
 def stringify(value, delimiters=DELIMS, **_) -> str:
-    return re.sub(rf"([{delimiters}])", r"\\\1", str(value))
+    s = str(value)
+
+    return s if is_template(s) else re.sub(rf"([{delimiters}])", r"\\\1", s)
 
 
 @stringify.register
