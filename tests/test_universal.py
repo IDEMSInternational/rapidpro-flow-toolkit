@@ -83,6 +83,15 @@ class TestConvertUniversalToTable(TestCase):
 
         self.assertEqual(table[1], [r"1 ; 2 | 3 \| 4 | 5 \; 6"])
 
+    def test_delimiters_in_templates_are_not_escaped(self):
+        data = [
+            {"h1": '{@ values | map(attribute="ID") @}'},
+        ]
+
+        table = tabulate(data)
+
+        self.assertEqual(table[1], ['{@ values | map(attribute="ID") @}'])
+
     def test_single_item_array(self):
         data = [{"k1": ["seq1v1"]}]
 
