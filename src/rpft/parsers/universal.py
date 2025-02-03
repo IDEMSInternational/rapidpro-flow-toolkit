@@ -188,7 +188,7 @@ def parse_cell(s: str, delimiters=DELIMS, depth=0) -> Any:
     if d and re.search(pattern, clean):
         seq = [parse_cell(item, depth=depth + 1) for item in re.split(pattern, clean)]
 
-        return seq[:-1] if clean and clean[-1] == d else seq
+        return seq[:-1] if re.search(rf"(?<!\\)\{d}$", clean) else seq
 
     delims = delimiters[depth + 1 :]
 
