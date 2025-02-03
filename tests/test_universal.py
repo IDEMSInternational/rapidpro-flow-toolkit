@@ -74,12 +74,35 @@ class TestConvertUniversalToTable(TestCase):
         self.assertEqual(table[1], ["yes | no | 1 | false"])
         self.assertEqual(table[2], ["yes | no | 1 | false"])
 
+    def test_array_delimiters_are_escaped(self):
+        data = [
+            {"h1": [[1, 2], "3 | 4", "5 ; 6"]},
+        ]
+
+        table = tabulate(data)
+
+        self.assertEqual(table[1], ["1 ; 2 | 3 \| 4 | 5 \; 6"])
+
     def test_single_item_array(self):
         data = [{"k1": ["seq1v1"]}]
 
         table = tabulate(data)
 
         self.assertEqual(table[1][0], "seq1v1 |")
+
+    def test_arrays_with_empty_single_item(self):
+        data = [{"k1": [""]}]
+
+        table = tabulate(data)
+
+        self.assertEqual(table[1][0], " |")
+
+    def test_arrays_with_empty_last_item(self):
+        data = [{"k1": ["v1", ""]}]
+
+        table = tabulate(data)
+
+        self.assertEqual(table[1][0], "v1 | |")
 
     def test_nested_arrays_within_a_single_cell(self):
         data = [
@@ -131,7 +154,7 @@ class TestConvertUniversalToTable(TestCase):
 
         self.assertEqual(table[1], ["prop1; val1 | prop2; val2"])
 
-    def test_object_with_single_property_within_cell_has_trailing_separator(self):
+    def test_object_with_single_property_within_cell_has_trailing_delimiter(self):
         data = [{"obj": {"k": "v"}}]
 
         table = tabulate(data)
@@ -355,3 +378,10 @@ class TestCellConversion(TestCase):
             ),
             "{{3*(steps.values()|length -1)}}|{{3*(steps.values()|length -1)+2}}",
         )
+        self.assertEqual(
+            self.func("6;0{%if skip_option != "" -%};skip{% endif %}"),
+            "6;0{%if skip_option != "" -%};skip{% endif %}",
+        )
+
+    def test_delimiters_can_be_escaped(self):
+        self.assertEqual(self.func(r"1 ; 2 | 3 \| 4 | 5 \; 6"), [[1, 2], "3 | 4", "5 ; 6"])
