@@ -3,7 +3,7 @@ from unittest import TestCase
 from rpft.parsers.sheets import DatasetSheetReader
 from rpft.parsers.universal import (
     bookify,
-    convert_cell,
+    parse_cell,
     parse_table,
     parse_tables,
     tabulate,
@@ -81,7 +81,7 @@ class TestConvertUniversalToTable(TestCase):
 
         table = tabulate(data)
 
-        self.assertEqual(table[1], ["1 ; 2 | 3 \| 4 | 5 \; 6"])
+        self.assertEqual(table[1], [r"1 ; 2 | 3 \| 4 | 5 \; 6"])
 
     def test_single_item_array(self):
         data = [{"k1": ["seq1v1"]}]
@@ -324,7 +324,7 @@ class TestConvertTableToNested(TestCase):
 class TestCellConversion(TestCase):
 
     def setUp(self):
-        self.func = convert_cell
+        self.func = parse_cell
 
     def test_convert_cell_string_to_number(self):
         self.assertEqual(self.func("123"), 123)
@@ -379,9 +379,12 @@ class TestCellConversion(TestCase):
             "{{3*(steps.values()|length -1)}}|{{3*(steps.values()|length -1)+2}}",
         )
         self.assertEqual(
-            self.func("6;0{%if skip_option != "" -%};skip{% endif %}"),
-            "6;0{%if skip_option != "" -%};skip{% endif %}",
+            self.func("6;0{%if skip_option != " " -%};skip{% endif %}"),
+            "6;0{%if skip_option != " " -%};skip{% endif %}",
         )
 
     def test_delimiters_can_be_escaped(self):
-        self.assertEqual(self.func(r"1 ; 2 | 3 \| 4 | 5 \; 6"), [[1, 2], "3 | 4", "5 ; 6"])
+        self.assertEqual(
+            self.func(r"1 ; 2 | 3 \| 4 | 5 \; 6"),
+            [[1, 2], "3 | 4", "5 ; 6"],
+        )
