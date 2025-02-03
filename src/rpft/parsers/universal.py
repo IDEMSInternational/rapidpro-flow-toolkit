@@ -46,19 +46,19 @@ def tabulate(data, meta: dict = {}) -> Table:
 
 
 @singledispatch
-def stringify(value, **_) -> str:
-    return str(value)
+def stringify(value, delimiters=DELIMS, **_) -> str:
+    return re.sub(rf"([{delimiters}])", r"\\\1", str(value))
 
 
 @stringify.register
-def _(value: dict, delimiters=DELIMS) -> str:
-    if len(delimiters) > 1:
-        d1, d2 = delimiters
+def _(value: dict, delimiters=DELIMS, depth=0) -> str:
+    if len(delimiters[depth:]) > 1:
+        d1, d2 = delimiters[depth : depth + 2]
     else:
         raise ValueError("Too few delimiters to stringify dict")
 
     s = f" {d1} ".join(
-        f"{stringify(k)}{d2} {stringify(v, delimiters=[])}" for k, v in value.items()
+        f"{stringify(k)}{d2} {stringify(v, depth=depth + 2)}" for k, v in value.items()
     )
 
     if len(value) == 1:
@@ -68,20 +68,25 @@ def _(value: dict, delimiters=DELIMS) -> str:
 
 
 @stringify.register
-def _(value: list, delimiters=DELIMS) -> str:
-    d, *delims = delimiters if delimiters else [None]
+def _(value: list, delimiters=DELIMS, depth=0) -> str:
+    d = delimiters[depth] if depth < len(delimiters) else None
 
     if not d:
         raise ValueError("Too few delimiters to stringify list")
 
-    s = f" {d} ".join(stringify(item, delimiters=delims) for item in value)
+    s = f" {d} ".join(stringify(item, depth=depth + 1) for item in value)
 
-    return f"{s} {d}" if len(value) == 1 else s
+    if len(value) == 1:
+        s += f" {d}"
+    elif value[-1] == "":
+        s += d
+
+    return s
 
 
 @stringify.register
-def _(value: tuple, delimiters=DELIMS) -> str:
-    return stringify(list(value))
+def _(value: tuple, delimiters=DELIMS, depth=0) -> str:
+    return stringify(list(value), depth=depth)
 
 
 @stringify.register
@@ -155,7 +160,7 @@ def create_obj(pairs):
     return obj
 
 
-def convert_cell(s: str, delimiters=DELIMS) -> Any:
+def convert_cell(s: str, delimiters=DELIMS, depth=0) -> Any:
     if type(s) is not str:
         raise TypeError("Value to convert is not a string")
 
@@ -177,18 +182,21 @@ def convert_cell(s: str, delimiters=DELIMS) -> Any:
     if is_template(clean):
         return clean
 
-    d, *delims = delimiters if delimiters else [None]
+    d = delimiters[depth] if depth < len(delimiters) else ""
+    pattern = rf"(?<!\\)\{d}"
 
-    if d and d in clean:
-        seq = [convert_cell(item, delimiters=delims) for item in clean.split(d)]
+    if d and re.search(pattern, clean):
+        seq = [convert_cell(item, depth=depth + 1) for item in re.split(pattern, clean)]
 
         return seq[:-1] if clean and clean[-1] == d else seq
 
-    if any(s in clean for s in delims):
-        return convert_cell(clean, delimiters=delims)
+    delims = delimiters[depth + 1 :]
 
-    return clean
+    if delims and re.search(rf"(?<!\\)[{''.join(delims)}]", clean):
+        return convert_cell(clean, depth=depth + 1)
+
+    return re.sub(rf"\\([{DELIMS}])", r"\g<1>", clean)
 
 
 def is_template(s: str) -> bool:
-    return bool(re.match("{{.*?}}|{@.*?@}|{%.*?%}", s))
+    return bool(re.search("{{.*?}}|{@.*?@}|{%.*?%}", s))
