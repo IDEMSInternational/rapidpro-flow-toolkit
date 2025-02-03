@@ -15,6 +15,7 @@ from rpft.parsers.sheets import (
     CSVSheetReader,
     GoogleSheetReader,
     JSONSheetReader,
+    ODSSheetReader,
     XLSXSheetReader,
 )
 from rpft.rapidpro.models.containers import RapidProContainer
@@ -59,10 +60,7 @@ def uni_to_sheets(infile) -> bytes:
 
     sheets = bookify(data)
     book = Databook(
-        [
-            Dataset(*table[1:], headers=table[0], title=name)
-            for name, table in sheets
-        ]
+        [Dataset(*table[1:], headers=table[0], title=name) for name, table in sheets]
     )
 
     return book.export("ods")
@@ -117,18 +115,29 @@ def flows_to_sheets(
 
 
 def create_sheet_reader(sheet_format, input_file):
-    if sheet_format == "csv":
-        sheet_reader = CSVSheetReader(input_file)
-    elif sheet_format == "xlsx":
-        sheet_reader = XLSXSheetReader(input_file)
-    elif sheet_format == "json":
-        sheet_reader = JSONSheetReader(input_file)
-    elif sheet_format == "google_sheets":
-        sheet_reader = GoogleSheetReader(input_file)
+    sheet_format = sheet_format if sheet_format else detect_format(input_file)
+    cls = {
+        "csv": CSVSheetReader,
+        "google_sheets": GoogleSheetReader,
+        "json": JSONSheetReader,
+        "ods": ODSSheetReader,
+        "xlsx": XLSXSheetReader,
+    }.get(sheet_format)
+
+    if cls:
+        return cls(input_file)
     else:
         raise Exception(f"Format {sheet_format} currently unsupported.")
 
-    return sheet_reader
+
+def detect_format(fp):
+    if bool(re.fullmatch(r"[a-z0-9_-]{44}", fp, re.IGNORECASE)):
+        return "google_sheets"
+
+    ext = Path(fp).suffix.lower()[1:]
+
+    if ext in ["xlsx", "ods"]:
+        return ext
 
 
 def sheets_to_csv(path, sheet_ids):
