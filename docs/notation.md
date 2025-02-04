@@ -168,3 +168,38 @@ Table cells may contain Jinja templates. A cell is considered a template if it c
 - `{@ ... @}`
 
 When converting between spreadsheets and JSON, templates will not be interpreted in any way, just copied verbatim. This means that sequence delimiters do not need to be escaped if they exist within a template. It is intended for templates to eventually be interpreted at a later stage, during further processing.
+
+# Metadata
+
+Information that would otherwise be lost during the conversion from spreadsheets to JSON is stored as metadata - in a top-level property with key `_idems`. The metadata property is intended to be 'hidden' and unlikely to be shared by any sheet name.
+
+The original header names for each sheet are held as metadata to direct the conversion process from JSON back to spreadsheet. The original headers preserve the order of columns and whether a wide or inline layout was used.
+
+
+| seq1 | seq1 | seq2     |
+|------|------|----------|
+| v1   | v2   | v1 \| v2 |
+
+`sequences`
+
+```json
+{
+  "_idems": {
+    "tabulate": {
+      "sequences": {
+        "headers": [
+          "seq1",
+          "seq1",
+          "seq2"
+        ]
+      }
+    }
+  }
+  "sequences": [
+    {
+      "seq1": ["v1", "v2"],
+      "seq2": ["v1", "v2"]
+    }
+  ]
+}
+```
