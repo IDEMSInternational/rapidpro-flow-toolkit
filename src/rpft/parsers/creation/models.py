@@ -146,6 +146,12 @@ class SkipOption(ParserModel):
     The value that is stored in the question variable if the question is skipped.
     """
 
+class Confirmation(ParserModel):
+    condition: Condition = Condition()
+    question: str = ""
+    confirm_option: str = ""
+    back_option: str = ""
+
 
 class SurveyQuestionModel(ParserModel):
     """
@@ -197,7 +203,8 @@ class SurveyQuestionModel(ParserModel):
     question.
     """
 
-    confirmation: ConditionsWithMessage = ConditionsWithMessage()
+    # confirmation: ConditionsWithMessage = ConditionsWithMessage()
+    confirmation: Confirmation = Confirmation()
     """
     Conditional Answer confirmation. If a condition holds, send a message asking the
     user to confirm their answer. Comes with a Yes/No choice for the user.
