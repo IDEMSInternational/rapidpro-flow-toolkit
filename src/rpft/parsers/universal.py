@@ -201,4 +201,4 @@ def parse_cell(s: str, delimiters=DELIMS, depth=0) -> Any:
 
 
 def is_template(s: str) -> bool:
-    return bool(re.search("{{.*?}}|{@.*?@}|{%.*?%}", s))
+    return bool(re.search(r"{{.*?}}|{@.*?@}|{%.*?%}|@\(.*?\)", s))
