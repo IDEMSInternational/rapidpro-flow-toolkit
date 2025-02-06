@@ -391,6 +391,10 @@ class TestCellConversion(TestCase):
             self.func("6;0{%if skip_option != " " -%};skip{% endif %}"),
             "6;0{%if skip_option != " " -%};skip{% endif %}",
         )
+        self.assertEqual(
+            self.func('@(fields.survey_behave & "no|")'),
+            '@(fields.survey_behave & "no|")',
+        )
 
     def test_delimiters_can_be_escaped(self):
         self.assertEqual(
