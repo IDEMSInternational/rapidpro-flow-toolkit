@@ -1,0 +1,8 @@
+row_id,type,from,loop_variable,condition,condition_var,condition_type,condition_name,include_if,message_text,choices,save_name,attachments,image,audio,video
+,begin_for,,message;i,,,,,,{@messages@},,,,,,
+,send_message,,,,,,,{{message.text}},"{{message.text}}{%if skipoption.text!= """" and i==messages|length -1%}
+
+{{skipoption.text}}{%endif-%}",,,{%if message.attachments|length >0%}{{message.attachments}}{%endif-%},{{message.image}},{{message.audio}},{{message.video}}
+,end_for,,,,,,,,,,,,,,
+,wait_for_response,,,yes;,,has_only_phrase;,from validation;,,,,variable,,,,
+,save_flow_result,,,{{skipoption.choice}},,has_only_phrase,skip,{@skipoption.text!=''@},{{skipoption.value}},,variable,,,,
