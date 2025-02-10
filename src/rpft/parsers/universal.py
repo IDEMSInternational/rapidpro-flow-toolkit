@@ -60,7 +60,8 @@ def _(value: dict, delimiters=DELIMS, depth=0) -> str:
         raise ValueError("Too few delimiters to stringify dict")
 
     s = f" {d1} ".join(
-        f"{stringify(k)}{d2} {stringify(v, depth=depth + 2)}" for k, v in value.items()
+        f"{stringify(k)}{d2} {stringify(v, delimiters=delimiters, depth=depth + 2)}"
+        for k, v in value.items()
     )
 
     if len(value) == 1:
@@ -76,7 +77,9 @@ def _(value: list, delimiters=DELIMS, depth=0) -> str:
     if not d:
         raise ValueError("Too few delimiters to stringify list")
 
-    s = f" {d} ".join(stringify(item, depth=depth + 1) for item in value)
+    s = f" {d} ".join(
+        stringify(item, delimiters=delimiters, depth=depth + 1) for item in value
+    )
 
     if len(value) == 1:
         s += f" {d}"
@@ -88,7 +91,7 @@ def _(value: list, delimiters=DELIMS, depth=0) -> str:
 
 @stringify.register
 def _(value: tuple, delimiters=DELIMS, depth=0) -> str:
-    return stringify(list(value), depth=depth)
+    return stringify(list(value), delimiters=delimiters, depth=depth)
 
 
 @stringify.register
@@ -188,16 +191,19 @@ def parse_cell(s: str, delimiters=DELIMS, depth=0) -> Any:
     pattern = rf"(?<!\\)\{d}"
 
     if d and re.search(pattern, clean):
-        seq = [parse_cell(item, depth=depth + 1) for item in re.split(pattern, clean)]
+        seq = [
+            parse_cell(item, delimiters=delimiters, depth=depth + 1)
+            for item in re.split(pattern, clean)
+        ]
 
         return seq[:-1] if re.search(rf"(?<!\\)\{d}$", clean) else seq
 
     delims = delimiters[depth + 1 :]
 
     if delims and re.search(rf"(?<!\\)[{''.join(delims)}]", clean):
-        return parse_cell(clean, depth=depth + 1)
+        return parse_cell(clean, delimiters=delimiters, depth=depth + 1)
 
-    return re.sub(rf"\\([{DELIMS}])", r"\g<1>", clean)
+    return re.sub(rf"\\([{delimiters}])", r"\g<1>", clean)
 
 
 def is_template(s: str) -> bool:
