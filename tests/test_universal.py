@@ -6,9 +6,24 @@ from rpft.parsers.universal import (
     parse_cell,
     parse_table,
     parse_tables,
+    stringify,
     tabulate,
 )
 from tablib import Dataset
+
+
+class TestConvertDataToCell(TestCase):
+    def test_delimiters_can_be_configured(self):
+        self.assertEqual(
+            stringify(
+                [
+                    ["click", ["auth", "sign_in_google"]],
+                    ["click", ["emit", "force_reprocess"]],
+                ],
+                delimiters=";|:",
+            ),
+            "click | auth : sign_in_google ; click | emit : force_reprocess",
+        )
 
 
 class TestConvertUniversalToTable(TestCase):
@@ -368,6 +383,18 @@ class TestCellConversion(TestCase):
         self.assertEqual(self.func("k1; v1 |"), [["k1", "v1"]])
         self.assertEqual(self.func("k1; k2; v2 |"), [["k1", "k2", "v2"]])
         self.assertEqual(self.func("k1; 1 | k2; true"), [["k1", 1], ["k2", True]])
+
+    def test_delimiters_can_be_configured(self):
+        self.assertEqual(
+            self.func(
+                "click | auth: sign_in_google; click | emit: force_reprocess",
+                delimiters=";|:",
+            ),
+            [
+                ["click", ["auth", "sign_in_google"]],
+                ["click", ["emit", "force_reprocess"]],
+            ],
+        )
 
     def test_inline_templates_are_preserved(self):
         self.assertEqual(self.func("{{ template }}"), "{{ template }}")
