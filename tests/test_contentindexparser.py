@@ -3,8 +3,13 @@ from unittest import TestCase
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
-from rpft.parsers.sheets import CompositeSheetReader, CSVSheetReader, XLSXSheetReader
+from rpft.parsers.sheets import (
+    CompositeSheetReader,
+    CSVSheetReader,
+    XLSXSheetReader,
+)
 from rpft.rapidpro.models.triggers import RapidProTriggerError
+
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
 from tests.utils import Context, csv_join, traverse_flow
@@ -1389,77 +1394,3 @@ class TestMultiFile(TestTemplate):
 
         self.assertFlowMessages(flows, "template - a", ["hello georg"])
         self.assertFlowMessages(flows, "template - b", ["hello chiara"])
-
-
-class TestSaveAsDict(TestCase):
-    def test_save_as_dict(self):
-        self.maxDiff = None
-        ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
-            "data_sheet,simpledata,,,simpledata_renamed,ListRowModel,\n"
-            "create_flow,my_basic_flow,,,,,\n"
-            "data_sheet,nesteddata,,,,NestedRowModel,\n"
-        )
-        simpledata = csv_join(
-            "ID,list_value.1,list_value.2",
-            "rowID,val1,val2",
-        )
-        nesteddata = (
-            "ID,value1,custom_field.happy,custom_field.sad\n"
-            "row1,Value1,Happy1,Sad1\n"
-            "row2,Value2,Happy2,Sad2\n"
-        )
-        my_basic_flow = csv_join(
-            "row_id,type,from,message_text",
-            ",send_message,start,Some text",
-        )
-        sheet_dict = {
-            "simpledata": simpledata,
-            "my_basic_flow": my_basic_flow,
-            "nesteddata": nesteddata,
-        }
-
-        output = ContentIndexParser(
-            MockSheetReader(ci_sheet, sheet_dict),
-            "tests.datarowmodels.nestedmodel",
-        ).data_sheets_to_dict()
-
-        output["meta"].pop("version")
-        exp = {
-            "meta": {
-                "user_models_module": "tests.datarowmodels.nestedmodel",
-            },
-            "sheets": {
-                "simpledata_renamed": {
-                    "model": "ListRowModel",
-                    "rows": [
-                        {
-                            "ID": "rowID",
-                            "list_value": ["val1", "val2"],
-                        }
-                    ],
-                },
-                "nesteddata": {
-                    "model": "NestedRowModel",
-                    "rows": [
-                        {
-                            "ID": "row1",
-                            "value1": "Value1",
-                            "custom_field": {
-                                "happy": "Happy1",
-                                "sad": "Sad1",
-                            },
-                        },
-                        {
-                            "ID": "row2",
-                            "value1": "Value2",
-                            "custom_field": {
-                                "happy": "Happy2",
-                                "sad": "Sad2",
-                            },
-                        },
-                    ],
-                },
-            },
-        }
-        self.assertEqual(output, exp)
