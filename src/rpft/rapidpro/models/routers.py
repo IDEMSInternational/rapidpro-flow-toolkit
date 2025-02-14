@@ -202,6 +202,7 @@ class SwitchRouter(BaseRouter):
         # Auto-generate a category name that is guaranteed to be unique
         # TODO: Write tests for this
         category_name = "_".join([str(a).title() for a in comparison_arguments])
+        category_name = category_name or "Yes"
         while self._get_category_or_none(category_name):
             category_name += "_alt"
         return category_name
@@ -485,36 +486,40 @@ class RouterCase:
     }
 
     TEST_VALIDATIONS = {
-        "all_words": lambda x: len(x) == 1,
-        "has_any_word": lambda x: len(x) == 1,
-        "has_beginning": lambda x: len(x) == 1,
-        "has_category": lambda x: len(x) >= 1,
+        "all_words": lambda x: len(x) == 1 and x[0],
+        "has_any_word": lambda x: len(x) == 1 and x[0],
+        "has_beginning": lambda x: len(x) == 1 and x[0],
+        "has_category": lambda x: len(x) >= 1 and all(x),
         "has_date": lambda x: len(x) == 0,
-        "has_date_eq": lambda x: len(x) == 1,
-        "has_date_gt": lambda x: len(x) == 1,
-        "has_date_lt": lambda x: len(x) == 1,
-        "has_district": lambda x: len(x) == 1,
+        "has_date_eq": lambda x: len(x) == 1 and x[0],
+        "has_date_gt": lambda x: len(x) == 1 and x[0],
+        "has_date_lt": lambda x: len(x) == 1 and x[0],
+        "has_district": lambda x: len(x) == 1 and x[0],
         "has_email": lambda x: len(x) == 0,
         "has_error": lambda x: len(x) == 0,
-        "has_group": lambda x: len(x) in {1, 2},  # uuid obligatory, name optional?
-        "has_intent": lambda x: len(x) == 2,
+        # For has_group: First is UUID and second is name.
+        # In imported flows, UUID is obligatory, but the toolkit
+        # uses blank as a placeholder. Instead, the toolkit requires
+        # a name, which usually is optional.
+        "has_group": lambda x: len(x) in {1, 2} and (x[0] or x[1]),
+        "has_intent": lambda x: len(x) == 2 and all(x),
         "has_number": lambda x: len(x) == 0,
-        "has_number_between": lambda x: len(x) == 2,
-        "has_number_eq": lambda x: len(x) == 1,
-        "has_number_gt": lambda x: len(x) == 1,
-        "has_number_gte": lambda x: len(x) == 1,
-        "has_number_lt": lambda x: len(x) == 1,
-        "has_number_lte": lambda x: len(x) == 1,
-        "has_only_phrase": lambda x: len(x) == 1,
-        "has_only_text": lambda x: len(x) == 1,
-        "has_pattern": lambda x: len(x) == 1,
-        "has_phone": lambda x: len(x) in {0, 1},
-        "has_phrase": lambda x: len(x) == 1,
+        "has_number_between": lambda x: len(x) == 2 and all(x),
+        "has_number_eq": lambda x: len(x) == 1 and x[0],
+        "has_number_gt": lambda x: len(x) == 1 and x[0],
+        "has_number_gte": lambda x: len(x) == 1 and x[0],
+        "has_number_lt": lambda x: len(x) == 1 and x[0],
+        "has_number_lte": lambda x: len(x) == 1 and x[0],
+        "has_only_phrase": lambda x: len(x) == 1 and x[0],
+        "has_only_text": lambda x: len(x) == 1 and x[0],
+        "has_pattern": lambda x: len(x) == 1 and x[0],
+        "has_phone": lambda x: len(x) in {0, 1} and all(x),
+        "has_phrase": lambda x: len(x) == 1 and x[0],
         "has_state": lambda x: len(x) == 0,
         "has_text": lambda x: len(x) == 0,
         "has_time": lambda x: len(x) == 0,
-        "has_top_intent": lambda x: len(x) == 2,
-        "has_ward": lambda x: len(x) == 2,
+        "has_top_intent": lambda x: len(x) == 2 and all(x),
+        "has_ward": lambda x: len(x) == 2 and all(x),
     }
 
     def __init__(self, comparison_type, arguments, category_uuid, uuid=None):
@@ -537,8 +542,8 @@ class RouterCase:
             raise ValueError(f'Invalid router test type: "{self.type}"')
         if not RouterCase.TEST_VALIDATIONS[self.type](self.arguments):
             print(
-                f"Warning: Invalid number of arguments {len(self.arguments)} for router"
-                f'test type "{self.type}"'
+                f"Warning: Invalid number of arguments {len(self.arguments)} or blank "
+                f'arguments for router test type "{self.type}"'
             )
 
     def render(self):
