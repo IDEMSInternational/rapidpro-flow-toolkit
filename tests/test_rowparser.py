@@ -151,3 +151,44 @@ class TestRowParserList(TestRowParserListStr):
         self.emptyModel = ListModel(**{"list_field": []})
         self.oneModel = ListModel(**{"list_field": ["1"]})
         self.onetwoModel = ListModel(**{"list_field": ["1", "2"]})
+
+
+class DictModel(ParserModel):
+    dict_field: dict = {}
+
+
+class TestRowParserDict(unittest.TestCase):
+    def setUp(self):
+        self.parser = RowParser(DictModel, MockCellParser())
+
+    def test_convert_empty(self):
+        self.emptyModel = DictModel(**{"dict_field": {}})
+        inputs = [
+            {},
+            {"dict_field": ""},
+            {"dict_field": []},
+        ]
+        for inp in inputs:
+            out = self.parser.parse_row(inp)
+            self.assertEqual(out, self.emptyModel)
+
+    def test_convert_single_element(self):
+        self.oneModel = DictModel(**{"dict_field": {"K" : "V"}})
+        inputs = [
+            {"dict_field": ["K", "V"]},
+            {"dict_field": [["K", "V"]]},
+            {"dict_field.K": "V"},
+        ]
+        for inp in inputs:
+            out = self.parser.parse_row(inp)
+            self.assertEqual(out, self.oneModel)
+
+    def test_convert_two_element(self):
+        self.onetwoModel = DictModel(**{"dict_field": {"K1" : "V1", "K2" : "V2"}})
+        inputs = [
+            {"dict_field": [["K1", "V1"], ["K2", "V2"]]},
+            {"dict_field.K1": "V1", "dict_field.K2": "V2"},
+        ]
+        for inp in inputs:
+            out = self.parser.parse_row(inp)
+            self.assertEqual(out, self.onetwoModel)
