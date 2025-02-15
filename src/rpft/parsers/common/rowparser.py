@@ -64,6 +64,10 @@ def is_basic_list_type(model):
     return model is list
 
 
+def is_basic_dict_type(model):
+    return model is dict
+
+
 def is_list_instance(value):
     return isinstance(value, list)
 
@@ -192,6 +196,20 @@ class RowParser:
                         entry,
                         model.__fields__[entry_key].outer_type_,
                     )
+        elif is_basic_dict_type(model):
+            field[key] = {}
+            if not value:
+                return
+            if not is_iterable_instance(value):
+                raise ValueError("dict-type cell must contain key-value pairs")
+            value = list(value)
+            if isinstance(value[0], str):
+                assert len(value) == 2
+                field[key] = {value[0] : value[1]}
+            elif isinstance(value[0], list):
+                for entry in value:
+                    assert len(entry) == 2
+                    field[key][entry[0]] = entry[1]
         elif is_basic_list_type(model):
             # We cannot iterate deeper if we don't know what to expect.
             if is_iterable_instance(value):
@@ -257,6 +275,10 @@ class RowParser:
                 output_field.append(None)
 
             key = index
+        elif is_basic_dict_type(model):
+            key = field_name
+            output_field[key] = None
+            child_model = str
         else:
             assert is_parser_model_type(model)
             key = model.header_name_to_field_name(field_name)
@@ -281,6 +303,8 @@ class RowParser:
             # If field doesn't exist yet in our output object, create it.
             if is_list_type(child_model) and output_field[key] is None:
                 output_field[key] = []
+            elif is_basic_dict_type(child_model) and output_field[key] is None:
+                output_field[key] = {}
             elif is_parser_model_type(child_model) and output_field[key] is None:
                 output_field[key] = {}
             # recurse
@@ -303,7 +327,7 @@ class RowParser:
         # The model of field[key] is model, and thus value should also be interpreted
         # as being of type model.
         if not value_is_parsed:
-            if is_list_type(model) or is_parser_model_type(model):
+            if is_list_type(model) or is_basic_dict_type(model) or is_parser_model_type(model):
                 # If the expected type of the value is list/object,
                 # parse the cell content as such.
                 # Otherwise leave it as a string

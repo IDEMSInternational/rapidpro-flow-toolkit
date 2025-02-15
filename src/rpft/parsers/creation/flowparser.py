@@ -319,6 +319,7 @@ class FlowParser:
         context=None,
         sheet_parser=None,
         definition=None,
+        flow_type=None,
     ):
         """
         rapidpro_container: The parent RapidProContainer to contain the flow generated
@@ -336,6 +337,7 @@ class FlowParser:
         self.rapidpro_container = rapidpro_container
         self.flow_name = flow_name
         self.flow_uuid = flow_uuid
+        self.flow_type = flow_type or "messaging"
         self.context = context or {}
         if sheet_parser:
             self.sheet_parser = sheet_parser
@@ -795,7 +797,7 @@ class FlowParser:
         """
 
         # Caveat/TODO: Need to ensure starting node comes first.
-        flow_container = FlowContainer(flow_name=self.flow_name, uuid=self.flow_uuid)
+        flow_container = FlowContainer(flow_name=self.flow_name, uuid=self.flow_uuid, type=self.flow_type)
         if not len(self.node_group_stack) == 1:
             raise Exception("Unexpected end of flow. Did you forget end_for/end_block?")
         self.current_node_group().add_nodes_to_flow(flow_container)
@@ -837,6 +839,7 @@ class FlowParser:
         parse_as_block=False,
         context=None,
         definition=None,
+        flow_type=None,
     ):
         base_name = new_name or sheet_name
         context = copy.copy(context or {})
@@ -866,6 +869,7 @@ class FlowParser:
             template_sheet.table,
             context=context,
             definition=definition,
+            flow_type=flow_type,
         )
 
         if parse_as_block:
@@ -879,6 +883,7 @@ class FlowParser:
 
         for logging_prefix, row in definition.flow_definitions:
             with logging_context(f"{logging_prefix} | {row.sheet_name[0]}"):
+                flow_type = row.options.get("flow_type") or "messaging"
                 if row.data_sheet and not row.data_row_id:
                     data_rows = definition.get_data_sheet_rows(row.data_sheet)
 
@@ -892,6 +897,7 @@ class FlowParser:
                                 rapidpro_container,
                                 row.new_name,
                                 definition=definition,
+                                flow_type=flow_type,
                             )
 
                             if flow.name in flows:
@@ -915,6 +921,7 @@ class FlowParser:
                         rapidpro_container,
                         row.new_name,
                         definition=definition,
+                        flow_type=flow_type,
                     )
 
                     if flow.name in flows:
