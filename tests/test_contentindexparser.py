@@ -3,8 +3,14 @@ from unittest import TestCase
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
-from rpft.parsers.sheets import CompositeSheetReader, CSVSheetReader, XLSXSheetReader
+from rpft.parsers.sheets import (
+    CompositeSheetReader,
+    CSVSheetReader,
+    DatasetSheetReader,
+    XLSXSheetReader,
+)
 from rpft.rapidpro.models.triggers import RapidProTriggerError
+from tablib import Dataset
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
 from tests.utils import Context, csv_join, traverse_flow
@@ -747,6 +753,72 @@ class TestParsing(TestTemplate):
         )
 
 
+class TestOverrideBehaviour(TestCase):
+
+    def test_data_defined_earlier_is_overridden_by_later_definitions(self):
+        base = DatasetSheetReader(
+            [
+                Dataset(
+                    ("A", "", ""),
+                    ("B", "", ""),
+                    headers=("ID", "value1", "value2"),
+                    title="data",
+                ),
+                Dataset(
+                    ("data_sheet", "data", "", "SimpleRowModel"),
+                    headers=("type", "sheet_name", "new_name", "data_model"),
+                    title="content_index",
+                ),
+            ],
+            "base",
+        )
+        filter_ = DatasetSheetReader(
+            [
+                Dataset(
+                    (
+                        "data_sheet",
+                        "data",
+                        "data",
+                        "SimpleRowModel",
+                        'filter | expression ; ID != "B"',
+                    ),
+                    headers=(
+                        "type",
+                        "sheet_name",
+                        "new_name",
+                        "data_model",
+                        "operation",
+                    ),
+                    title="content_index",
+                )
+            ],
+            "filter",
+        )
+        deployment = DatasetSheetReader(
+            [
+                Dataset(
+                    ("B", "", ""),
+                    ("C", "", ""),
+                    headers=("ID", "value1", "value2"),
+                    title="data",
+                ),
+                Dataset(
+                    ("data_sheet", "data", "data", "SimpleRowModel"),
+                    headers=("type", "sheet_name", "new_name", "data_model"),
+                    title="content_index",
+                ),
+            ],
+            "deployment",
+        )
+        definition = ContentIndexParser(
+            CompositeSheetReader([base, filter_, deployment]),
+            "tests.datarowmodels.simplemodel",
+        ).definition
+        keys = list(definition.get_data_sheet_rows("data").keys())
+
+        self.assertEqual(keys, ["B", "C"], "Deployment dataset should prevail")
+
+
 class TestConcatOperation(TestCase):
     def setUp(self):
         simpleA = csv_join(
@@ -766,13 +838,6 @@ class TestConcatOperation(TestCase):
         self.ci_sheet = csv_join(
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type",
             "data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,concat",
-        )
-        self.check_concat()
-
-    def test_two_fresh_sheets_implictly(self):
-        self.ci_sheet = csv_join(
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type",
-            "data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,",
         )
         self.check_concat()
 
