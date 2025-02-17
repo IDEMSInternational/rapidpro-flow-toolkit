@@ -1,9 +1,5 @@
 import logging
 from collections import ChainMap
-import sys
-
-
-LOGGER_NAME = "main"
 
 
 class LoggingContextHandler:
@@ -27,7 +23,7 @@ class LoggingContextHandler:
         self.context_variables.pop()
 
 
-logging_context_handler = LoggingContextHandler()
+_context = LoggingContextHandler()
 
 
 class logging_context:
@@ -36,48 +32,33 @@ class logging_context:
         self.kwargs = kwargs
 
     def __enter__(self):
-        logging_context_handler.add(self.processing_unit, **self.kwargs)
+        _context.add(self.processing_unit, **self.kwargs)
 
     def __exit__(self, exc_type, exc_value, exc_tb):
-        logging_context_handler.pop()
+        if exc_type is None:
+            _context.pop()
 
 
 class ContextFilter(logging.Filter):
-    def __init__(self):
-        super(ContextFilter, self).__init__()
 
     def filter(self, record):
-        record.processing_stack = " | ".join(
-            logging_context_handler.get_processing_stack()
-        )
-        record.context_variables = logging_context_handler.get_context_variables()
+        record.processing_stack = " | ".join(_context.get_processing_stack())
+        record.context_variables = _context.get_context_variables()
         return True
 
 
-class ShutdownHandler(logging.FileHandler):
-    def emit(self, record):
-        super().emit(record)
-        if record.levelno >= logging.CRITICAL:
-            # raise Exception(self.format(record))
-            print(f"{self.format(record)}", file=sys.stderr)
-            sys.exit(1)
-
-
-def get_logger():
-    return logging.getLogger(LOGGER_NAME)
-
-
 def initialize_main_logger(file_path="errors.log"):
-    LOGGER = logging.getLogger(LOGGER_NAME)
-    LOGGER.setLevel(logging.INFO)
     context_filter = ContextFilter()
-    LOGGER.addFilter(context_filter)
-    # We're currently not using the context_variables, so don't print them.
-    # If needed, add "Context: %(context_variables)s" to the format string below
-    stdout_formatter = logging.Formatter(
-        "%(levelname)s: %(processing_stack)s: %(message)s\n"
+
+    file_handler = logging.FileHandler(file_path, "w")
+    file_handler.addFilter(context_filter)
+
+    console_handler = logging.StreamHandler()
+    console_handler.addFilter(context_filter)
+    console_handler.setLevel(logging.CRITICAL)
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(levelname)s:%(name)s: %(processing_stack)s: %(message)s",
+        handlers=[file_handler, console_handler],
     )
-    stdout_handler = ShutdownHandler(file_path, "w")
-    stdout_handler.setFormatter(stdout_formatter)
-    LOGGER.addHandler(stdout_handler)
-    return LOGGER

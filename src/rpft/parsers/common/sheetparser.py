@@ -1,9 +1,8 @@
 import copy
+
 from rpft.parsers.common.rowdatasheet import RowDataSheet
 from rpft.parsers.common.rowparser import RowParser
-from rpft.logger.logger import get_logger, logging_context
-
-LOGGER = get_logger()
+from rpft.logger.logger import logging_context
 
 
 class SheetParser:
