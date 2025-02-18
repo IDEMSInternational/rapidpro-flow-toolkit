@@ -1,6 +1,7 @@
 row_id,type,from,loop_variable,condition,condition_var,condition_type,condition_name,include_if,message_text,data_sheet,data_row_id,choices,save_name,image,audio,video,obj_name,obj_id,node_name,_nodeId,no_response
 ,begin_for,,qs,,,,,,{@questions.values()@},,,,,,,,,,,,
 ,save_value,,,,,,,,,,,,"sq {{survey_id}} {{ qs.ID | lower | replace("" "", """") | replace(""-"", """") | replace(""_"", """") }} complete",,,,,,,,
+,save_value,,,,,,,,,,,,"sq {{survey_id}} {{ qs.ID | lower | replace("" "", """") | replace(""-"", """") | replace(""_"", """") }}",,,,,,,,
 ,end_for,,,,,,,,,,,,,,,,,,,,
 ,send_message,,,,,,,"{@send_confirm_msg == ""yes""@}",Variables have been reset,,,,,,,,,,,,
 ,save_value,,,,,,,,,,,,s {{survey_id}} complete,,,,,,,,
