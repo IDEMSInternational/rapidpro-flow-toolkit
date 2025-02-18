@@ -58,7 +58,8 @@ class Drive:
 
     @classmethod
     def fetch(cls, file_id):
-        meta = cls.client().files().get(fileId=file_id).execute()
-        content = cls.client().files().get_media(fileId=file_id).execute()
+        params = {"fileId": file_id, "supportsAllDrives": True}
+        meta = cls.client().files().get(**params).execute()
+        content = cls.client().files().get_media(**params).execute()
 
         return meta["name"], content
