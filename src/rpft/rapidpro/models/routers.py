@@ -20,7 +20,7 @@ class BaseRouter:
         elif data["type"] == "switch":
             return SwitchRouter.from_dict(data, exits)
         else:
-            raise ValueError("Router data has invalid router type.")
+            raise RapidProRouterError("Router data has invalid router type.")
 
     def _get_result_name_and_categories_from_data(data, exits):
         categories = [
@@ -150,7 +150,7 @@ class SwitchRouter(BaseRouter):
             if category.uuid == data["default_category_uuid"]
         ]
         if not default_categories:
-            raise ValueError("Default category uuid does not match any category.")
+            raise RapidProRouterError("Default category uuid does not match any category.")
         no_response_category = None
         no_response_category_id = None
         wait_timeout = None
@@ -165,7 +165,7 @@ class SwitchRouter(BaseRouter):
                     if category.uuid == no_response_category_id
                 ]
                 if not no_response_categories:
-                    raise ValueError(
+                    raise RapidProRouterError(
                         "No Response category uuid does not match any category."
                     )
                 no_response_category = no_response_categories[0]
@@ -200,7 +200,6 @@ class SwitchRouter(BaseRouter):
 
     def generate_category_name(self, comparison_arguments):
         # Auto-generate a category name that is guaranteed to be unique
-        # TODO: Write tests for this
         category_name = "_".join([str(a).title() for a in comparison_arguments])
         category_name = category_name or "Yes"
         while self._get_category_or_none(category_name):
@@ -452,7 +451,7 @@ class RouterCategory:
         """
         matching_exits = [exit for exit in exits if exit.uuid == data["exit_uuid"]]
         if not matching_exits:
-            raise ValueError("RouterCategory with no matching exit.")
+            raise RapidProRouterError("RouterCategory with no matching exit.")
         return RouterCategory(
             name=data["name"], uuid=data["uuid"], exit=matching_exits[0]
         )
@@ -539,10 +538,10 @@ class RouterCase:
 
     def validate(self):
         if self.type not in RouterCase.TEST_VALIDATIONS:
-            raise ValueError(f'Invalid router test type: "{self.type}"')
+            raise RapidProRouterError(f'Invalid router test type: "{self.type}"')
         if not RouterCase.TEST_VALIDATIONS[self.type](self.arguments):
-            print(
-                f"Warning: Invalid number of arguments {len(self.arguments)} or blank "
+            raise RapidProRouterError(
+                f"Invalid number of arguments {len(self.arguments)} or blank "
                 f'arguments for router test type "{self.type}"'
             )
 
