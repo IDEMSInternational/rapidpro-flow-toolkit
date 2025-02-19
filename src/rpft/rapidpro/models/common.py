@@ -1,4 +1,5 @@
 import re
+import string
 
 from rpft.rapidpro.models.exceptions import RapidProActionError
 from rpft.rapidpro.utils import generate_new_uuid
@@ -100,9 +101,9 @@ def generate_field_key(field_name):
             {"length": len(key), "limit": FIELD_KEY_MAX_LENGTH, "key": key},
         )
 
-    if not re.search("[A-Za-z]", key):
+    if not key or key[0] not in string.ascii_lowercase:
         raise RapidProActionError(
-            "Contact field key without letter characters detected",
+            "Contact field key needs to start with a letter",
             {"key": key, "name": field_name},
         )
 

@@ -139,7 +139,7 @@ class TestParsing(TestTemplate):
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,options\n"
             "create_flow,my_basic_flow,,,,,\n"
-            "create_flow,my_basic_flow,,,my_other_flow,,flow_type;messaging_background\n"
+            "create_flow,my_basic_flow,,,my_other_flow,,flow_type;messaging_background\n"  # noqa: E501
         )
         my_basic_flow = csv_join(
             "row_id,type,from,message_text",
