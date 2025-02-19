@@ -514,6 +514,8 @@ class FlowParser:
             if not row.mainarg_groups:
                 LOGGER.warning(f"Removing contact from ALL groups.")
                 return RemoveContactGroupAction(groups=[], all_groups=True)
+            elif row.mainarg_groups[0] == "ALL":
+                return RemoveContactGroupAction(groups=[], all_groups=True)
             else:
                 return RemoveContactGroupAction(
                     groups=[
