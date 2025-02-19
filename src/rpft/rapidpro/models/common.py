@@ -100,7 +100,7 @@ def generate_field_key(field_name):
             "Contact field key length limit exceeded",
             {"length": len(key), "limit": FIELD_KEY_MAX_LENGTH, "key": key},
         )
-    
+
     if not key or key[0] not in string.ascii_lowercase:
         raise RapidProActionError(
             "Contact field key needs to start with a letter",

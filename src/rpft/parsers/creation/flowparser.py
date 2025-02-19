@@ -797,7 +797,9 @@ class FlowParser:
         """
 
         # Caveat/TODO: Need to ensure starting node comes first.
-        flow_container = FlowContainer(flow_name=self.flow_name, uuid=self.flow_uuid, type=self.flow_type)
+        flow_container = FlowContainer(
+            flow_name=self.flow_name, uuid=self.flow_uuid, type=self.flow_type
+        )
         if not len(self.node_group_stack) == 1:
             raise Exception("Unexpected end of flow. Did you forget end_for/end_block?")
         self.current_node_group().add_nodes_to_flow(flow_container)

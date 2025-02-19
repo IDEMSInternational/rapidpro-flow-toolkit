@@ -205,7 +205,7 @@ class RowParser:
             value = list(value)
             if isinstance(value[0], str):
                 assert len(value) == 2
-                field[key] = {value[0] : value[1]}
+                field[key] = {value[0]: value[1]}
             elif isinstance(value[0], list):
                 for entry in value:
                     assert len(entry) == 2
@@ -327,7 +327,11 @@ class RowParser:
         # The model of field[key] is model, and thus value should also be interpreted
         # as being of type model.
         if not value_is_parsed:
-            if is_list_type(model) or is_basic_dict_type(model) or is_parser_model_type(model):
+            if (
+                is_list_type(model)
+                or is_basic_dict_type(model)
+                or is_parser_model_type(model)
+            ):
                 # If the expected type of the value is list/object,
                 # parse the cell content as such.
                 # Otherwise leave it as a string
