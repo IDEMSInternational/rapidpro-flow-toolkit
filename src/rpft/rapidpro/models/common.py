@@ -100,9 +100,9 @@ def generate_field_key(field_name):
             {"length": len(key), "limit": FIELD_KEY_MAX_LENGTH, "key": key},
         )
 
-    if not re.search("[A-Za-z]", key):
+    if not re.match(r"^[a-z][a-z0-9_]*$", key):
         raise RapidProActionError(
-            "Contact field key without letter characters detected",
+            "Contact field key needs to start with a letter",
             {"key": key, "name": field_name},
         )
 
