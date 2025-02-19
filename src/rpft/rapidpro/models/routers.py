@@ -150,7 +150,9 @@ class SwitchRouter(BaseRouter):
             if category.uuid == data["default_category_uuid"]
         ]
         if not default_categories:
-            raise RapidProRouterError("Default category uuid does not match any category.")
+            raise RapidProRouterError(
+                "Default category uuid does not match any category."
+            )
         no_response_category = None
         no_response_category_id = None
         wait_timeout = None
