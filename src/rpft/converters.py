@@ -6,11 +6,10 @@ import shutil
 from pathlib import Path
 
 from rpft.parsers.universal import bookify, parse_tables
-from rpft.parsers.creation.contentindexparser import ContentIndexParser
+from rpft.parsers.creation.contentindexparser import ContentIndexParser, JSONDataSource, SheetDataSource
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import (
     AbstractSheetReader,
-    CompositeSheetReader,
     CSVSheetReader,
     GoogleSheetReader,
     JSONSheetReader,
@@ -70,12 +69,15 @@ def sheets_to_uni(infile) -> list:
 
 
 def get_content_index_parser(input_files, sheet_format, data_models, tags):
-    reader = CompositeSheetReader()
+    # readers = [
+    #     create_sheet_reader(sheet_format, input_file) for input_file in input_files
+    # ]
 
-    for input_file in input_files:
-        reader.add_reader(create_sheet_reader(sheet_format, input_file))
+    # return ContentIndexParser(SheetDataSource(readers), data_models, TagMatcher(tags))
 
-    return ContentIndexParser(reader, data_models, TagMatcher(tags))
+    return ContentIndexParser(
+        JSONDataSource(input_files), data_models, TagMatcher(tags)
+    )
 
 
 def convert_to_json(input_file, sheet_format):
