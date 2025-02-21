@@ -1,6 +1,8 @@
 import json
+import logging
 import os
 import shutil
+import sys
 from pathlib import Path
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
@@ -16,6 +18,9 @@ from rpft.parsers.sheets import (
 from rpft.rapidpro.models.containers import RapidProContainer
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 def create_flows(input_files, output_file, sheet_format, data_models=None, tags=[]):
     """
     Convert source spreadsheet(s) into RapidPro flows.
@@ -28,9 +33,15 @@ def create_flows(input_files, output_file, sheet_format, data_models=None, tags=
     :returns: dict representing the RapidPro import/export format.
     """
 
-    parser = get_content_index_parser(input_files, sheet_format, data_models, tags)
-
-    flows = parser.parse_all().render()
+    try:
+        flows = (
+            get_content_index_parser(input_files, sheet_format, data_models, tags)
+            .parse_all()
+            .render()
+        )
+    except Exception as e:
+        LOGGER.critical(e.args[0])
+        sys.exit(1)
 
     if output_file:
         with open(output_file, "w", encoding="utf8") as export:
@@ -67,11 +78,11 @@ def save_data_sheets(input_files, output_file, sheet_format, data_models=None, t
 
 def get_content_index_parser(input_files, sheet_format, data_models, tags):
     reader = CompositeSheetReader()
+
     for input_file in input_files:
-        sub_reader = create_sheet_reader(sheet_format, input_file)
-        reader.add_reader(sub_reader)
-    parser = ContentIndexParser(reader, data_models, TagMatcher(tags))
-    return parser
+        reader.add_reader(create_sheet_reader(sheet_format, input_file))
+
+    return ContentIndexParser(reader, data_models, TagMatcher(tags))
 
 
 def convert_to_json(input_file, sheet_format):

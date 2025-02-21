@@ -1,5 +1,6 @@
 import unittest
 
+from rpft.rapidpro.models.exceptions import RapidProRouterError
 from rpft.rapidpro.models.routers import SwitchRouter, RandomRouter
 
 
@@ -178,7 +179,7 @@ class TestNoArgsTests(unittest.TestCase):
 
     def test_invalid_test(self):
         switch_router = SwitchRouter(operand="@fields.field")
-        with self.assertRaises(ValueError):
+        with self.assertRaises(RapidProRouterError):
             switch_router.add_choice(
                 "@fields.field",
                 "has_junk",

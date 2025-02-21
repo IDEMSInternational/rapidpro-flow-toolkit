@@ -135,6 +135,34 @@ class TestParsing(TestTemplate):
         self.assertEqual(datamodelB.value1, "1B")
         self.assertEqual(datamodelB.value2, "2B")
 
+    def test_flow_type(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,options\n"
+            "create_flow,my_basic_flow,,,,,\n"
+            "create_flow,my_basic_flow,,,my_other_flow,,flow_type;messaging_background\n"
+        )
+        my_basic_flow = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
+        )
+        sheet_dict = {
+            "my_basic_flow": my_basic_flow,
+        }
+        render_output = (
+            ContentIndexParser(
+                MockSheetReader(ci_sheet, sheet_dict),
+                "tests.datarowmodels.nestedmodel",
+            )
+            .parse_all()
+            .render()
+        )
+
+        self.assertEqual(len(render_output["flows"]), 2)
+        self.assertEqual(render_output["flows"][0]["name"], "my_basic_flow")
+        self.assertEqual(render_output["flows"][0]["type"], "messaging")
+        self.assertEqual(render_output["flows"][1]["name"], "my_other_flow")
+        self.assertEqual(render_output["flows"][1]["type"], "messaging_background")
+
     def test_ignore_flow_definition(self):
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"

@@ -29,6 +29,7 @@ class ContentIndexRowModel(ParserModel):
     data_row_id: str = ""
     template_argument_definitions: List[TemplateArgument] = []  # internal name
     template_arguments: list = []
+    options: dict = {}
     survey_config: SurveyConfig = SurveyConfig()
     operation: Operation = Operation()
     data_model: str = ""

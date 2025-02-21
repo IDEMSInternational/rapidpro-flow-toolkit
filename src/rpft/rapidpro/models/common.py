@@ -97,13 +97,13 @@ def generate_field_key(field_name):
     if len(key) > FIELD_KEY_MAX_LENGTH:
         raise RapidProActionError(
             "Contact field key length limit exceeded",
-            {"length": len(key), "limit": FIELD_KEY_MAX_LENGTH, "key": key}
+            {"length": len(key), "limit": FIELD_KEY_MAX_LENGTH, "key": key},
         )
 
     if not re.search("[A-Za-z]", key):
         raise RapidProActionError(
             "Contact field key without letter characters detected",
-            {"key": key, "name": field_name}
+            {"key": key, "name": field_name},
         )
 
     return key

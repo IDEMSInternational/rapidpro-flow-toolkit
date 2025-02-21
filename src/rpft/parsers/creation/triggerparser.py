@@ -1,7 +1,10 @@
-from rpft.logger.logger import get_logger, logging_context
+import logging
+
+from rpft.logger.logger import logging_context
 from rpft.rapidpro.models.triggers import Trigger
 
-LOGGER = get_logger()
+
+LOGGER = logging.getLogger(__name__)
 
 
 class TriggerParser:
@@ -27,5 +30,5 @@ class TriggerParser:
                     )
                     triggers.append(trigger)
                 except ValueError as e:
-                    LOGGER.critical(str(e))
+                    raise Exception(str(e))
         return triggers

@@ -4,7 +4,8 @@ import json
 from rpft import converters
 from rpft.logger.logger import initialize_main_logger
 
-LOGGER = initialize_main_logger()
+
+initialize_main_logger()
 
 
 def main():
