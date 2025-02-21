@@ -1,9 +1,10 @@
 import re
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
+
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from rpft.parsers.common.cellparser import CellParser
 
@@ -32,6 +33,16 @@ class ParserModel(BaseModel):
     def header_name_to_field_name_with_context(header, row):
         # This is used for models representing a full sheet row.
         return header
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def collect(cls, v, info):
+        field = cls.model_fields[info.field_name]
+
+        if is_list_type(field.annotation):
+            return v if isinstance(v, Sequence) and not isinstance(v, str) else [v]
+
+        return v
 
 
 def get_list_child_model(model):
