@@ -841,6 +841,13 @@ class TestConcatOperation(TestCase):
         )
         self.check_concat()
 
+    def test_two_fresh_sheets_implictly(self):
+        self.ci_sheet = csv_join(
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type",
+            "data_sheet,simpleA;simpleB,,,simpledata,SimpleRowModel,",
+        )
+        self.check_concat()
+
     def test_fresh_and_existing_sheets(self):
         self.ci_sheet = csv_join(
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,operation.type",
