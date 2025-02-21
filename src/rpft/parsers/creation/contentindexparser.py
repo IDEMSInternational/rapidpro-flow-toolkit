@@ -133,7 +133,7 @@ class ContentIndexParser:
                     name = campaign_parser.campaign.name
 
                     if name in self.campaign_parsers:
-                        LOGGER.warning(
+                        LOGGER.debug(
                             f"Duplicate campaign definition sheet '{name}'. "
                             "Overwriting previous definition."
                         )
@@ -155,7 +155,7 @@ class ContentIndexParser:
         sheet_name = row.sheet_name[0]
 
         if sheet_name in self.template_sheets and update_duplicates:
-            LOGGER.info(
+            LOGGER.debug(
                 f"Duplicate template definition sheet '{sheet_name}'. "
                 "Overwriting previous definition."
             )
@@ -193,7 +193,7 @@ class ContentIndexParser:
 
         if len(candidates) > 1:
             readers = [c.reader.name for c in candidates]
-            LOGGER.warning(
+            LOGGER.debug(
                 "Duplicate sheets found, "
                 + str(
                     {
@@ -247,7 +247,7 @@ class ContentIndexParser:
         new_name = row.new_name or sheet_names[0]
 
         if new_name in self.data_sheets:
-            LOGGER.warn(
+            LOGGER.debug(
                 f"Duplicate data sheet {new_name}. Overwriting previous definition."
             )
 

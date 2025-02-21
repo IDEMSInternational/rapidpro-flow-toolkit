@@ -513,9 +513,17 @@ class FlowParser:
                 scheme=row.urn_scheme or "tel",
             )
         elif row.type == "remove_from_group":
-            return RemoveContactGroupAction(
-                groups=[self._get_or_create_group(row.mainarg_groups[0], row.obj_id)]
-            )
+            if not row.mainarg_groups:
+                LOGGER.warning(f"Removing contact from ALL groups.")
+                return RemoveContactGroupAction(groups=[], all_groups=True)
+            elif row.mainarg_groups[0] == "ALL":
+                return RemoveContactGroupAction(groups=[], all_groups=True)
+            else:
+                return RemoveContactGroupAction(
+                    groups=[
+                        self._get_or_create_group(row.mainarg_groups[0], row.obj_id)
+                    ]
+                )
         elif row.type == "save_flow_result":
             return SetRunResultAction(
                 row.save_name, row.mainarg_value, category=row.result_category
@@ -551,7 +559,7 @@ class FlowParser:
     def _get_row_node(self, row):
         if (
             row.type in ["add_to_group", "remove_from_group", "split_by_group"]
-            and row.obj_id
+            and row.obj_id and row.mainarg_groups
         ):
             self.rapidpro_container.record_group_uuid(row.mainarg_groups[0], row.obj_id)
 
