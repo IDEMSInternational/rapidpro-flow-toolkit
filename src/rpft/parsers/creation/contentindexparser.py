@@ -36,7 +36,7 @@ class DataSheet:
     def to_dict(self):
         return {
             "model": self.row_model.__name__,
-            "rows": [content.dict() for content in self.rows.values()],
+            "rows": [content.model_dump() for content in self.rows.values()],
         }
 
 

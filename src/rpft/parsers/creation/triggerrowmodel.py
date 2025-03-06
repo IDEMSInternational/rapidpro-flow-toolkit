@@ -1,4 +1,4 @@
-from pydantic.v1 import validator
+from pydantic import field_validator, model_validator
 
 from rpft.parsers.common.rowparser import ParserModel
 
@@ -12,7 +12,8 @@ class TriggerRowModel(ParserModel):
     channel: str = ""
     match_type: str = ""
 
-    @validator("type")
+    @field_validator("type")
+    @classmethod
     def validate_type(cls, v):
         if v not in ["K", "C", "M", "T"]:
             raise ValueError(
@@ -21,10 +22,11 @@ class TriggerRowModel(ParserModel):
             )
         return v
 
-    @validator("match_type")
-    def validate_match_type(cls, v, values):
-        if values["type"] == "K" and v not in ["F", "O", ""]:
+    @model_validator(mode="after")
+    def validate_match_type(self):
+        if self.type == "K" and self.match_type not in ["F", "O", ""]:
             raise ValueError(
                 'match_type must be "F" (starts with) or "O" (only) if type is "K".'
             )
-        return v
+
+        return self

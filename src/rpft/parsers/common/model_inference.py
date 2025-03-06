@@ -1,7 +1,7 @@
 from collections import defaultdict
 from typing import List, ForwardRef, _eval_type
 from pydoc import locate
-from pydantic.v1 import create_model
+from pydantic import create_model
 
 from rpft.parsers.common.rowparser import (
     ParserModel,

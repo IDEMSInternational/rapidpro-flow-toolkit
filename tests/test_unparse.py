@@ -15,7 +15,7 @@ class ModelWithStuff(ParserModel):
 
 class MainModel(ParserModel):
     str_field: str = ""
-    model_optional: Optional[ModelWithStuff]
+    model_optional: Optional[ModelWithStuff] = None
     model_default: ModelWithStuff = ModelWithStuff()
     model_list: List[ModelWithStuff] = []
 
