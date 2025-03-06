@@ -162,7 +162,7 @@ class RowParser:
             # Get the list of keys that are available for the target model
             # Note: The fields have a well defined ordering.
             # See https://pydantic-docs.helpmanual.io/usage/models/#field-ordering
-            model_fields = list(model.__fields__.keys())
+            model_fields = list(model.model_fields.keys())
 
             if type(value) is not list:
                 # It could be that an object is specified via a single element.
