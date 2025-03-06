@@ -1,8 +1,6 @@
 import importlib
 import logging
 from collections import OrderedDict
-from typing import Dict, List
-
 from rpft.logger.logger import logging_context
 from rpft.parsers.common.model_inference import model_from_headers
 from rpft.parsers.common.sheetparser import SheetParser
@@ -58,8 +56,8 @@ class ContentIndexParser:
         self.tag_matcher = tag_matcher
         self.template_sheets = {}
         self.data_sheets = {}
-        self.flow_definition_rows: List[ContentIndexRowModel] = []
-        self.campaign_parsers: Dict[str, tuple[str, CampaignParser]] = {}
+        self.flow_definition_rows: list[ContentIndexRowModel] = []
+        self.campaign_parsers: dict[str, tuple[str, CampaignParser]] = {}
         self.surveys = {}
         self.trigger_parsers = OrderedDict()
         self.user_models_module = (

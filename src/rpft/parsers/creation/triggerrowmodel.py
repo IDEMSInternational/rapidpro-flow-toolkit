@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic.v1 import validator
 
 from rpft.parsers.common.rowparser import ParserModel
@@ -7,10 +5,10 @@ from rpft.parsers.common.rowparser import ParserModel
 
 class TriggerRowModel(ParserModel):
     type: str
-    keywords: List[str] = ""
+    keywords: list[str] = ""
     flow: str = ""
-    groups: List[str] = []
-    exclude_groups: List[str] = []
+    groups: list[str] = []
+    exclude_groups: list[str] = []
     channel: str = ""
     match_type: str = ""
 
