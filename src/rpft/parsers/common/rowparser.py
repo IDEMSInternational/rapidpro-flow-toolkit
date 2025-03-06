@@ -47,16 +47,15 @@ def get_list_child_model(model):
 
 
 def is_list_type(model):
-    # Determine whether model is a list type,
-    # such as list, List, List[str], ...
-    # issubclass only works for Python <=3.6
-    # model.__dict__.get('__origin__') returns different things in different Python
-    # version.
-    # This function tries to accommodate both 3.6 and 3.8 (at least)
+    """
+    Determine whether model is a list type, such as list, list[str], List, List[str].
+
+    typing.List is deprecated as of Python 3.9
+    """
     return (
         is_basic_list_type(model)
         or model is List
-        or model.__dict__.get("__origin__") in [list, List]
+        or getattr(model, "__origin__", None) is list
     )
 
 
@@ -205,7 +204,7 @@ class RowParser:
             value = list(value)
             if isinstance(value[0], str):
                 assert len(value) == 2
-                field[key] = {value[0] : value[1]}
+                field[key] = {value[0]: value[1]}
             elif isinstance(value[0], list):
                 for entry in value:
                     assert len(entry) == 2
@@ -327,7 +326,11 @@ class RowParser:
         # The model of field[key] is model, and thus value should also be interpreted
         # as being of type model.
         if not value_is_parsed:
-            if is_list_type(model) or is_basic_dict_type(model) or is_parser_model_type(model):
+            if (
+                is_list_type(model)
+                or is_basic_dict_type(model)
+                or is_parser_model_type(model)
+            ):
                 # If the expected type of the value is list/object,
                 # parse the cell content as such.
                 # Otherwise leave it as a string

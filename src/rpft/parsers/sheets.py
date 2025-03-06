@@ -1,7 +1,7 @@
 import json
 from abc import ABC
+from collections.abc import Mapping
 from pathlib import Path
-from typing import List, Mapping
 
 import tablib
 from googleapiclient.discovery import build
@@ -28,7 +28,7 @@ class AbstractSheetReader(ABC):
     def get_sheet(self, name) -> Sheet:
         return self.sheets.get(name)
 
-    def get_sheets_by_name(self, name) -> List[Sheet]:
+    def get_sheets_by_name(self, name) -> list[Sheet]:
         return [sheet] if (sheet := self.get_sheet(name)) else []
 
 
