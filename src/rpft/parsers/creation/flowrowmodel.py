@@ -1,3 +1,5 @@
+from pydantic import ConfigDict
+
 from rpft.parsers.common.rowparser import ParserModel
 from rpft.parsers.creation.models import Condition
 
@@ -45,6 +47,8 @@ class WhatsAppTemplating(ParserModel):
 
 
 class Edge(ParserModel):
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+
     from_: str = ""
     condition: Condition = Condition()
 
@@ -65,6 +69,8 @@ class Edge(ParserModel):
 
 
 class FlowRowModel(ParserModel):
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+
     row_id: str = ""
     type: str
     edges: list[Edge]
