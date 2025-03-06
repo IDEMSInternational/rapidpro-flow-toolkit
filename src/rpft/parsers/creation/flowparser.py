@@ -514,7 +514,7 @@ class FlowParser:
             )
         elif row.type == "remove_from_group":
             if not row.mainarg_groups:
-                LOGGER.warning(f"Removing contact from ALL groups.")
+                LOGGER.warning("Removing contact from ALL groups.")
                 return RemoveContactGroupAction(groups=[], all_groups=True)
             elif row.mainarg_groups[0] == "ALL":
                 return RemoveContactGroupAction(groups=[], all_groups=True)
@@ -559,7 +559,8 @@ class FlowParser:
     def _get_row_node(self, row):
         if (
             row.type in ["add_to_group", "remove_from_group", "split_by_group"]
-            and row.obj_id and row.mainarg_groups
+            and row.obj_id
+            and row.mainarg_groups
         ):
             self.rapidpro_container.record_group_uuid(row.mainarg_groups[0], row.obj_id)
 
@@ -804,8 +805,9 @@ class FlowParser:
         to fill in these missing UUIDs in a consistent way.
         """
 
-        # Caveat/TODO: Need to ensure starting node comes first.
-        flow_container = FlowContainer(flow_name=self.flow_name, uuid=self.flow_uuid, type=self.flow_type)
+        flow_container = FlowContainer(
+            flow_name=self.flow_name, uuid=self.flow_uuid, type=self.flow_type
+        )
         if not len(self.node_group_stack) == 1:
             raise Exception("Unexpected end of flow. Did you forget end_for/end_block?")
         self.current_node_group().add_nodes_to_flow(flow_container)
