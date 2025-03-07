@@ -173,7 +173,7 @@ class TestRowParserDict(unittest.TestCase):
             self.assertEqual(out, self.emptyModel)
 
     def test_convert_single_element(self):
-        self.oneModel = DictModel(**{"dict_field": {"K" : "V"}})
+        self.oneModel = DictModel(**{"dict_field": {"K": "V"}})
         inputs = [
             {"dict_field": ["K", "V"]},
             {"dict_field": [["K", "V"]]},
@@ -184,7 +184,7 @@ class TestRowParserDict(unittest.TestCase):
             self.assertEqual(out, self.oneModel)
 
     def test_convert_two_element(self):
-        self.onetwoModel = DictModel(**{"dict_field": {"K1" : "V1", "K2" : "V2"}})
+        self.onetwoModel = DictModel(**{"dict_field": {"K1": "V1", "K2": "V2"}})
         inputs = [
             {"dict_field": [["K1", "V1"], ["K2", "V2"]]},
             {"dict_field.K1": "V1", "dict_field.K2": "V2"},
