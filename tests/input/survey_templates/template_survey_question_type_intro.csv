@@ -1,0 +1,6 @@
+row_id,type,from,loop_variable,condition,condition_var,condition_type,condition_name,include_if,message_text,choices,save_name,attachments,image,audio,video,no_response
+0,save_flow_result,,,,,,,,"Block can’t start with for loop, see issue #47",,dummy,,,,,
+,begin_for,,message;i,,,,,,{@messages@},,,,,,,
+,send_message,,,,,,,{{message.text}},{{message.text}},"{%if i == messages|length-1%}{%if choices|length >0 and choices[0].text !=""""%}{{choices[0].text}}{%endif-%}{%endif-%}",,{%if message.attachments|length >0%}{{message.attachments}}{%endif-%},{{message.image}},{{message.audio}},{{message.video}},
+,end_for,,,,,,,,,,,,,,,
+,wait_for_response,,,,,,,"{@choices|length >0 and choices[0].text !=""""@}",,,,,,,,60

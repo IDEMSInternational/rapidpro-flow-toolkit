@@ -1,6 +1,6 @@
 from typing import List
 import unittest
-from pydantic.v1 import create_model, BaseModel
+from pydantic import create_model, BaseModel
 
 from rpft.parsers.common.model_inference import (
     get_value_for_type,
@@ -60,7 +60,7 @@ class TestModelInference(unittest.TestCase):
         self.assertEqual(parse_header_annotations("field:int=5"), (int, 5))
 
     def compare_models(self, model1, model2, **kwargs):
-        self.assertEqual(model1(**kwargs).dict(), model2(**kwargs).dict())
+        self.assertEqual(model1(**kwargs).model_dump(), model2(**kwargs).model_dump())
 
     def test_model_from_headers(self):
         self.compare_models(

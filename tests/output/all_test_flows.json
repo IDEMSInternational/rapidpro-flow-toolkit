@@ -172,6 +172,23 @@
           "exits": [
             {
               "uuid": "51548997-3f36-487d-9498-b48e33907b49",
+              "destination_uuid": "12340fc2-f28c-4ad0-8c02-4afd63ad31ab"
+            }
+          ]
+        },
+        {
+          "uuid": "12340fc2-f28c-4ad0-8c02-4afd63ad31ab",
+          "actions": [
+            {
+              "type": "remove_contact_groups",
+              "groups": [],
+              "all_groups": true,
+              "uuid": "1234d6d0-02a2-4edf-9025-8e00959e4d05"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "d9482afc-9802-4c49-87e0-6b6512b19632",
               "destination_uuid": null
             }
           ]

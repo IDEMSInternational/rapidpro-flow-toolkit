@@ -124,11 +124,9 @@ class TestDifferentWays(unittest.TestCase):
         for inp in inputs:
             out = self.parser.parse_row(inp)  # We get an instance of the model
             outputs.append(out)
-            # Note: we can also serialize via out.json(indent=4) for printing
-            # or out.dict()
 
         for out in outputs:
-            self.assertEqual(out.dict(), output_instance)
+            self.assertEqual(out.model_dump(), output_instance)
 
     def test_single_kwarg(self):
         output_single_kwarg = self.parser.parse_row(input_single_kwarg)

@@ -10,8 +10,8 @@ class TestFlowParserReverse(unittest.TestCase):
         pass
 
     def compare_models_leniently(self, model, model_exp):
-        model_dict = model.dict()
-        model_exp_dict = model_exp.dict()
+        model_dict = model.model_dump()
+        model_exp_dict = model_exp.model_dump()
         for edge, edge_exp in zip(model_dict["edges"], model_exp_dict["edges"]):
             if (
                 edge["condition"]["variable"] == "@input.text"
