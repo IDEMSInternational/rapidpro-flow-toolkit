@@ -1,4 +1,4 @@
-from pydantic import ConfigDict
+from pydantic import ConfigDict, model_validator
 
 from rpft.parsers.common.rowparser import ParserModel
 from rpft.parsers.creation.models import Condition
@@ -105,6 +105,16 @@ class FlowRowModel(ParserModel):
     no_response: str = ""
     ui_type: str = ""
     ui_position: list[str] = []
+
+    @model_validator(mode="before")
+    def set_main_arg(cls, data):
+        try:
+            name = cls.header_name_to_field_name_with_context("message_text", data)
+            data[name] = data.pop("message_text")
+        except Exception:
+            pass
+
+        return data
 
     def field_name_to_header_name(field):
         field_map = {
