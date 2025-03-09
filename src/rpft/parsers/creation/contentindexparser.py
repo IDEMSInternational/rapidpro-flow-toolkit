@@ -51,14 +51,6 @@ class ParserError(Exception):
     pass
 
 
-def coerce(model, item):
-    try:
-        return model(**item)
-    except Exception:
-        print("ITEM:", item)
-        raise
-
-
 class JSONDataSource:
 
     def __init__(self, paths):
@@ -94,8 +86,7 @@ class JSONDataSource:
 
         model = model or benedict
 
-        print("FILE:", name, "KEY:", key)
-        return [coerce(model, item) for item in active], name, key
+        return [model(**item) for item in active], name, key
 
     def get_all(self, key, model=None):
         model = model or benedict
@@ -103,8 +94,7 @@ class JSONDataSource:
 
         for obj, name in self.objs:
             if key in obj:
-                print("FILE:", name, "KEY:", key)
-                items += [([coerce(model, item) for item in obj[key]], name, key)]
+                items += [([model(**item) for item in obj[key]], name, key)]
 
         return items
 
@@ -260,7 +250,6 @@ class ContentIndexParser:
                     entries, location, key = self.data_source.get(
                         row.sheet_name[0], ContentIndexRowModel
                     )
-                    # rows = SheetParser(sheet.table, ContentIndexRowModel).parse_all()
 
                     with logging_context(f"{key}"):
                         self._process_content_index_table(entries, f"{location}-{key}")
@@ -397,16 +386,16 @@ class ContentIndexParser:
         user_model = None
 
         if data_model_name:
-            if hasattr(globalrowmodels, data_model_name):
-                user_model = getattr(globalrowmodels, data_model_name)
+            user_model = getattr(globalrowmodels, data_model_name, None)
+
             if self.user_models_module:
-                if hasattr(self.user_models_module, data_model_name):
-                    user_model = getattr(self.user_models_module, data_model_name)
-            if not user_model:
-                raise Exception(
-                    f'Undefined data_model_name "{data_model_name}" '
-                    f"in {self.user_models_module}."
-                )
+                user_model = getattr(self.user_models_module, data_model_name, None)
+
+                if not user_model:
+                    raise Exception(
+                        f'Undefined data_model_name "{data_model_name}" '
+                        f"in {self.user_models_module}."
+                    )
 
         with logging_context(sheet_name):
             items, *_ = self.data_source.get(sheet_name, user_model)

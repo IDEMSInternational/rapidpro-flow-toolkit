@@ -112,7 +112,7 @@ def _add_create_command(sub):
     parser.add_argument(
         "-f",
         "--format",
-        choices=["csv", "google_sheets", "json", "xlsx"],
+        choices=["csv", "google_sheets", "json", "uni", "xlsx"],
         help="input sheet format",
         required=True,
     )
