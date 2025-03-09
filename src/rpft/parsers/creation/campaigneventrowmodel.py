@@ -5,7 +5,7 @@ from rpft.parsers.common.rowparser import ParserModel
 
 class CampaignEventRowModel(ParserModel):
     uuid: str = ""
-    offset: str
+    offset: int
     unit: str
     event_type: str
     delivery_hour: str = ""
