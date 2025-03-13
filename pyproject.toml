@@ -38,7 +38,7 @@ dependencies = [
     "openpyxl",
     "pydantic >= 2",
     "python-benedict",
-    "tablib @ git+https://github.com/istride/tablib@v3.8.0-0",
+    "tablib @ git+https://github.com/istride/tablib@v3.8.0-1",
 ]
 
 [project.urls]
