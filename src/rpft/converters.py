@@ -142,7 +142,7 @@ def detect_format(fp):
 
     ext = Path(fp).suffix.lower()[1:]
 
-    if ext in ["xlsx", "ods"]:
+    if ext in ["json", "ods", "xlsx"]:
         return ext
 
 
