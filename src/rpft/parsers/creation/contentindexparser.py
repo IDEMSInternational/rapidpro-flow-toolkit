@@ -216,11 +216,12 @@ class ContentIndexParser:
         if not row.operation.type:
             if len(sheet_names) > 1:
                 LOGGER.warning(
-                    "Implicitly concatenating data sheets without concat operation. "
-                    "Implicit concatenation is deprecated and may be removed "
-                    "in the future."
+                    "Implicitly concatenating data sheets without concat operation "
+                    "is deprecated and may be removed in the future."
                 )
-            data_sheet = self._data_sheets_concat(sheet_names, row.data_model)
+                data_sheet = self._data_sheets_concat(sheet_names, row.data_model)
+            else:
+                data_sheet = self._get_new_data_sheet(sheet_names[0], row.data_model)
 
         else:
             if not row.new_name:
