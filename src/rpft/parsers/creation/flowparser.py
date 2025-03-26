@@ -746,10 +746,10 @@ class FlowParser:
             self._parse_insert_as_block_row(row)
             return
 
-        try:
-            row_action = self._get_row_action(row)
-        except RapidProActionError as e:
-            raise Exception(str(e))
+        # try:
+        row_action = self._get_row_action(row)
+        # except RapidProActionError as e:
+        #     raise Exception(str(e))
         node_name = self._get_node_name(row)
         existing_node = self.node_name_to_node_map.get(node_name)
 

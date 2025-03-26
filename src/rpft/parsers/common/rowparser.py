@@ -1,11 +1,19 @@
 import re
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
+
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, model_validator
 
 from rpft.parsers.common.cellparser import CellParser
+
+
+def is_pairs(value):
+    return all(
+        isinstance(item, Sequence) and not isinstance(item, str) and len(item) == 2
+        for item in value
+    )
 
 
 class RowParserError(Exception):
@@ -32,6 +40,41 @@ class ParserModel(BaseModel):
     def header_name_to_field_name_with_context(header, row):
         # This is used for models representing a full sheet row.
         return header
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def collect(cls, v, info):
+        """
+        Collect a single value into a list if the target field is a list
+        """
+        field = cls.model_fields[info.field_name]
+
+        if is_list_type(field.annotation) and (
+            not isinstance(v, Sequence) or isinstance(v, str)
+        ):
+            return [v] if v != "" else []
+
+        return v
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_to_dict(cls, data):
+        """
+        Coerce different types of data into a dict, if possible.
+        """
+        if isinstance(data, str):
+            data = [data]
+
+        if isinstance(data, Sequence):
+            if is_pairs(data):
+                return dict(data)
+            else:
+                return {
+                    name: val[1] if isinstance(val, list) and len(val) > 1 else val
+                    for (name, _), val in zip(cls.model_fields.items(), data)
+                }
+
+        return data
 
 
 def get_list_child_model(model):

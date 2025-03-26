@@ -55,7 +55,7 @@ def initialize_main_logger(file_path="errors.log"):
 
     console_handler = logging.StreamHandler()
     console_handler.addFilter(context_filter)
-    console_handler.setLevel(logging.CRITICAL)
+    console_handler.setLevel(logging.INFO)
 
     logging.basicConfig(
         level=logging.INFO,

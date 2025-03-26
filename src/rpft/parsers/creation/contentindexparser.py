@@ -1,7 +1,14 @@
 import importlib
+import json
 import logging
 from collections import OrderedDict
+from pathlib import Path
+
+from benedict import benedict
+from tablib import Dataset
+
 from rpft.logger.logger import logging_context
+from rpft.parsers.universal import tabulate
 from rpft.parsers.common.model_inference import model_from_headers
 from rpft.parsers.common.sheetparser import SheetParser
 from rpft.parsers.creation import globalrowmodels
@@ -17,7 +24,7 @@ from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.creation.surveyparser import Survey, SurveyParser
 from rpft.parsers.creation.triggerparser import TriggerParser
 from rpft.parsers.creation.triggerrowmodel import TriggerRowModel
-from rpft.parsers.sheets import Sheet
+from rpft.parsers.sheets import CompositeSheetReader, Sheet
 from rpft.rapidpro.models.containers import RapidProContainer
 
 
@@ -44,19 +51,154 @@ class ParserError(Exception):
     pass
 
 
+class JSONDataSource:
+
+    def __init__(self, paths):
+        self.objs = []
+
+        for path in paths:
+            with open(path, "r") as file_:
+                self.objs += [(json.load(file_), Path(path).name)]
+
+    def get(self, key, model=None):
+        candidates = []
+
+        for obj, name in self.objs:
+            if key in obj:
+                candidates += [(obj[key], name)]
+
+        if not candidates:
+            raise ParserError("Data for key not found", {"key": key})
+
+        active, name = candidates[-1]
+
+        if len(candidates) > 1:
+            LOGGER.warning(
+                "Duplicate sheets found, "
+                + str(
+                    {
+                        "name": key,
+                        "readers": [name for _, name in candidates],
+                        "active": name,
+                    }
+                ),
+            )
+
+        model = model or benedict
+
+        return [model(**item) for item in active], name, key
+
+    def get_all(self, key, model=None):
+        model = model or benedict
+        items = []
+
+        for obj, name in self.objs:
+            if key in obj:
+                items += [([model(**item) for item in obj[key]], name, key)]
+
+        return items
+
+    def _get_sheet_or_die(self, sheet_name):
+        data, meta, name, key = self._get(sheet_name)
+        table = tabulate(data, meta)
+        sheet = Sheet(None, name, Dataset(*table[1:], headers=table[0], title=key))
+
+        return sheet
+
+    def _get(self, key):
+        candidates = []
+
+        for obj, name in self.objs:
+            if key in obj:
+                candidates += [
+                    (
+                        obj[key],
+                        obj.get("_idems", {}).get("tabulate", {}).get(key, {}),
+                        name,
+                    )
+                ]
+
+        if not candidates:
+            raise ParserError("Data for key not found", {"key": key})
+
+        active, meta, name = candidates[-1]
+
+        if len(candidates) > 1:
+            LOGGER.warning(
+                "Duplicate sheets found, "
+                + str(
+                    {
+                        "name": key,
+                        "readers": [name for *_, name in candidates],
+                        "active": name,
+                    }
+                ),
+            )
+
+        return active, meta, name, key
+
+
+class SheetDataSource:
+
+    def __init__(self, readers):
+        self.reader = CompositeSheetReader(readers)
+
+    def get(self, key, model=None):
+        sheet = self._get_sheet_or_die(key)
+        model = model or model_from_headers(key, sheet.table.headers)
+
+        return SheetParser(sheet.table, model).parse_all(), sheet.reader.name, key
+
+    def get_all(self, key, model=None):
+        return [
+            (
+                SheetParser(
+                    sheet.table,
+                    model or model_from_headers(key, sheet.table.headers),
+                ).parse_all(),
+                sheet.reader.name,
+                sheet.name,
+            )
+            for sheet in self.reader.get_sheets_by_name(key)
+        ]
+
+    def _get_sheet_or_die(self, sheet_name):
+        candidates = self.reader.get_sheets_by_name(sheet_name)
+
+        if not candidates:
+            raise ParserError("Sheet not found", {"name": sheet_name})
+
+        active = candidates[-1]
+
+        if len(candidates) > 1:
+            readers = [c.reader.name for c in candidates]
+            LOGGER.warning(
+                "Duplicate sheets found, "
+                + str(
+                    {
+                        "name": sheet_name,
+                        "readers": readers,
+                        "active": active.reader.name,
+                    }
+                ),
+            )
+
+        return active
+
+
 class ContentIndexParser:
 
     def __init__(
         self,
-        sheet_reader=None,
+        data_source,
         user_data_model_module_name=None,
         tag_matcher=TagMatcher(),
     ):
-        self.reader = sheet_reader
+        self.data_source = data_source
         self.tag_matcher = tag_matcher
         self.template_sheets = {}
         self.data_sheets = {}
-        self.flow_definition_rows: list[ContentIndexRowModel] = []
+        self.flow_definition_rows = []
         self.campaign_parsers: dict[str, tuple[str, CampaignParser]] = {}
         self.surveys = {}
         self.trigger_parsers = OrderedDict()
@@ -65,13 +207,13 @@ class ContentIndexParser:
             if user_data_model_module_name
             else None
         )
-        indices = self.reader.get_sheets_by_name("content_index")
+        indices = self.data_source.get_all("content_index", ContentIndexRowModel)
 
         if not indices:
-            raise Exception("No content index sheet provided")
+            raise Exception("No content index found")
 
-        for sheet in indices:
-            self._process_content_index_table(sheet)
+        for entries, location, key in indices:
+            self._process_content_index_table(entries, f"{location}-{key}")
 
         self._populate_missing_templates()
         self.definition = ChatbotDefinition(
@@ -81,11 +223,9 @@ class ContentIndexParser:
             self.surveys,
         )
 
-    def _process_content_index_table(self, sheet: Sheet):
-        rows = SheetParser(sheet.table, ContentIndexRowModel).parse_all()
-
+    def _process_content_index_table(self, rows, label):
         for row_idx, row in enumerate(rows, start=2):
-            logging_prefix = f"{sheet.reader.name}-{sheet.name} | row {row_idx}"
+            logging_prefix = f"{label} | row {row_idx}"
 
             with logging_context(logging_prefix):
                 if row.status == "draft":
@@ -104,10 +244,12 @@ class ContentIndexParser:
                     )
 
                 if row.type == "content_index":
-                    sheet = self._get_sheet_or_die(row.sheet_name[0])
+                    entries, location, key = self.data_source.get(
+                        row.sheet_name[0], ContentIndexRowModel
+                    )
 
-                    with logging_context(f"{sheet.name}"):
-                        self._process_content_index_table(sheet)
+                    with logging_context(f"{key}"):
+                        self._process_content_index_table(entries, f"{location}-{key}")
                 elif row.type == "data_sheet":
                     if not len(row.sheet_name) >= 1:
                         raise Exception(
@@ -159,7 +301,7 @@ class ContentIndexParser:
             )
 
         if sheet_name not in self.template_sheets or update_duplicates:
-            sheet = self._get_sheet_or_die(sheet_name)
+            sheet = self.data_source._get_sheet_or_die(sheet_name)
             self.template_sheets[sheet_name] = TemplateSheet(
                 sheet_name,
                 sheet.table,
@@ -180,29 +322,6 @@ class ContentIndexParser:
         for logging_prefix, row in self.flow_definition_rows:
             with logging_context(f"{logging_prefix} | {row.sheet_name[0]}"):
                 self._add_template(row)
-
-    def _get_sheet_or_die(self, sheet_name):
-        candidates = self.reader.get_sheets_by_name(sheet_name)
-
-        if not candidates:
-            raise ParserError("Sheet not found", {"name": sheet_name})
-
-        active = candidates[-1]
-
-        if len(candidates) > 1:
-            readers = [c.reader.name for c in candidates]
-            LOGGER.debug(
-                "Duplicate sheets found, "
-                + str(
-                    {
-                        "name": sheet_name,
-                        "readers": readers,
-                        "active": active.reader.name,
-                    }
-                ),
-            )
-
-        return active
 
     def _process_data_sheet(self, row):
         sheet_names = row.sheet_name
@@ -262,26 +381,20 @@ class ContentIndexParser:
         user_model = None
 
         if data_model_name:
-            if hasattr(globalrowmodels, data_model_name):
-                user_model = getattr(globalrowmodels, data_model_name)
+            user_model = getattr(globalrowmodels, data_model_name, None)
+
             if self.user_models_module:
-                if hasattr(self.user_models_module, data_model_name):
-                    user_model = getattr(self.user_models_module, data_model_name)
-            if not user_model:
-                raise Exception(
-                    f'Undefined data_model_name "{data_model_name}" '
-                    f"in {self.user_models_module}."
-                )
+                user_model = getattr(self.user_models_module, data_model_name, None)
+
+                if not user_model:
+                    raise Exception(
+                        f'Undefined data_model_name "{data_model_name}" '
+                        f"in {self.user_models_module}."
+                    )
 
         with logging_context(sheet_name):
-            data_table = self._get_sheet_or_die(sheet_name).table
-
-            if not user_model:
-                LOGGER.info("Inferring RowModel automatically")
-                user_model = model_from_headers(sheet_name, data_table.headers)
-
-            data_rows = SheetParser(data_table, user_model).parse_all()
-            model_instances = OrderedDict((row.ID, row) for row in data_rows)
+            items, *_ = self.data_source.get(sheet_name, user_model)
+            model_instances = OrderedDict((item.ID, item) for item in items)
 
             return DataSheet(model_instances, user_model)
 
@@ -368,14 +481,14 @@ class ContentIndexParser:
 
     def create_campaign_parser(self, row):
         sheet_name = row.sheet_name[0]
-        sheet = self._get_sheet_or_die(sheet_name)
-        rows = SheetParser(sheet.table, CampaignEventRowModel).parse_all()
+        rows, *_ = self.data_source.get(sheet_name, CampaignEventRowModel)
+
         return CampaignParser(row.new_name or sheet_name, row.group, rows)
 
     def create_trigger_parser(self, row):
         sheet_name = row.sheet_name[0]
-        sheet = self._get_sheet_or_die(sheet_name)
-        rows = SheetParser(sheet.table, TriggerRowModel).parse_all()
+        rows, *_ = self.data_source.get(sheet_name, TriggerRowModel)
+
         return TriggerParser(sheet_name, rows)
 
     def _add_survey(self, row, logging_prefix):
