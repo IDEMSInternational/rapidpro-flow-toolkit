@@ -823,7 +823,7 @@ class TestOverrideBehaviour(TestCase):
             "deployment",
         )
         definition = ContentIndexParser(
-            CompositeSheetReader([base, filter_, deployment]),
+            SheetDataSource([base, filter_, deployment]),
             "tests.datarowmodels.simplemodel",
         ).definition
         keys = list(definition.get_data_sheet_rows("data").keys())
