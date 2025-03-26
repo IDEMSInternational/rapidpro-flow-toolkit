@@ -259,7 +259,8 @@ class TestConvertWorkbookToUniversal(TestCase):
             [
                 Dataset(("t1a1", "t1b1"), headers=("T1A", "T1B"), title="table1"),
                 Dataset(("t2a1", "t2b1"), headers=("T2A", "T2B"), title="table2"),
-            ]
+            ],
+            "test"
         )
 
         nested = parse_tables(workbook)
