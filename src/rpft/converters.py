@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import shutil
-import sys
 from pathlib import Path
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
@@ -40,8 +39,8 @@ def create_flows(input_files, output_file, sheet_format, data_models=None, tags=
             .render()
         )
     except Exception as e:
-        LOGGER.critical(e.args[0])
-        sys.exit(1)
+        LOGGER.critical(e.args[0] if e.args else e.__class__.__name__)
+        raise
 
     if output_file:
         with open(output_file, "w", encoding="utf8") as export:
