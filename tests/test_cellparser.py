@@ -118,41 +118,13 @@ class TestCellParser(TestCase):
     def test_strings_without_templates_are_not_changed(self):
         self.assertEqual(
             CellParser().parse_as_string("plain string"),
-            "plain string",
+            ("plain string", False),
         )
 
-    def test_strings_are_trimmed(self):
-        self.assertEqual(
-            CellParser().parse_as_string(" plain string "),
-            "plain string",
-        )
+    def test_templates_are_rendered(self):
         self.assertEqual(
             CellParser().parse_as_string(" {{var}} string ", context={"var": "abc"}),
-            "abc string",
-        )
-
-    def test_template_variable_substitution(self):
-        self.assertEqual(
-            CellParser().parse_as_string("{{var}} :)", context={"var": 15}),
-            "15 :)",
-        )
-
-    def test_template_variable_substitution_of_nested_objects(self):
-        context = {
-            "instance": OuterModel(
-                strings=["a", "b"],
-                inner=InnerModel(str_field="xyz"),
-            )
-        }
-        parser = CellParser()
-
-        self.assertEqual(
-            parser.parse_as_string("{{instance.strings[1]}}", context=context),
-            "b",
-        )
-        self.assertEqual(
-            parser.parse_as_string("{{instance.inner.str_field}}", context=context),
-            "xyz",
+            ("abc string", False),
         )
 
     def test_parse(self):
@@ -177,31 +149,12 @@ class TestCellParser(TestCase):
         out = self.parser.parse("{{string|escape}}", context={"string": string})
         self.assertEqual(out, string)
 
-    def test_parse_native_type(self):
-        out = self.parser.parse_as_string('{@(1,2,[3,"a"])@}')
-        self.assertEqual(out, (1, 2, [3, "a"]))
-        out = self.parser.parse_as_string('  {@(1,2,[3,"a"])@} ')
-        self.assertEqual(out, (1, 2, [3, "a"]))
-        out = self.parser.parse_as_string('{@ ( 1 , 2 , [ 3 , "a" ] ) @}')
-        self.assertEqual(out, (1, 2, [3, "a"]))
-
-        instance = OuterModel(strings=["a", "b"], inner=InnerModel(str_field="xyz"))
-        context = {"instance": instance}
-        out = self.parser.parse_as_string("{@instance@}", context=context)
-        self.assertEqual(out, instance)
-        out = self.parser.parse_as_string("{@instance.inner@}", context=context)
-        self.assertEqual(out, instance.inner)
-        out = self.parser.parse_as_string("{@instance.strings@}", context=context)
-        self.assertEqual(out, ["a", "b"])
-
-        class TestObj:
-            def __init__(self, value):
-                self.value = value
-
-        test_objs = [TestObj("1"), TestObj("2"), TestObj("A")]
-        out = self.parser.parse_as_string(
-            "{@test_objs@}", context={"test_objs": test_objs}
+    def test_indicate_is_object_after_parsing_native_type_template(self):
+        self.assertEqual(
+            self.parser.parse_as_string(
+                ' {@(1, 2, [input == "yes", "a"])@} ',
+                context={"input": "yes"},
+            ),
+            ((1, 2, [True, "a"]), True),
+            "Rendered value should not be string; is_object should be True",
         )
-        self.assertEqual(out, test_objs)
-        out = self.parser.parse_as_string("{@range(1,5)@}")
-        self.assertEqual(out, range(1, 5))

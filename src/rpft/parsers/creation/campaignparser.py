@@ -1,7 +1,10 @@
-from rpft.rapidpro.models.campaigns import Campaign, CampaignEvent
-from rpft.logger.logger import get_logger, logging_context
+import logging
 
-LOGGER = get_logger()
+from rpft.rapidpro.models.campaigns import Campaign, CampaignEvent
+from rpft.logger.logger import logging_context
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class CampaignParser:
@@ -34,5 +37,5 @@ class CampaignParser:
                     )
                     self.campaign.add_event(event)
                 except ValueError as e:
-                    LOGGER.critical(str(e))
+                    raise Exception(str(e))
         return self.campaign

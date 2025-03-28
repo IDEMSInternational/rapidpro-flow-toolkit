@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import List
 
 from rpft.parsers.common.rowparser import ParserModel
 from rpft.parsers.creation.models import SurveyConfig
@@ -24,17 +23,18 @@ class Operation(ParserModel):
 class ContentIndexRowModel(ParserModel):
     type: str = ""
     new_name: str = ""
-    sheet_name: List[str] = []
+    sheet_name: list[str] = []
     data_sheet: str = ""
     data_row_id: str = ""
-    template_argument_definitions: List[TemplateArgument] = []  # internal name
+    template_argument_definitions: list[TemplateArgument] = []  # internal name
     template_arguments: list = []
+    options: dict = {}
     survey_config: SurveyConfig = SurveyConfig()
     operation: Operation = Operation()
     data_model: str = ""
     group: str = ""
     status: str = ""
-    tags: List[str] = []
+    tags: list[str] = []
 
     def field_name_to_header_name(field):
         if field == "template_argument_definitions":

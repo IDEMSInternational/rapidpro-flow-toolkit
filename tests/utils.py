@@ -234,7 +234,9 @@ action_value_fields = {
     "enter_flow": (lambda x: x["flow"]["name"]),
     "open_ticket": (lambda x: x["subject"]),
     "play_audio": (lambda x: x["audio_url"]),
-    "remove_contact_groups": (lambda x: x["groups"][0]["name"]),
+    "remove_contact_groups": (
+        lambda x: x["groups"][0]["name"] if x["groups"] else "ALL"
+    ),
     "say_msg": (lambda x: x["text"]),
     "send_broadcast": (lambda x: x["text"]),
     "send_email": (lambda x: x["subject"]),

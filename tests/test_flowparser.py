@@ -155,7 +155,7 @@ class TestParsing(TestCase):
         nodes = output["nodes"]
         all_node_uuids = [row.node_uuid for row in self.rows]
         # Rows 0,1,2,3 and rows -3,-2 are actions joined into a single node.
-        expected_node_uuids = all_node_uuids[3:-2] + all_node_uuids[-1:]
+        expected_node_uuids = all_node_uuids[3:-3] + all_node_uuids[-2:]
         self.assertEqual(
             expected_node_uuids,
             [node["uuid"] for node in nodes],
@@ -165,7 +165,7 @@ class TestParsing(TestCase):
         self.assertEqual(output["type"], "messaging")
         self.assertEqual(output["language"], "eng")
 
-        self.assertEqual(len(nodes), 7)
+        self.assertEqual(len(nodes), 8)
 
         node_0 = nodes[0]
         self.assertEqual(len(node_0["actions"]), 4)
@@ -239,7 +239,13 @@ class TestParsing(TestCase):
 
         node_6 = nodes[6]
         self.assertEqual(node_5["exits"][0]["destination_uuid"], node_6["uuid"])
-        self.assertIsNone(node_6["exits"][0]["destination_uuid"])
+
+        node_7 = nodes[7]
+        self.assertEqual(len(node_7["actions"]), 1)
+        self.assertEqual("remove_contact_groups", node_7["actions"][0]["type"])
+        self.assertEqual(len(node_7["actions"][0]["groups"]), 0)
+        self.assertTrue(node_7["actions"][0]["all_groups"])
+        self.assertIsNone(node_7["exits"][0]["destination_uuid"])
 
         # Check UI positions/types of the first two nodes
         render_ui = output["_ui"]["nodes"]

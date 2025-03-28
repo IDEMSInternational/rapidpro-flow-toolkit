@@ -373,17 +373,17 @@ class GenericGroupAction(Action):
             group.assign_uuid(uuid_dict)
 
     def main_value(self):
-        return self.groups[0].name
+        return self.groups[0].name if self.groups else ""
 
     def render(self):
         return NotImplementedError
 
     def get_row_model_fields(self):
         # abstract method
+        obj_id = [group.uuid for group in self.groups][0] if self.groups else ""
         return {
             "mainarg_groups": [group.name for group in self.groups],
-            "obj_id": [group.uuid for group in self.groups][0]
-            or "",  # 0th element as obj_id is not yet a list.
+            "obj_id": obj_id or "",  # 0th element as obj_id is not yet a list.
         }
 
 

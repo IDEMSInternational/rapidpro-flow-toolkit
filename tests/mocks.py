@@ -11,7 +11,7 @@ class MockCellParser:
         return value
 
     def parse_as_string(self, value, context={}):
-        return value
+        return value, False
 
     def join_from_lists(self, nested_list):
         return nested_list

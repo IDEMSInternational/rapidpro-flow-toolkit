@@ -1,4 +1,4 @@
-from typing import List
+from pydantic import ConfigDict
 
 from rpft.parsers.common.rowparser import ParserModel
 from rpft.parsers.creation.models import Condition
@@ -43,10 +43,12 @@ def dict_to_list_of_pairs(headers):
 class WhatsAppTemplating(ParserModel):
     name: str = ""
     uuid: str = ""
-    variables: List[str] = []
+    variables: list[str] = []
 
 
 class Edge(ParserModel):
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+
     from_: str = ""
     condition: Condition = Condition()
 
@@ -67,17 +69,19 @@ class Edge(ParserModel):
 
 
 class FlowRowModel(ParserModel):
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+
     row_id: str = ""
     type: str
-    edges: List[Edge]
-    loop_variable: List[str] = []
+    edges: list[Edge]
+    loop_variable: list[str] = []
     include_if: bool = True
     mainarg_message_text: str = ""
     mainarg_value: str = ""
-    mainarg_groups: List[str] = []
+    mainarg_groups: list[str] = []
     mainarg_none: str = ""
     mainarg_dict: list = []  # encoded as list of pairs
-    mainarg_destination_row_ids: List[str] = []
+    mainarg_destination_row_ids: list[str] = []
     mainarg_flow_name: str = ""
     mainarg_expression: str = ""
     mainarg_iterlist: list = []
@@ -86,13 +90,13 @@ class FlowRowModel(ParserModel):
     data_sheet: str = ""
     data_row_id: str = ""
     template_arguments: list = []
-    choices: List[str] = []
+    choices: list[str] = []
     save_name: str = ""
     result_category: str = ""
     image: str = ""
     audio: str = ""
     video: str = ""
-    attachments: List[str] = []
+    attachments: list[str] = []
     urn_scheme: str = ""
     obj_name: str = ""
     obj_id: str = ""
@@ -100,14 +104,8 @@ class FlowRowModel(ParserModel):
     node_uuid: str = ""
     no_response: str = ""
     ui_type: str = ""
-    ui_position: List[str] = []
+    ui_position: list[str] = []
 
-    # TODO: Extra validation here, e.g. from must not be empty
-    # type must come from row_type_to_main_arg.keys() (see below)
-    # image/audio/video only makes sense if type == send_message
-    # mainarg_none should be ''
-    # _ui_position should be '' or a list of two ints
-    # ...
     def field_name_to_header_name(field):
         field_map = {
             "node_uuid": "_nodeId",

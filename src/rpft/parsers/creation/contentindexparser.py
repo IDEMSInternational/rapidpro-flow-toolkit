@@ -1,8 +1,7 @@
 import importlib
+import logging
 from collections import OrderedDict
-from typing import Dict, List
-
-from rpft.logger.logger import get_logger, logging_context
+from rpft.logger.logger import logging_context
 from rpft.parsers.common.model_inference import model_from_headers
 from rpft.parsers.common.sheetparser import SheetParser
 from rpft.parsers.creation import globalrowmodels
@@ -21,7 +20,8 @@ from rpft.parsers.creation.triggerrowmodel import TriggerRowModel
 from rpft.parsers.sheets import Sheet
 from rpft.rapidpro.models.containers import RapidProContainer
 
-LOGGER = get_logger()
+
+LOGGER = logging.getLogger(__name__)
 
 
 class DataSheet:
@@ -36,7 +36,7 @@ class DataSheet:
     def to_dict(self):
         return {
             "model": self.row_model.__name__,
-            "rows": [content.dict() for content in self.rows.values()],
+            "rows": [content.model_dump() for content in self.rows.values()],
         }
 
 
@@ -56,8 +56,8 @@ class ContentIndexParser:
         self.tag_matcher = tag_matcher
         self.template_sheets = {}
         self.data_sheets = {}
-        self.flow_definition_rows: List[ContentIndexRowModel] = []
-        self.campaign_parsers: Dict[str, tuple[str, CampaignParser]] = {}
+        self.flow_definition_rows: list[ContentIndexRowModel] = []
+        self.campaign_parsers: dict[str, tuple[str, CampaignParser]] = {}
         self.surveys = {}
         self.trigger_parsers = OrderedDict()
         self.user_models_module = (
@@ -68,7 +68,7 @@ class ContentIndexParser:
         indices = self.reader.get_sheets_by_name("content_index")
 
         if not indices:
-            LOGGER.critical("No content index sheet provided")
+            raise Exception("No content index sheet provided")
 
         for sheet in indices:
             self._process_content_index_table(sheet)
@@ -98,7 +98,7 @@ class ContentIndexParser:
                     "data_sheet",
                     ContentIndexType.SURVEY.value,
                 ]:
-                    LOGGER.critical(
+                    raise Exception(
                         f"For {row.type} rows, exactly one sheet_name has to be"
                         " specified"
                     )
@@ -110,7 +110,7 @@ class ContentIndexParser:
                         self._process_content_index_table(sheet)
                 elif row.type == "data_sheet":
                     if not len(row.sheet_name) >= 1:
-                        LOGGER.critical(
+                        raise Exception(
                             "For data_sheet rows, at least one sheet_name has to be"
                             " specified"
                         )
@@ -131,7 +131,7 @@ class ContentIndexParser:
                     name = campaign_parser.campaign.name
 
                     if name in self.campaign_parsers:
-                        LOGGER.warning(
+                        LOGGER.debug(
                             f"Duplicate campaign definition sheet '{name}'. "
                             "Overwriting previous definition."
                         )
@@ -153,7 +153,7 @@ class ContentIndexParser:
         sheet_name = row.sheet_name[0]
 
         if sheet_name in self.template_sheets and update_duplicates:
-            LOGGER.info(
+            LOGGER.debug(
                 f"Duplicate template definition sheet '{sheet_name}'. "
                 "Overwriting previous definition."
             )
@@ -191,7 +191,7 @@ class ContentIndexParser:
 
         if len(candidates) > 1:
             readers = [c.reader.name for c in candidates]
-            LOGGER.warning(
+            LOGGER.debug(
                 "Duplicate sheets found, "
                 + str(
                     {
@@ -216,15 +216,16 @@ class ContentIndexParser:
         if not row.operation.type:
             if len(sheet_names) > 1:
                 LOGGER.warning(
-                    "Implicitly concatenating data sheets without concat operation. "
-                    "Implicit concatenation is deprecated and may be removed "
-                    "in the future."
+                    "Implicitly concatenating data sheets without concat operation "
+                    "is deprecated and may be removed in the future."
                 )
-            data_sheet = self._data_sheets_concat(sheet_names, row.data_model)
+                data_sheet = self._data_sheets_concat(sheet_names, row.data_model)
+            else:
+                data_sheet = self._get_new_data_sheet(sheet_names[0], row.data_model)
 
         else:
             if not row.new_name:
-                LOGGER.critical(
+                raise Exception(
                     "If an operation is applied to a data_sheet, a new_name has to be"
                     " provided"
                 )
@@ -240,12 +241,12 @@ class ContentIndexParser:
                     sheet_names[0], row.data_model, row.operation
                 )
             else:
-                LOGGER.critical(f'Unknown operation "{row.operation}"')
+                raise Exception(f'Unknown operation "{row.operation}"')
 
         new_name = row.new_name or sheet_names[0]
 
         if new_name in self.data_sheets:
-            LOGGER.warn(
+            LOGGER.debug(
                 f"Duplicate data sheet {new_name}. Overwriting previous definition."
             )
 
@@ -267,7 +268,7 @@ class ContentIndexParser:
                 if hasattr(self.user_models_module, data_model_name):
                     user_model = getattr(self.user_models_module, data_model_name)
             if not user_model:
-                LOGGER.critical(
+                raise Exception(
                     f'Undefined data_model_name "{data_model_name}" '
                     f"in {self.user_models_module}."
                 )
@@ -293,7 +294,7 @@ class ContentIndexParser:
                 data_sheet = self._get_data_sheet(sheet_name, data_model_name)
 
                 if user_model and user_model is not data_sheet.row_model:
-                    LOGGER.critical(
+                    raise Exception(
                         "Cannot concatenate data_sheets with different underlying"
                         " models"
                     )
@@ -312,9 +313,9 @@ class ContentIndexParser:
                 if eval(operation.expression, {}, dict(row)) is True:
                     new_row_data[row_id] = row
             except NameError as e:
-                LOGGER.critical(f"Invalid filtering expression: {e}")
+                raise Exception(f"Invalid filtering expression: {e}")
             except SyntaxError as e:
-                LOGGER.critical(
+                raise Exception(
                     f'Invalid filtering expression: "{e.text}". '
                     f"SyntaxError at line {e.lineno} character {e.offset}"
                 )
@@ -333,9 +334,9 @@ class ContentIndexParser:
                 )
             )
         except NameError as e:
-            LOGGER.critical(f"Invalid sorting expression: {e}")
+            raise Exception(f"Invalid sorting expression: {e}")
         except SyntaxError as e:
-            LOGGER.critical(
+            raise Exception(
                 f'Invalid sorting expression: "{e.text}". '
                 f"SyntaxError at line {e.lineno} character {e.offset}"
             )

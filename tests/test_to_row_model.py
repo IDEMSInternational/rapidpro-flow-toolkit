@@ -44,8 +44,8 @@ class TestToRowModels(unittest.TestCase):
         self.maxDiff = None
         self.assertEqual(len(row_models1), len(row_models2))
         for model1, model2 in zip(row_models1, row_models2):
-            data1 = model1.dict()
-            data2 = model2.dict()
+            data1 = model1.model_dump()
+            data2 = model2.model_dump()
             if not data1["node_uuid"] or not data2["node_uuid"]:
                 # If one of them is blank, skip the comparison
                 data1.pop("node_uuid")

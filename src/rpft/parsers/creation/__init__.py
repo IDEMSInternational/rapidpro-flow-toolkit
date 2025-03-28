@@ -1,7 +1,9 @@
-from rpft.logger.logger import get_logger
+import logging
+
 from rpft.parsers.creation.models import TemplateSheet
 
-LOGGER = get_logger()
+
+LOGGER = logging.getLogger(__name__)
 
 
 def map_template_arguments(template: TemplateSheet, args, context, data_sheets) -> dict:
@@ -39,7 +41,7 @@ def map_template_arguments(template: TemplateSheet, args, context, data_sheets) 
         value = arg if arg != "" else arg_def.default_value
 
         if value == "":
-            LOGGER.critical(f'Required template argument "{arg_def.name}" not provided')
+            raise Exception(f'Required template argument "{arg_def.name}" not provided')
 
         value = data_sheets[value].rows if arg_def.type == "sheet" else value
 

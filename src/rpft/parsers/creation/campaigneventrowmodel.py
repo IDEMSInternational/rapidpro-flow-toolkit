@@ -1,5 +1,6 @@
+from pydantic import field_validator
+
 from rpft.parsers.common.rowparser import ParserModel
-from pydantic.v1 import validator
 
 
 class CampaignEventRowModel(ParserModel):
@@ -14,13 +15,15 @@ class CampaignEventRowModel(ParserModel):
     flow: str = ""
     base_language: str = ""
 
-    @validator("unit")
+    @field_validator("unit")
+    @classmethod
     def validate_unit(cls, v):
         if v not in ["M", "H", "D", "W"]:
             raise ValueError("unit must be M (minute), H (hour), D (day) or W (week)")
         return v
 
-    @validator("start_mode")
+    @field_validator("start_mode")
+    @classmethod
     def validate_start_mode(cls, v):
         if v not in ["I", "S", "P"]:
             raise ValueError(
@@ -29,7 +32,8 @@ class CampaignEventRowModel(ParserModel):
             )
         return v
 
-    @validator("event_type")
+    @field_validator("event_type")
+    @classmethod
     def validate_event_type(cls, v):
         if v not in ["M", "F"]:
             raise ValueError("event_type must be F (flow) or M (message)")

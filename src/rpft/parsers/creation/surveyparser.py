@@ -1,7 +1,8 @@
 import copy
+import logging
 import re
 
-from rpft.logger.logger import get_logger, logging_context
+from rpft.logger.logger import logging_context
 from rpft.parsers.common.rowparser import ParserModel
 from rpft.parsers.creation import map_template_arguments
 from rpft.parsers.creation.models import ChatbotDefinition
@@ -9,7 +10,7 @@ from rpft.parsers.creation.flowparser import FlowParser
 from rpft.rapidpro.models.containers import RapidProContainer
 
 
-LOGGER = get_logger()
+LOGGER = logging.getLogger(__name__)
 
 
 def name_to_id(name):

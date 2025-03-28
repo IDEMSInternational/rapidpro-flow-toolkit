@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+requires = ["setuptools>=64", "setuptools-scm>=8"]
 
 [project]
+dynamic = ["version"]
 name = "rpft"
-version = "1.5.1"
 description = "Toolkit for using spreadsheets to create and modify RapidPro flows"
 authors = [
     {name = "IDEMS International", email = "contact@idems.international"},
@@ -26,6 +26,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Text Processing :: General",
     "Topic :: Utilities",
 ]
@@ -45,3 +46,5 @@ Repository = "https://github.com/IDEMSInternational/rapidpro-flow-toolkit"
 
 [project.scripts]
 rpft = "rpft.cli:main"
+
+[tool.setuptools_scm]
