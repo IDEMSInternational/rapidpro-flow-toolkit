@@ -118,8 +118,8 @@ class TestSurveyParser(TestTemplate):
             [
                 ("enter_flow", "survey - Survey Name - question - first"),
                 ("enter_flow", "survey - Survey Name - question - second"),
-                ("send_msg", "You waited too long"),
                 ("set_run_result", "expired"),
+                ("send_msg", "You waited too long"),
             ],
             Context(inputs=["completed", "expired"]),
         )
@@ -132,6 +132,7 @@ class TestSurveyParser(TestTemplate):
                 ("enter_flow", "survey - Survey Name - question - second"),
                 ("enter_flow", "survey - Survey Name - question - third"),
                 ("set_run_result", "proceed"),
+                ("set_contact_field", "s_surveyname_complete"),
             ],
             Context(inputs=["completed", "completed", "completed"]),
         )
@@ -221,6 +222,143 @@ class TestSurveyParser(TestTemplate):
             ],
             Context(inputs=["My name"]),
         )
+
+    def test_confirmation_conditions(self):
+        ci_sheet = csv_join(
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model",
+            "data_sheet,survey_data,,,,SurveyQuestionRowModel",
+            "survey,,survey_data,,Survey Name,",
+        )
+        survey_data = csv_join(
+            "ID,type,question,variable,completion_variable,confirmation.conditions.1.condition,confirmation.conditions.1.message,confirmation.conditions.2.condition,confirmation.conditions.2.message",  # noqa: E501
+            "age,text,Enter your age,,,18|@answer|has_number_lt|,Are you sure you're under 19?,25|@answer|has_number_gt|,Are you sure you're over 24?",  # noqa: E501
+        )
+
+        output = (
+            ContentIndexParser(
+                CompositeSheetReader(
+                    [
+                        CSVSheetReader(TESTS_ROOT / "input/survey_templates"),
+                        MockSheetReader(ci_sheet, {"survey_data": survey_data}),
+                    ]
+                )
+            )
+            .parse_all()
+            .render()
+        )
+
+        self.assertFlowMessages(
+            output,
+            "survey - Survey Name - question - age",
+            [
+                ("set_run_result", "dummy"),
+                ("send_msg", "Enter your age"),
+                ("set_contact_field", "sq_surveyname_age"),
+                ("set_run_result", "dummy"),
+                ("set_contact_field", "sq_surveyname_age_complete"),
+            ],
+            Context(inputs=["20"], variables={"@fields.sq_surveyname_age": "20"}),
+        )
+
+        self.assertFlowMessages(
+            output,
+            "survey - Survey Name - question - age",
+            [
+                ("set_run_result", "dummy"),
+                ("send_msg", "Enter your age"),
+                ("set_contact_field", "sq_surveyname_age"),
+                ("set_run_result", "dummy"),
+                ("send_msg", "Are you sure you're under 19?"),
+                ("send_msg", "Sorry, I don’t understand"),
+                ("send_msg", "Are you sure you're under 19?"),
+                ("send_msg", "Ok, answer confirmed"),
+                ("set_contact_field", "sq_surveyname_age_complete"),
+            ],
+            Context(
+                inputs=["15", "x", "y"], variables={"@fields.sq_surveyname_age": "15"}
+            ),
+        )
+
+        self.assertFlowMessages(
+            output,
+            "survey - Survey Name - question - age",
+            [
+                ("set_run_result", "dummy"),
+                ("send_msg", "Enter your age"),
+                ("set_contact_field", "sq_surveyname_age"),
+                ("set_run_result", "dummy"),
+                ("send_msg", "Are you sure you're over 24?"),
+                ("send_msg", "Ok, repeating question."),
+                ("set_run_result", "dummy"),
+                ("send_msg", "Enter your age"),
+                ("set_contact_field", "sq_surveyname_age"),
+                ("set_run_result", "dummy"),
+                ("send_msg", "Are you sure you're over 24?"),
+                ("send_msg", "Ok, answer confirmed"),
+                ("set_contact_field", "sq_surveyname_age_complete"),
+            ],
+            Context(
+                inputs=["30", "n", "30", "y"],
+                variables={"@fields.sq_surveyname_age": "30"},
+            ),
+        )
+
+    def test_validation_conditions(self):
+        ci_sheet = csv_join(
+            "type,sheet_name,data_sheet,data_row_id,new_name,data_model",
+            "data_sheet,survey_data,,,,SurveyQuestionRowModel",
+            "survey,,survey_data,,Survey Name,",
+        )
+        survey_data = csv_join(
+            "ID,type,question,variable,completion_variable,validation.conditions.1.condition,validation.conditions.1.message,validation.conditions.2.condition,validation.conditions.2.message",  # noqa: E501
+            "age,text,Enter your age,,,18|@answer|has_number_lt|,You are too young,25|@answer|has_number_gt|,You are too old",  # noqa: E501
+        )
+
+        output = (
+            ContentIndexParser(
+                CompositeSheetReader(
+                    [
+                        CSVSheetReader(TESTS_ROOT / "input/survey_templates"),
+                        MockSheetReader(ci_sheet, {"survey_data": survey_data}),
+                    ]
+                )
+            )
+            .parse_all()
+            .render()
+        )
+
+        self.assertFlowMessages(
+            output,
+            "survey - Survey Name - question - age",
+            [
+                ("set_run_result", "dummy"),
+                ("send_msg", "Enter your age"),
+                ("set_contact_field", "sq_surveyname_age"),
+                ("set_contact_field", "sq_surveyname_age_complete"),
+            ],
+            Context(inputs=["20"], variables={"@fields.sq_surveyname_age": "20"}),
+        )
+
+        # This is a limitation of the flow simulation: We cannot reassign context
+        # variables, i.e. not simulate the user input changing the value of a variable.
+        # A validation check failing causes the flow to repeat the input/validation
+        # loop indefinitely, resulting in an IndexError after popping all the user
+        # inputs from the context.
+        with self.assertRaises(IndexError):
+            self.assertFlowMessages(
+                output,
+                "survey - Survey Name - question - age",
+                [],
+                Context(inputs=["15"], variables={"@fields.sq_surveyname_age": "15"}),
+            )
+
+        with self.assertRaises(IndexError):
+            self.assertFlowMessages(
+                output,
+                "survey - Survey Name - question - age",
+                [],
+                Context(inputs=["30"], variables={"@fields.sq_surveyname_age": "30"}),
+            )
 
     def test_template_overwrite(self):
         ci_sheet = csv_join(

@@ -144,6 +144,12 @@ class SkipOption(ParserModel):
     The value that is stored in the question variable if the question is skipped.
     """
 
+class Confirmation(ParserModel):
+    condition: Condition = Condition()
+    question: str = ""
+    confirm_option: str = ""
+    back_option: str = ""
+
 
 class SurveyQuestionModel(ParserModel):
     """
@@ -191,27 +197,28 @@ class SurveyQuestionModel(ParserModel):
 
     skipoption: SkipOption = SkipOption()
     """
-    Make question skippable. Adds an additional choice allowing use to skip the
+    Make question skippable. Adds an additional choice allowing user to skip the
     question.
     """
 
-    confirmation: ConditionsWithMessage = ConditionsWithMessage()
+    # confirmation: ConditionsWithMessage = ConditionsWithMessage()
+    confirmation: Confirmation = Confirmation()
     """
-    Conditional Answer confirmation. Condition for sending a message asking the user to
-    confirm their answer. Comes with a Yes/No choice for the user. 'No' repeats the
-    question; 'Yes' stores the answer and proceeds.
+    Conditional Answer confirmation. If a condition holds, send a message asking the
+    user to confirm their answer. Comes with a Yes/No choice for the user.
+    'No' repeats the question; 'Yes' stores the answer and proceeds.
     """
 
     stop: ConditionsWithMessage = ConditionsWithMessage()
     """
-    Conditional premature end of survey (later: forward skip?). Condition that ends the
-    survey (with message to user).
+    Conditional premature end of survey (later: forward skip?).
+    If ANY of the conditions hold, ends the survey (with message to user).
     """
 
     validation: ConditionsWithMessage = ConditionsWithMessage()
     """
-    Validation / conditional repetition of question. If condition holds, message is
-    printed and question is repeated.
+    Validation / conditional repetition of question. If a condition holds,
+    its associated message is printed and the question is repeated.
     """
 
     postprocessing: PostProcessing = PostProcessing()
