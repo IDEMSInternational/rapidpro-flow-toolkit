@@ -4,7 +4,7 @@ from collections.abc import Iterable, Sequence
 
 from typing import List
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from rpft.parsers.common.cellparser import CellParser
 
@@ -21,6 +21,9 @@ class RowParserError(Exception):
 
 
 class ParserModel(BaseModel):
+
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+
     def header_name_to_field_name(header):
         # Given a human-friendly column header name, map it to the
         # string defining which field(s) in the model the cell
