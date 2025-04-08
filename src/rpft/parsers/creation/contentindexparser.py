@@ -378,25 +378,23 @@ class ContentIndexParser:
             return self._get_new_data_sheet(sheet_name, data_model_name)
 
     def _get_new_data_sheet(self, sheet_name, data_model_name=None):
-        user_model = None
+        model = getattr(
+            self.user_models_module or globalrowmodels,
+            data_model_name,
+            None,
+        ) if data_model_name else None
 
-        if data_model_name:
-            user_model = getattr(globalrowmodels, data_model_name, None)
-
-            if self.user_models_module:
-                user_model = getattr(self.user_models_module, data_model_name, None)
-
-                if not user_model:
-                    raise Exception(
-                        f'Undefined data_model_name "{data_model_name}" '
-                        f"in {self.user_models_module}."
-                    )
+        if self.user_models_module and not model:
+            raise Exception(
+                f'Undefined data_model_name "{data_model_name}" '
+                f"in {self.user_models_module}."
+            )
 
         with logging_context(sheet_name):
-            items, *_ = self.data_source.get(sheet_name, user_model)
+            items, *_ = self.data_source.get(sheet_name, model)
             model_instances = OrderedDict((item.ID, item) for item in items)
 
-            return DataSheet(model_instances, user_model)
+            return DataSheet(model_instances, model)
 
     def _data_sheets_concat(self, sheet_names, data_model_name):
         all_data_rows = OrderedDict()
