@@ -1,5 +1,8 @@
 import logging
 from collections import ChainMap
+from logging.config import dictConfig
+
+from rpft.logger import DEFAULT_CONFIG
 
 
 class LoggingContextHandler:
@@ -48,17 +51,6 @@ class ContextFilter(logging.Filter):
 
 
 def initialize_main_logger(file_path="errors.log"):
-    context_filter = ContextFilter()
-
-    file_handler = logging.FileHandler(file_path, "w")
-    file_handler.addFilter(context_filter)
-
-    console_handler = logging.StreamHandler()
-    console_handler.addFilter(context_filter)
-    console_handler.setLevel(logging.CRITICAL)
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(levelname)s:%(name)s: %(processing_stack)s: %(message)s",
-        handlers=[file_handler, console_handler],
-    )
+    config = dict(DEFAULT_CONFIG)
+    config["handlers"]["file"]["filename"] = file_path
+    dictConfig(config)
