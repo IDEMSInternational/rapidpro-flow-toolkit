@@ -1,5 +1,13 @@
+import json
 import logging
 from collections import ChainMap
+from logging.config import dictConfig
+from pathlib import Path
+
+from rpft.logger import DEFAULT_CONFIG
+
+
+logger = logging.getLogger(__name__)
 
 
 class LoggingContextHandler:
@@ -47,18 +55,15 @@ class ContextFilter(logging.Filter):
         return True
 
 
-def initialize_main_logger(file_path="errors.log"):
-    context_filter = ContextFilter()
+def initialize_main_logger(file_path="errors.log", config_path="logging.json"):
+    config = None
 
-    file_handler = logging.FileHandler(file_path, "w")
-    file_handler.addFilter(context_filter)
+    if Path(config_path).exists():
+        with open(config_path, "r") as f:
+            config = json.load(f)
+    else:
+        config = dict(DEFAULT_CONFIG)
 
-    console_handler = logging.StreamHandler()
-    console_handler.addFilter(context_filter)
-    console_handler.setLevel(logging.CRITICAL)
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(levelname)s:%(name)s: %(processing_stack)s: %(message)s",
-        handlers=[file_handler, console_handler],
-    )
+    config["handlers"]["file"]["filename"] = file_path
+    dictConfig(config)
+    logger.debug(f"Logging configured, config={config}")

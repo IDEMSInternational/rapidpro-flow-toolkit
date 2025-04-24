@@ -72,6 +72,10 @@ The expected contents of the input spreadsheets is documented separately:
 
 The toolkit can fetch spreadsheets from Google Sheets. See the [setup instructions] for details.
 
+# Logging
+
+To override the default logging configuration, see [Logging].
+
 # Development
 
 For instructions on how to set up your development environment for developing the toolkit, see the [development] page.
@@ -81,3 +85,4 @@ For instructions on how to set up your development environment for developing th
 [RapidPro sheet specification]: https://docs.google.com/document/d/1m2yrzZS8kRGihUkPW0YjMkT_Fmz_L7Gl53WjD0AJRV0/edit?usp=sharing
 [New features documentation]: https://docs.google.com/document/d/1Onx2RhNoWKW9BQvFrgTc5R5hcwDy1OMsLKnNB7YxQH0/edit?usp=sharing
 [setup instructions]: docs/google.md
+[Logging]: docs/logging.md

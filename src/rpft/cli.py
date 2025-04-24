@@ -5,10 +5,8 @@ from rpft import converters
 from rpft.logger.logger import initialize_main_logger
 
 
-initialize_main_logger()
-
-
 def main():
+    initialize_main_logger()
     args = create_parser().parse_args()
     args.func(args)
 
