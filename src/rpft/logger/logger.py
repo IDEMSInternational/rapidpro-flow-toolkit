@@ -7,6 +7,9 @@ from pathlib import Path
 from rpft.logger import DEFAULT_CONFIG
 
 
+logger = logging.getLogger(__name__)
+
+
 class LoggingContextHandler:
     def __init__(self):
         self.context_variables = []
@@ -63,3 +66,4 @@ def initialize_main_logger(file_path="errors.log", config_path="logging.json"):
 
     config["handlers"]["file"]["filename"] = file_path
     dictConfig(config)
+    logger.debug(f"Logging configured, config={config}")
