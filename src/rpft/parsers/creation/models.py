@@ -145,6 +145,13 @@ class SkipOption(ParserModel):
     """
 
 
+class Confirmation(ParserModel):
+    condition: Condition = Condition()
+    question: str = ""
+    confirm_option: str = ""
+    back_option: str = ""
+
+
 class SurveyQuestionModel(ParserModel):
     """
     Representation of a survey question.
@@ -191,27 +198,23 @@ class SurveyQuestionModel(ParserModel):
 
     skipoption: SkipOption = SkipOption()
     """
-    Make question skippable. Adds an additional choice allowing use to skip the
-    question.
+    Add an additional choice to allow the question to be skipped.
     """
 
-    confirmation: ConditionsWithMessage = ConditionsWithMessage()
+    confirmation: Confirmation = Confirmation()
     """
-    Conditional Answer confirmation. Condition for sending a message asking the user to
-    confirm their answer. Comes with a Yes/No choice for the user. 'No' repeats the
-    question; 'Yes' stores the answer and proceeds.
+    Seek confirmation of the answer if a condition is met. The choices will be 'Yes'
+    (store the answer and proceed) or 'No' (repeat the question).
     """
 
     stop: ConditionsWithMessage = ConditionsWithMessage()
     """
-    Conditional premature end of survey (later: forward skip?). Condition that ends the
-    survey (with message to user).
+    End the survey if any of the conditions are met.
     """
 
     validation: ConditionsWithMessage = ConditionsWithMessage()
     """
-    Validation / conditional repetition of question. If condition holds, message is
-    printed and question is repeated.
+    Repeat the question of any of the conditions are met.
     """
 
     postprocessing: PostProcessing = PostProcessing()

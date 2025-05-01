@@ -357,27 +357,6 @@ class TestSurveyPreprocessing(TestCase):
                 ],
                 flow="my_flow",
             ),
-            confirmation=ConditionsWithMessage(
-                conditions=[
-                    ConditionWithMessage(
-                        condition=Condition(
-                            value="6",
-                            variable="@(fields.sq_s1_question1"
-                            " + fields.sq_s1_question1b)",
-                        ),
-                        message="Same as @fields.sq_s1_question1_new? "
-                        "Or @fields.new_variable2?",
-                    ),
-                    ConditionWithMessage(
-                        condition=Condition(
-                            value="6",
-                            variable="@fields.sq_s1_question1_complete",
-                        ),
-                        message="You entered @fields.sq_s1_question1. Confirm?",
-                    ),
-                ],
-                message="You entered @answer but that's no good.",
-            ),
         )
 
         question2_replaced = SurveyQuestionRowModel(
@@ -417,27 +396,6 @@ class TestSurveyPreprocessing(TestCase):
                     ),
                 ],
                 flow="my_flow",
-            ),
-            confirmation=ConditionsWithMessage(
-                conditions=[
-                    ConditionWithMessage(
-                        condition=Condition(
-                            value="6",
-                            variable="@(fields.pre_sq_s1_question1"
-                            " + fields.sq_s1_question1b)",
-                        ),
-                        message="Same as @fields.sq_s1_question1_new? "
-                        "Or @fields.pre_new_variable2?",
-                    ),
-                    ConditionWithMessage(
-                        condition=Condition(
-                            value="6",
-                            variable="@fields.pre_sq_s1_question1_complete",
-                        ),
-                        message="You entered @fields.pre_sq_s1_question1. Confirm?",
-                    ),
-                ],
-                message="You entered @fields.pre_sq_question2 but that's no good.",
             ),
         )
 
