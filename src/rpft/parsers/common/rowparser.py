@@ -3,7 +3,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from typing import List
 
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 from rpft.parsers.common.cellparser import CellParser
 
@@ -47,21 +47,24 @@ def get_list_child_model(model):
 
 
 def is_list_type(model):
-    # Determine whether model is a list type,
-    # such as list, List, List[str], ...
-    # issubclass only works for Python <=3.6
-    # model.__dict__.get('__origin__') returns different things in different Python
-    # version.
-    # This function tries to accommodate both 3.6 and 3.8 (at least)
+    """
+    Determine whether model is a list type, such as list, list[str], List, List[str].
+
+    typing.List is deprecated as of Python 3.9
+    """
     return (
         is_basic_list_type(model)
         or model is List
-        or model.__dict__.get("__origin__") in [list, List]
+        or getattr(model, "__origin__", None) is list
     )
 
 
 def is_basic_list_type(model):
     return model is list
+
+
+def is_basic_dict_type(model):
+    return model is dict
 
 
 def is_list_instance(value):
@@ -94,9 +97,7 @@ def is_basic_instance(value):
 
 
 def is_default_value(model_instance, field, field_value):
-    # Note: In pydantic V2, __fields__ will become model_fields
-    if field_value == type(model_instance).__fields__[field].get_default():
-        return True
+    return field_value == type(model_instance).model_fields[field].default
 
 
 def str_to_bool(string):
@@ -134,12 +135,12 @@ class RowParser:
         # model, assign value to field[key] (which represents the field in the model)
         if is_list_instance(value) and len(value) == 2 and type(value[0]) is str:
             first_entry_as_key = model.header_name_to_field_name(value[0])
-            if first_entry_as_key in model.__fields__:
+            if first_entry_as_key in model.model_fields:
                 self.assign_value(
                     field[key],
                     first_entry_as_key,
                     value[1],
-                    model.__fields__[first_entry_as_key].outer_type_,
+                    model.model_fields[first_entry_as_key].annotation,
                 )
                 return True
         return False
@@ -161,7 +162,7 @@ class RowParser:
             # Get the list of keys that are available for the target model
             # Note: The fields have a well defined ordering.
             # See https://pydantic-docs.helpmanual.io/usage/models/#field-ordering
-            model_fields = list(model.__fields__.keys())
+            model_fields = list(model.model_fields.keys())
 
             if type(value) is not list:
                 # It could be that an object is specified via a single element.
@@ -190,8 +191,22 @@ class RowParser:
                         field[key],
                         entry_key,
                         entry,
-                        model.__fields__[entry_key].outer_type_,
+                        model.model_fields[entry_key].annotation,
                     )
+        elif is_basic_dict_type(model):
+            field[key] = {}
+            if not value:
+                return
+            if not is_iterable_instance(value):
+                raise ValueError("dict-type cell must contain key-value pairs")
+            value = list(value)
+            if isinstance(value[0], str):
+                assert len(value) == 2
+                field[key] = {value[0]: value[1]}
+            elif isinstance(value[0], list):
+                for entry in value:
+                    assert len(entry) == 2
+                    field[key][entry[0]] = entry[1]
         elif is_basic_list_type(model):
             # We cannot iterate deeper if we don't know what to expect.
             if is_iterable_instance(value):
@@ -257,15 +272,16 @@ class RowParser:
                 output_field.append(None)
 
             key = index
+        elif is_basic_dict_type(model):
+            key = field_name
+            output_field[key] = None
+            child_model = str
         else:
             assert is_parser_model_type(model)
             key = model.header_name_to_field_name(field_name)
-            if key not in model.__fields__:
+            if key not in model.model_fields:
                 raise ValueError(f"Field {key} doesn't exist in target type {model}.")
-            child_model = model.__fields__[key].outer_type_
-            # TODO: how does ModelField.outer_type_ and ModelField.type_
-            # deal with nested lists, e.g. List[List[str]]?
-            # Write test cases and fix code.
+            child_model = model.model_fields[key].annotation
 
             if key not in output_field:
                 # Create a new entry for this, if necessary
@@ -281,6 +297,8 @@ class RowParser:
             # If field doesn't exist yet in our output object, create it.
             if is_list_type(child_model) and output_field[key] is None:
                 output_field[key] = []
+            elif is_basic_dict_type(child_model) and output_field[key] is None:
+                output_field[key] = {}
             elif is_parser_model_type(child_model) and output_field[key] is None:
                 output_field[key] = {}
             # recurse
@@ -303,13 +321,17 @@ class RowParser:
         # The model of field[key] is model, and thus value should also be interpreted
         # as being of type model.
         if not value_is_parsed:
-            if is_list_type(model) or is_parser_model_type(model):
+            if (
+                is_list_type(model)
+                or is_basic_dict_type(model)
+                or is_parser_model_type(model)
+            ):
                 # If the expected type of the value is list/object,
                 # parse the cell content as such.
                 # Otherwise leave it as a string
                 value = self.cell_parser.parse(value, context=template_context)
             else:
-                value = self.cell_parser.parse_as_string(
+                value, _ = self.cell_parser.parse_as_string(
                     value, context=template_context
                 )
         self.assign_value(field, key, value, model)

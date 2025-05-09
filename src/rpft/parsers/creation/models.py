@@ -1,5 +1,3 @@
-from typing import List
-
 from rpft.parsers.common.rowparser import ParserModel
 
 
@@ -26,12 +24,15 @@ class Condition(ParserModel):
 
 
 class ConditionWithMessage(ParserModel):
-    condition: Condition
+    condition: Condition 
     message: str
 
+class ConditionWithId(ParserModel):
+    condition: Condition = Condition()
+    rowid: str = ""
 
 class ConditionsWithMessage(ParserModel):
-    conditions: List[ConditionWithMessage] = []
+    conditions: list[ConditionWithMessage] = []
     general_message: str = ""
 
 
@@ -61,7 +62,7 @@ class Message(ParserModel):
     image: str = ""
     audio: str = ""
     video: str = ""
-    attachments: List[str] = []
+    attachments: list[str] = []
 
 
 class TemplateSheet:
@@ -76,7 +77,7 @@ class ChatbotDefinition:
         self,
         flow_definitions,
         data_sheets,
-        templates: List[TemplateSheet],
+        templates: list[TemplateSheet],
         surveys,
     ):
         self.flow_definitions = flow_definitions
@@ -116,10 +117,14 @@ class MCQChoice(ParserModel):
     """
     Text stored in survey variable.
     """
+    show: str = ""
+    """
+    if == "no" won't display the choice as quick reply, but will add the case to the wfr node
+    """
 
 
 class PostProcessing(ParserModel):
-    assignments: List[Assignment] = []
+    assignments: list[Assignment] = []
     """
     Assignments to perform via save_value rows.
     """
@@ -163,7 +168,7 @@ class SurveyQuestionModel(ParserModel):
     Type of the question.
     """
 
-    messages: List[Message]
+    messages: list[Message]
     """
     Question text.
     """
@@ -181,7 +186,7 @@ class SurveyQuestionModel(ParserModel):
     the question ID as {variable}_complete.
     """
 
-    choices: List[MCQChoice] = []
+    choices: list[MCQChoice] = []
     """
     MCQ specific fields.
     """
@@ -192,7 +197,7 @@ class SurveyQuestionModel(ParserModel):
     configuration is used.
     """
 
-    relevant: List[Condition] = []
+    relevant: list[Condition] = []
     """
     Conditions required to present the question, otherwise skipped.
     """
@@ -216,6 +221,11 @@ class SurveyQuestionModel(ParserModel):
     Conditional premature end of survey (later: forward skip?).
     If ANY of the conditions hold, ends the survey (with message to user).
     """
+    back: ConditionWithId = ConditionWithId()
+    """
+    Allows to go back to the previous question in the survey (later: any previous question?).
+    If ANY of the conditions hold, it brings the user back into the previous question.
+    """
 
     validation: ConditionsWithMessage = ConditionsWithMessage()
     """
@@ -230,7 +240,7 @@ class SurveyQuestionModel(ParserModel):
     that is triggered.
     """
 
-    tags: List[str] = []
+    tags: list[str] = []
     """
     Tags allowing to filter questions to appear in a survey.
     """

@@ -1,7 +1,8 @@
 import copy
+import logging
 from collections import defaultdict
 
-from rpft.logger.logger import get_logger, logging_context
+from rpft.logger.logger import logging_context
 from rpft.parsers.common.cellparser import CellParser
 from rpft.parsers.common.rowparser import RowParser
 from rpft.parsers.common.sheetparser import SheetParser
@@ -38,7 +39,8 @@ from rpft.rapidpro.models.nodes import (
 )
 from rpft.rapidpro.models.routers import SwitchRouter
 
-LOGGER = get_logger()
+
+LOGGER = logging.getLogger(__name__)
 
 
 def string_to_int_or_float(s):
@@ -72,9 +74,9 @@ class NodeGroup:
 
     def add_exit(self, destination_uuid, condition):
         if condition != Condition():
-            LOGGER.critical("Cannot attach conditional edges to a block.")
+            raise Exception("Cannot attach conditional edges to a block.")
         if not self.has_loose_exits():
-            LOGGER.critical("Block has no loose exit to connect to.")
+            raise Exception("Block has no loose exit to connect to.")
         for node_group in self.node_groups:
             if node_group.has_loose_exits():
                 node_group.connect_loose_exits(destination_uuid)
@@ -124,7 +126,7 @@ class NoOpNodeGroup:
                 edge.source_node_group.connect_loose_exits(destination_uuid)
 
     def entry_node(self):
-        LOGGER.critical(
+        raise Exception(
             "NotImplementedError: go_to not implemented to link to no_op row."
         )
 
@@ -134,7 +136,7 @@ class NoOpNodeGroup:
             try:
                 source_node_group.add_exit(self.router_node.uuid, condition)
             except RapidProRouterError as e:
-                LOGGER.critical(str(e))
+                raise Exception(str(e))
 
     def add_exit(self, destination_uuid, condition):
         if not self.router_node:
@@ -144,7 +146,7 @@ class NoOpNodeGroup:
                 return
             else:
                 if not condition.variable:
-                    LOGGER.critical("Condition must have a variable.")
+                    raise Exception("Condition must have a variable.")
                 self.router_node = SwitchRouterNode(condition.variable)
                 self.child_node_ref = None
                 for edge in self.parent_edges:
@@ -215,7 +217,7 @@ class RowNodeGroup:
             try:
                 exit_node.update_default_exit(destination_uuid)
             except ValueError as e:
-                LOGGER.critical(str(e))
+                raise Exception(str(e))
             return
 
         # Completed/Expired edge from start_new_flow
@@ -317,6 +319,7 @@ class FlowParser:
         context=None,
         sheet_parser=None,
         definition=None,
+        flow_type=None,
     ):
         """
         rapidpro_container: The parent RapidProContainer to contain the flow generated
@@ -334,6 +337,7 @@ class FlowParser:
         self.rapidpro_container = rapidpro_container
         self.flow_name = flow_name
         self.flow_uuid = flow_uuid
+        self.flow_type = flow_type or "messaging"
         self.context = context or {}
         if sheet_parser:
             self.sheet_parser = sheet_parser
@@ -369,7 +373,7 @@ class FlowParser:
     def parse_as_block(self):
         self._parse_block()
         if not len(self.node_group_stack) == 1:
-            LOGGER.critical("Unexpected end of flow. Did you forget end_for/end_block?")
+            raise Exception("Unexpected end of flow. Did you forget end_for/end_block?")
         return self.current_node_group()
 
     def parse(self, add_to_container=True):
@@ -395,7 +399,7 @@ class FlowParser:
                         iteration_variable = row.loop_variable[0]
                     else:
                         with logging_context(f"row {row_idx}"):
-                            LOGGER.critical("begin_for must have a loop_variable")
+                            raise Exception("begin_for must have a loop_variable")
                     index_variable = None
                     if len(row.loop_variable) >= 2 and row.loop_variable[1]:
                         index_variable = row.loop_variable[1]
@@ -442,12 +446,12 @@ class FlowParser:
             if block_type == "root_block":
                 return True
             else:
-                LOGGER.critical("Sheet has unterminated block.")
+                raise Exception("Sheet has unterminated block.")
         elif row.type in block_end_map:
             if block_end_map[row.type] == block_type:
                 return True
             else:
-                LOGGER.critical(
+                raise Exception(
                     f'Wrong block terminator "{row.type}" found for block of type'
                     f" {block_type}."
                 )
@@ -509,9 +513,17 @@ class FlowParser:
                 scheme=row.urn_scheme or "tel",
             )
         elif row.type == "remove_from_group":
-            return RemoveContactGroupAction(
-                groups=[self._get_or_create_group(row.mainarg_groups[0], row.obj_id)]
-            )
+            if not row.mainarg_groups:
+                LOGGER.warning("Removing contact from ALL groups.")
+                return RemoveContactGroupAction(groups=[], all_groups=True)
+            elif row.mainarg_groups[0] == "ALL":
+                return RemoveContactGroupAction(groups=[], all_groups=True)
+            else:
+                return RemoveContactGroupAction(
+                    groups=[
+                        self._get_or_create_group(row.mainarg_groups[0], row.obj_id)
+                    ]
+                )
         elif row.type == "save_flow_result":
             return SetRunResultAction(
                 row.save_name, row.mainarg_value, category=row.result_category
@@ -548,6 +560,7 @@ class FlowParser:
         if (
             row.type in ["add_to_group", "remove_from_group", "split_by_group"]
             and row.obj_id
+            and row.mainarg_groups
         ):
             self.rapidpro_container.record_group_uuid(row.mainarg_groups[0], row.obj_id)
 
@@ -590,7 +603,7 @@ class FlowParser:
             try:
                 headers = list_of_pairs_to_dict(row.webhook.headers)
             except ValueError as e:
-                LOGGER.critical("webhook.headers: " + str(e))
+                raise Exception("webhook.headers: " + str(e))
             return CallWebhookNode(
                 result_name=row.save_name,
                 url=row.webhook.url,
@@ -604,14 +617,14 @@ class FlowParser:
             try:
                 airtime_amounts = list_of_pairs_to_dict(row.mainarg_dict)
             except ValueError as e:
-                LOGGER.critical("airtime_amounts: " + str(e))
+                raise Exception("airtime_amounts: " + str(e))
 
             try:
                 airtime_amounts = {
                     k: string_to_int_or_float(v) for k, v in airtime_amounts.items()
                 }
             except ValueError:
-                LOGGER.critical("airtime_amounts: Current values must be numerical")
+                raise Exception("airtime_amounts: Current values must be numerical")
 
             return TransferAirtimeNode(
                 result_name=row.save_name,
@@ -667,7 +680,7 @@ class FlowParser:
             return None
         elif edge.from_:
             if edge.from_ not in self.row_id_to_nodegroup:
-                LOGGER.critical(
+                raise Exception(
                     f'Edge from row_id "{edge.from_}" which does not exist.'
                 )
             return self.row_id_to_nodegroup[edge.from_]
@@ -680,7 +693,7 @@ class FlowParser:
             try:
                 from_node_group.add_exit(destination_uuid, edge.condition)
             except RapidProRouterError as e:
-                LOGGER.critical(str(e))
+                raise Exception(str(e))
 
     def _parse_goto_row(self, row):
         # If there is a single destination, connect all edges to that destination.
@@ -692,7 +705,7 @@ class FlowParser:
         )
 
         if not len(row.edges) == len(destination_row_ids):
-            LOGGER.critical(
+            raise Exception(
                 "If a go_to has multiple destinations, the number of destinations has"
                 " to match the number of incoming edges."
             )
@@ -736,7 +749,7 @@ class FlowParser:
         try:
             row_action = self._get_row_action(row)
         except RapidProActionError as e:
-            LOGGER.critical(str(e))
+            raise Exception(str(e))
         node_name = self._get_node_name(row)
         existing_node = self.node_name_to_node_map.get(node_name)
 
@@ -760,12 +773,12 @@ class FlowParser:
                         ]
                     return
                 else:
-                    LOGGER.critical(
+                    raise Exception(
                         f'To merge rows using node name "{node_name}" into a single'
                         f' node, edge must come from a node with name "{node_name}".'
                     )
             else:
-                LOGGER.critical(
+                raise Exception(
                     f'To merge rows using node name "{node_name}" into a single node,'
                     " there must be exactly one unconditional incoming edge."
                 )
@@ -792,10 +805,11 @@ class FlowParser:
         to fill in these missing UUIDs in a consistent way.
         """
 
-        # Caveat/TODO: Need to ensure starting node comes first.
-        flow_container = FlowContainer(flow_name=self.flow_name, uuid=self.flow_uuid)
+        flow_container = FlowContainer(
+            flow_name=self.flow_name, uuid=self.flow_uuid, type=self.flow_type
+        )
         if not len(self.node_group_stack) == 1:
-            LOGGER.critical("Unexpected end of flow. Did you forget end_for/end_block?")
+            raise Exception("Unexpected end of flow. Did you forget end_for/end_block?")
         self.current_node_group().add_nodes_to_flow(flow_container)
         return flow_container
 
@@ -820,7 +834,7 @@ class FlowParser:
                     definition=self.definition,
                 )
         else:
-            LOGGER.critical(
+            raise Exception(
                 "For insert_as_block, either both data_sheet and data_row_id or neither"
                 " have to be provided."
             )
@@ -835,6 +849,7 @@ class FlowParser:
         parse_as_block=False,
         context=None,
         definition=None,
+        flow_type=None,
     ):
         base_name = new_name or sheet_name
         context = copy.copy(context or {})
@@ -864,6 +879,7 @@ class FlowParser:
             template_sheet.table,
             context=context,
             definition=definition,
+            flow_type=flow_type,
         )
 
         if parse_as_block:
@@ -877,6 +893,7 @@ class FlowParser:
 
         for logging_prefix, row in definition.flow_definitions:
             with logging_context(f"{logging_prefix} | {row.sheet_name[0]}"):
+                flow_type = row.options.get("flow_type") or "messaging"
                 if row.data_sheet and not row.data_row_id:
                     data_rows = definition.get_data_sheet_rows(row.data_sheet)
 
@@ -890,6 +907,7 @@ class FlowParser:
                                 rapidpro_container,
                                 row.new_name,
                                 definition=definition,
+                                flow_type=flow_type,
                             )
 
                             if flow.name in flows:
@@ -900,7 +918,7 @@ class FlowParser:
 
                             flows[flow.name] = flow
                 elif not row.data_sheet and row.data_row_id:
-                    LOGGER.critical(
+                    raise Exception(
                         "For create_flow, if data_row_id is provided, data_sheet must"
                         " also be provided."
                     )
@@ -913,6 +931,7 @@ class FlowParser:
                         rapidpro_container,
                         row.new_name,
                         definition=definition,
+                        flow_type=flow_type,
                     )
 
                     if flow.name in flows:

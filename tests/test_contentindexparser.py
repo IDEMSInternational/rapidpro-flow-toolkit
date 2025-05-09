@@ -3,8 +3,14 @@ from unittest import TestCase
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
-from rpft.parsers.sheets import CompositeSheetReader, CSVSheetReader, XLSXSheetReader
+from rpft.parsers.sheets import (
+    CompositeSheetReader,
+    CSVSheetReader,
+    DatasetSheetReader,
+    XLSXSheetReader,
+)
 from rpft.rapidpro.models.triggers import RapidProTriggerError
+from tablib import Dataset
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
 from tests.utils import Context, csv_join, traverse_flow
@@ -134,6 +140,34 @@ class TestParsing(TestTemplate):
         self.assertEqual(datamodelA.value2, "2A")
         self.assertEqual(datamodelB.value1, "1B")
         self.assertEqual(datamodelB.value2, "2B")
+
+    def test_flow_type(self):
+        ci_sheet = (
+            "type,sheet_name,new_name,data_model,options\n"
+            "create_flow,my_basic_flow,,,\n"
+            "create_flow,my_basic_flow,my_other_flow,,flow_type;messaging_background\n"
+        )
+        my_basic_flow = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,Some text",
+        )
+        sheet_dict = {
+            "my_basic_flow": my_basic_flow,
+        }
+        render_output = (
+            ContentIndexParser(
+                MockSheetReader(ci_sheet, sheet_dict),
+                "tests.datarowmodels.nestedmodel",
+            )
+            .parse_all()
+            .render()
+        )
+
+        self.assertEqual(len(render_output["flows"]), 2)
+        self.assertEqual(render_output["flows"][0]["name"], "my_basic_flow")
+        self.assertEqual(render_output["flows"][0]["type"], "messaging")
+        self.assertEqual(render_output["flows"][1]["name"], "my_other_flow")
+        self.assertEqual(render_output["flows"][1]["type"], "messaging_background")
 
     def test_ignore_flow_definition(self):
         ci_sheet = (
@@ -717,6 +751,72 @@ class TestParsing(TestTemplate):
             {flow["name"] for flow in rapidpro_export["flows"]},
             flow_names,
         )
+
+
+class TestOverrideBehaviour(TestCase):
+
+    def test_data_defined_earlier_is_overridden_by_later_definitions(self):
+        base = DatasetSheetReader(
+            [
+                Dataset(
+                    ("A", "", ""),
+                    ("B", "", ""),
+                    headers=("ID", "value1", "value2"),
+                    title="data",
+                ),
+                Dataset(
+                    ("data_sheet", "data", "", "SimpleRowModel"),
+                    headers=("type", "sheet_name", "new_name", "data_model"),
+                    title="content_index",
+                ),
+            ],
+            "base",
+        )
+        filter_ = DatasetSheetReader(
+            [
+                Dataset(
+                    (
+                        "data_sheet",
+                        "data",
+                        "data",
+                        "SimpleRowModel",
+                        'filter | expression ; ID != "B"',
+                    ),
+                    headers=(
+                        "type",
+                        "sheet_name",
+                        "new_name",
+                        "data_model",
+                        "operation",
+                    ),
+                    title="content_index",
+                )
+            ],
+            "filter",
+        )
+        deployment = DatasetSheetReader(
+            [
+                Dataset(
+                    ("B", "", ""),
+                    ("C", "", ""),
+                    headers=("ID", "value1", "value2"),
+                    title="data",
+                ),
+                Dataset(
+                    ("data_sheet", "data", "data", "SimpleRowModel"),
+                    headers=("type", "sheet_name", "new_name", "data_model"),
+                    title="content_index",
+                ),
+            ],
+            "deployment",
+        )
+        definition = ContentIndexParser(
+            CompositeSheetReader([base, filter_, deployment]),
+            "tests.datarowmodels.simplemodel",
+        ).definition
+        keys = list(definition.get_data_sheet_rows("data").keys())
+
+        self.assertEqual(keys, ["B", "C"], "Deployment dataset should prevail")
 
 
 class TestConcatOperation(TestCase):

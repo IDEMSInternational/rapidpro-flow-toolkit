@@ -20,7 +20,7 @@ class BaseRouter:
         elif data["type"] == "switch":
             return SwitchRouter.from_dict(data, exits)
         else:
-            raise ValueError("Router data has invalid router type.")
+            raise RapidProRouterError("Router data has invalid router type.")
 
     def _get_result_name_and_categories_from_data(data, exits):
         categories = [
@@ -150,7 +150,9 @@ class SwitchRouter(BaseRouter):
             if category.uuid == data["default_category_uuid"]
         ]
         if not default_categories:
-            raise ValueError("Default category uuid does not match any category.")
+            raise RapidProRouterError(
+                "Default category uuid does not match any category."
+            )
         no_response_category = None
         no_response_category_id = None
         wait_timeout = None
@@ -165,7 +167,7 @@ class SwitchRouter(BaseRouter):
                     if category.uuid == no_response_category_id
                 ]
                 if not no_response_categories:
-                    raise ValueError(
+                    raise RapidProRouterError(
                         "No Response category uuid does not match any category."
                     )
                 no_response_category = no_response_categories[0]
@@ -200,8 +202,8 @@ class SwitchRouter(BaseRouter):
 
     def generate_category_name(self, comparison_arguments):
         # Auto-generate a category name that is guaranteed to be unique
-        # TODO: Write tests for this
         category_name = "_".join([str(a).title() for a in comparison_arguments])
+        category_name = category_name or "Yes"
         while self._get_category_or_none(category_name):
             category_name += "_alt"
         return category_name
@@ -451,7 +453,7 @@ class RouterCategory:
         """
         matching_exits = [exit for exit in exits if exit.uuid == data["exit_uuid"]]
         if not matching_exits:
-            raise ValueError("RouterCategory with no matching exit.")
+            raise RapidProRouterError("RouterCategory with no matching exit.")
         return RouterCategory(
             name=data["name"], uuid=data["uuid"], exit=matching_exits[0]
         )
@@ -485,36 +487,40 @@ class RouterCase:
     }
 
     TEST_VALIDATIONS = {
-        "all_words": lambda x: len(x) == 1,
-        "has_any_word": lambda x: len(x) == 1,
-        "has_beginning": lambda x: len(x) == 1,
-        "has_category": lambda x: len(x) >= 1,
+        "all_words": lambda x: len(x) == 1 and x[0],
+        "has_any_word": lambda x: len(x) == 1 and x[0],
+        "has_beginning": lambda x: len(x) == 1 and x[0],
+        "has_category": lambda x: len(x) >= 1 and all(x),
         "has_date": lambda x: len(x) == 0,
-        "has_date_eq": lambda x: len(x) == 1,
-        "has_date_gt": lambda x: len(x) == 1,
-        "has_date_lt": lambda x: len(x) == 1,
-        "has_district": lambda x: len(x) == 1,
+        "has_date_eq": lambda x: len(x) == 1 and x[0],
+        "has_date_gt": lambda x: len(x) == 1 and x[0],
+        "has_date_lt": lambda x: len(x) == 1 and x[0],
+        "has_district": lambda x: len(x) == 1 and x[0],
         "has_email": lambda x: len(x) == 0,
         "has_error": lambda x: len(x) == 0,
-        "has_group": lambda x: len(x) in {1, 2},  # uuid obligatory, name optional?
-        "has_intent": lambda x: len(x) == 2,
+        # For has_group: First is UUID and second is name.
+        # In imported flows, UUID is obligatory, but the toolkit
+        # uses blank as a placeholder. Instead, the toolkit requires
+        # a name, which usually is optional.
+        "has_group": lambda x: len(x) in {1, 2} and (x[0] or x[1]),
+        "has_intent": lambda x: len(x) == 2 and all(x),
         "has_number": lambda x: len(x) == 0,
-        "has_number_between": lambda x: len(x) == 2,
-        "has_number_eq": lambda x: len(x) == 1,
-        "has_number_gt": lambda x: len(x) == 1,
-        "has_number_gte": lambda x: len(x) == 1,
-        "has_number_lt": lambda x: len(x) == 1,
-        "has_number_lte": lambda x: len(x) == 1,
-        "has_only_phrase": lambda x: len(x) == 1,
-        "has_only_text": lambda x: len(x) == 1,
-        "has_pattern": lambda x: len(x) == 1,
-        "has_phone": lambda x: len(x) in {0, 1},
-        "has_phrase": lambda x: len(x) == 1,
+        "has_number_between": lambda x: len(x) == 2 and all(x),
+        "has_number_eq": lambda x: len(x) == 1 and x[0],
+        "has_number_gt": lambda x: len(x) == 1 and x[0],
+        "has_number_gte": lambda x: len(x) == 1 and x[0],
+        "has_number_lt": lambda x: len(x) == 1 and x[0],
+        "has_number_lte": lambda x: len(x) == 1 and x[0],
+        "has_only_phrase": lambda x: len(x) == 1 and x[0],
+        "has_only_text": lambda x: len(x) == 1 and x[0],
+        "has_pattern": lambda x: len(x) == 1 and x[0],
+        "has_phone": lambda x: len(x) in {0, 1} and all(x),
+        "has_phrase": lambda x: len(x) == 1 and x[0],
         "has_state": lambda x: len(x) == 0,
         "has_text": lambda x: len(x) == 0,
         "has_time": lambda x: len(x) == 0,
-        "has_top_intent": lambda x: len(x) == 2,
-        "has_ward": lambda x: len(x) == 2,
+        "has_top_intent": lambda x: len(x) == 2 and all(x),
+        "has_ward": lambda x: len(x) == 2 and all(x),
     }
 
     def __init__(self, comparison_type, arguments, category_uuid, uuid=None):
@@ -534,11 +540,11 @@ class RouterCase:
 
     def validate(self):
         if self.type not in RouterCase.TEST_VALIDATIONS:
-            raise ValueError(f'Invalid router test type: "{self.type}"')
+            raise RapidProRouterError(f'Invalid router test type: "{self.type}"')
         if not RouterCase.TEST_VALIDATIONS[self.type](self.arguments):
-            print(
-                f"Warning: Invalid number of arguments {len(self.arguments)} for router"
-                f'test type "{self.type}"'
+            raise RapidProRouterError(
+                f"Invalid number of arguments {len(self.arguments)} or blank "
+                f'arguments for router test type "{self.type}"'
             )
 
     def render(self):

@@ -30,6 +30,6 @@ class TestFieldKeyGenerator(TestCase):
         with self.assertRaises(RapidProActionError):
             generate_field_key("z" * 37)
 
-    def test_fail_if_key_does_not_contain_letters(self):
+    def test_fail_if_key_does_not_start_with_letter(self):
         with self.assertRaises(RapidProActionError):
-            generate_field_key("123")
+            generate_field_key("1zx")

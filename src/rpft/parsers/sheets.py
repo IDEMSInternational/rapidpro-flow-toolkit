@@ -1,15 +1,12 @@
 import json
-import os
 from abc import ABC
+from collections.abc import Mapping
 from pathlib import Path
-from typing import List, Mapping
 
 import tablib
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google.oauth2.service_account import Credentials as ServiceAccountCredentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+
+from rpft.google import get_credentials
 
 
 class SheetReaderError(Exception):
@@ -31,7 +28,7 @@ class AbstractSheetReader(ABC):
     def get_sheet(self, name) -> Sheet:
         return self.sheets.get(name)
 
-    def get_sheets_by_name(self, name) -> List[Sheet]:
+    def get_sheets_by_name(self, name) -> list[Sheet]:
         return [sheet] if (sheet := self.get_sheet(name)) else []
 
 
@@ -84,8 +81,6 @@ class XLSXSheetReader(AbstractSheetReader):
 
 
 class GoogleSheetReader(AbstractSheetReader):
-    # If modifying these scopes, delete the file token.json.
-    SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
     def __init__(self, spreadsheet_id):
         """
@@ -96,7 +91,7 @@ class GoogleSheetReader(AbstractSheetReader):
 
         self.name = spreadsheet_id
 
-        service = build("sheets", "v4", credentials=self.get_credentials())
+        service = build("sheets", "v4", credentials=get_credentials())
         sheet_metadata = (
             service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
         )
@@ -143,37 +138,6 @@ class GoogleSheetReader(AbstractSheetReader):
             max_cols,
         )
 
-    def get_credentials(self):
-        sa_creds = os.getenv("CREDENTIALS")
-        if sa_creds:
-            return ServiceAccountCredentials.from_service_account_info(
-                json.loads(sa_creds), scopes=GoogleSheetReader.SCOPES
-            )
-
-        creds = None
-        token_file_name = "token.json"
-
-        if os.path.exists(token_file_name):
-            creds = Credentials.from_authorized_user_file(
-                token_file_name, scopes=GoogleSheetReader.SCOPES
-            )
-
-        # If there are no (valid) credentials available, let the user log in.
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    "credentials.json", GoogleSheetReader.SCOPES
-                )
-                creds = flow.run_local_server(port=0)
-
-            # Save the credentials for the next run
-            with open(token_file_name, "w") as token:
-                token.write(creds.to_json())
-
-        return creds
-
 
 class CompositeSheetReader:
     def __init__(self, readers=None):
@@ -190,6 +154,12 @@ class CompositeSheetReader:
             sheets += reader.get_sheets_by_name(name)
 
         return sheets
+
+
+class DatasetSheetReader(AbstractSheetReader):
+    def __init__(self, datasets, name):
+        self._sheets = {d.title: Sheet(self, d.title, d) for d in datasets}
+        self.name = name
 
 
 def load_csv(path):
