@@ -24,9 +24,12 @@ class Condition(ParserModel):
 
 
 class ConditionWithMessage(ParserModel):
-    condition: Condition
+    condition: Condition 
     message: str
 
+class ConditionWithId(ParserModel):
+    condition: Condition = Condition()
+    rowid: str = ""
 
 class ConditionsWithMessage(ParserModel):
     conditions: list[ConditionWithMessage] = []
@@ -113,6 +116,10 @@ class MCQChoice(ParserModel):
     value: str
     """
     Text stored in survey variable.
+    """
+    show: str = ""
+    """
+    if == "no" won't display the choice as quick reply, but will add the case to the wfr node
     """
 
 
@@ -213,6 +220,11 @@ class SurveyQuestionModel(ParserModel):
     """
     Conditional premature end of survey (later: forward skip?).
     If ANY of the conditions hold, ends the survey (with message to user).
+    """
+    back: ConditionWithId = ConditionWithId()
+    """
+    Allows to go back to the previous question in the survey (later: any previous question?).
+    If ANY of the conditions hold, it brings the user back into the previous question.
     """
 
     validation: ConditionsWithMessage = ConditionsWithMessage()
