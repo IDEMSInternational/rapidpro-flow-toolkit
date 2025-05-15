@@ -5,7 +5,6 @@ from rpft.parsers.creation.contentindexparser import ContentIndexParser, DataShe
 from rpft.parsers.creation.models import (
     Assignment,
     Condition,
-    ConditionsWithMessage,
     ConditionWithMessage,
     Message,
     PostProcessing,
