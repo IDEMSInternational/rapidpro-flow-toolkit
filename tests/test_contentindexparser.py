@@ -1,7 +1,7 @@
 from typing import Set
 from unittest import TestCase
 
-from rpft.parsers.creation.contentindexparser import ContentIndexParser, SheetDataSource
+from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import (
     CSVSheetReader,
@@ -9,6 +9,7 @@ from rpft.parsers.sheets import (
     XLSXSheetReader,
 )
 from rpft.rapidpro.models.triggers import RapidProTriggerError
+from rpft.sources import SheetDataSource
 from tablib import Dataset
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
