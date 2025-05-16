@@ -28,6 +28,11 @@ class ConditionWithMessage(ParserModel):
     message: str
 
 
+class ConditionWithId(ParserModel):
+    condition: Condition = Condition()
+    rowid: str = ""
+
+
 class ConditionsWithMessage(ParserModel):
     conditions: list[ConditionWithMessage] = []
     general_message: str = ""
@@ -113,6 +118,12 @@ class MCQChoice(ParserModel):
     value: str
     """
     Text stored in survey variable.
+    """
+
+    show: str = ""
+    """
+    Whether to display the choice as a quick reply. A value of "no" won't display the
+    choice as quick reply, but will add the case to the WFR node.
     """
 
 
@@ -210,6 +221,11 @@ class SurveyQuestionModel(ParserModel):
     stop: ConditionsWithMessage = ConditionsWithMessage()
     """
     End the survey if any of the conditions are met.
+    """
+
+    back: ConditionWithId = ConditionWithId()
+    """
+    Return to the previous question in the survey if the condition is met.
     """
 
     validation: ConditionsWithMessage = ConditionsWithMessage()
