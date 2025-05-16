@@ -5,12 +5,10 @@ import re
 import shutil
 from pathlib import Path
 
+from tablib import Databook, Dataset
+
 from rpft.parsers.universal import bookify, parse_tables
-from rpft.parsers.creation.contentindexparser import (
-    ContentIndexParser,
-    JSONDataSource,
-    SheetDataSource,
-)
+from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import (
     AbstractSheetReader,
@@ -21,7 +19,7 @@ from rpft.parsers.sheets import (
     XLSXSheetReader,
 )
 from rpft.rapidpro.models.containers import RapidProContainer
-from tablib import Databook, Dataset
+from rpft.sources import JSONDataSource, SheetDataSource
 
 
 LOGGER = logging.getLogger(__name__)

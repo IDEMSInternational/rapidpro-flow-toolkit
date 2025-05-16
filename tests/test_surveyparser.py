@@ -3,7 +3,6 @@ from unittest import TestCase
 from rpft.parsers.creation.contentindexparser import (
     ContentIndexParser,
     DataSheet,
-    SheetDataSource,
 )
 from rpft.parsers.creation.models import (
     Assignment,
@@ -20,6 +19,7 @@ from rpft.parsers.creation.surveyparser import (
     SurveyQuestion,
 )
 from rpft.parsers.sheets import CSVSheetReader
+from rpft.sources import SheetDataSource
 
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
