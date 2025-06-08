@@ -1,0 +1,6 @@
+row_id,type,from,loop_variable,condition,condition_var,condition_type,condition_name,include_if,message_text,data_sheet,data_row_id,choices,save_name,image,audio,video,obj_name,obj_id,node_name,_nodeId,no_response
+,begin_for,,question;i,,,,,,{@questions@},,,,,,,,,,,,
+q{{i}}start,start_new_flow,,,,,,,{@i==0@},survey - {{survey_name}} - question - {{question.ID}},,,,,,,,,,,,
+q{{i}}start,start_new_flow,q{{i-1}}start,,completed,,,,{@i!=0@},survey - {{survey_name}} - question - {{question.ID}},,,,,,,,,,,,
+,send_message,,,completed,,,,,"{{survey_defaults[""survey_level_message""].value}}",,,,,,,,,,,,
+,end_for,,,,,,,,,,,,,,,,,,,,

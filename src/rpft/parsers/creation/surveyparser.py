@@ -165,20 +165,20 @@ class SurveyParser:
                     f" | survey {survey.name}"
                     f" | question {row.ID}"
                 ):
-                    self.parse_question(row, survey.name, container)
+                    self.parse_question(row, survey, container)
 
         return container
 
-    def parse_question(self, row, survey_name, container: RapidProContainer):
+    def parse_question(self, row, survey, container: RapidProContainer):
         context = map_template_arguments(
             self.question_template,
-            [],
+            survey.template_arguments,
             dict(row),
             self.definition.data_sheets,
         )
         flow_parser = FlowParser(
             container,
-            f"survey - {survey_name} - question - {row.ID}",
+            f"survey - {survey.name} - question - {row.ID}",
             self.question_template.table,
             context=context,
             definition=self.definition,

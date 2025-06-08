@@ -286,6 +286,55 @@ class TestSurveyParser(TestTemplate):
             Context(inputs=["completed", "completed"]),
         )
 
+    def test_template_arguments(self):
+        ci_sheet = csv_join(
+            "type,sheet_name,data_sheet,new_name,data_model,template_arguments",
+            "data_sheet,survey_data,,,SurveyQuestionRowModel,",
+            "survey,,survey_data,Survey Name,,survey_defaults",
+        )
+        survey_data = csv_join(
+            "ID,type,question,variable,completion_variable",
+            "first,text,First question?,first,",
+            "second,text,Second question?,second,second_complete",
+        )
+
+        output = (
+            ContentIndexParser(
+                CompositeSheetReader(
+                    [
+                        CSVSheetReader(TESTS_ROOT / "input/survey_templates_using_defaults"),
+                        MockSheetReader(ci_sheet, {"survey_data": survey_data}),
+                    ],
+                )
+            )
+            .parse_all()
+            .render()
+        )
+
+        self.assertFlowMessages(
+            output,
+            "survey - Survey Name - question - first",
+            [
+                ("set_run_result", "dummy"),
+                ("send_msg", "First question?"),
+                ("send_msg", "Question level message"),
+                ("set_contact_field", "first"),
+                ("set_contact_field", "first_complete"),
+            ],
+            Context(inputs=["First answer"]),
+        )
+
+        self.assertFlowMessages(
+            output,
+            "survey - Survey Name",
+            [
+                ("enter_flow", "survey - Survey Name - question - first"),
+                ("enter_flow", "survey - Survey Name - question - second"),
+                ("send_msg", "Survey level message"),
+            ],
+            Context(inputs=["completed", "completed"]),
+        )
+
 
 class TestSurveyPreprocessing(TestCase):
     def test_apply_to_all_str(self):
