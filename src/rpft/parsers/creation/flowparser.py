@@ -385,8 +385,10 @@ class FlowParser:
 
     def _parse_block(self, depth=0, block_type="root_block", omit_content=False):
         row, row_idx = self.sheet_parser.parse_next_row(
-            omit_templating=omit_content, return_index=True
+            omit_templating=omit_content,
+            return_index=True,
         )
+
         while not self._is_end_of_block(block_type, row):
             if omit_content or not row.include_if:
                 if row.type == "begin_for":
@@ -395,46 +397,60 @@ class FlowParser:
                     self._parse_block(depth + 1, "block", omit_content=True)
             else:
                 if row.type == "begin_for":
+                    if not row.mainarg_iterlist:
+                        self._parse_block(depth + 1, "for", omit_content=True)
+
                     if len(row.loop_variable) >= 1 and row.loop_variable[0]:
                         iteration_variable = row.loop_variable[0]
                     else:
                         with logging_context(f"row {row_idx}"):
                             raise Exception("begin_for must have a loop_variable")
+
                     index_variable = None
                     if len(row.loop_variable) >= 2 and row.loop_variable[1]:
                         index_variable = row.loop_variable[1]
+
                     self.sheet_parser.create_bookmark(str(depth))
                     new_node_group = NodeGroup()
                     self.node_group_stack.append(new_node_group)
+
                     # Interpret the row like a no-op to get the edges
                     if not row.is_starting_row():
                         self._parse_noop_row(row, store_row_id=False)
+
                     for i, entry in enumerate(row.mainarg_iterlist):
                         self.sheet_parser.go_to_bookmark(str(depth))
                         self.sheet_parser.add_to_context(iteration_variable, entry)
                         if index_variable:
                             self.sheet_parser.add_to_context(index_variable, i)
                         self._parse_block(depth + 1, "for")
+
                     self.node_group_stack.pop()
                     self.append_node_group(new_node_group, row.row_id)
                     self.sheet_parser.remove_from_context(iteration_variable)
+
                     if index_variable:
                         self.sheet_parser.remove_from_context(index_variable)
+
                     self.sheet_parser.remove_bookmark(str(depth))
                 elif row.type == "begin_block":
                     new_node_group = NodeGroup()
                     self.node_group_stack.append(new_node_group)
+
                     # Interpret the row like a no-op to get the edges
                     if not row.is_starting_row():
                         self._parse_noop_row(row, store_row_id=False)
+
                     self._parse_block(depth + 1, "block")
                     self.node_group_stack.pop()
                     self.append_node_group(new_node_group, row.row_id)
                 else:
                     with logging_context(f"row {row_idx}"):
                         self._parse_row(row)
+
             row, row_idx = self.sheet_parser.parse_next_row(
-                omit_templating=omit_content, return_index=True
+                omit_templating=omit_content,
+                return_index=True,
             )
 
     def _is_end_of_block(self, block_type, row):

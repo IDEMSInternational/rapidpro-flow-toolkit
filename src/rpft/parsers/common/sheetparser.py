@@ -45,7 +45,7 @@ class SheetParser:
         self.context[key] = value
 
     def remove_from_context(self, key):
-        self.context.pop(key)
+        self.context.pop(key, None)
 
     def create_bookmark(self, name):
         self.bookmarks[name] = copy.copy(self.iterator)
