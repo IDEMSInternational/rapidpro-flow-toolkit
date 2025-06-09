@@ -399,7 +399,11 @@ class TestBlocks(TestCase):
             FlowParser(
                 RapidProContainer(),
                 "basic loop",
-                tablib.import_set(table, format="csv"),
+                (
+                    table
+                    if isinstance(table, tablib.Dataset)
+                    else tablib.import_set(table, format="csv")
+                ),
                 context=context or {},
             )
             .parse()
@@ -523,6 +527,20 @@ class TestLoops(TestBlocks):
         self.assertEqual(nodes[0]["actions"][0]["text"], "1. A")
         self.assertEqual(nodes[1]["actions"][0]["text"], "2. B")
         self.assertEqual(nodes[2]["actions"][0]["text"], "3. C")
+
+    def test_skip_loop_when_list_is_empty(self):
+        table = tablib.Dataset(
+            ("send_message", "", "", "Start"),
+            ("begin_for", "", "i", "{@ [] @}"),
+            ("send_message", "", "", "{{ i }}"),
+            ("end_for", "", "", ""),
+            ("send_message", "", "", "End"),
+            headers=("type", "from", "loop_variable", "message_text"),
+        )
+        self.assert_messages(
+            self.render_output(table),
+            ["Start", "End"],
+        )
 
     def test_one_element_loop(self):
         table_data = (
