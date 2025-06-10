@@ -4,6 +4,8 @@ Surveys can be created by defining a data sheet of questions, indexing it in the
 
 A basic usage example can be found in `TestSurveyParser.test_basic_survey` in `tests/test_surveyparser.py`.
 
+It is also possible to create an individual question by adding a `survey_question` row to the content index.
+
 
 ## The question data sheet
 
@@ -104,6 +106,16 @@ Then, create a row of type `survey`. For this, the following columns are relevan
 
 This will create one flow for each question, named `survey - {survey name} - question - {question ID}`, as well as a survey flow `survey - {survey name}` that invokes each question via `start_new_flow`. This is achieved via templating. The templates can be customized if needed.
 
+### Individual questions
+
+Individual questions can be created through a row of type `survey_question`. For this, the following columns are relevant:
+
+- `data_sheet`: A data sheet with questions
+- `data_row_id`: The value of the ID column in the row of `data_sheet` that shall be used to create the question (question ID).
+- `new_name`: Name of the survey (survey name). If not provided, the name of the `data_sheet` is used.
+- `template arguments`: Template arguments to be passed down to the template `template_survey_question_wrapper`. Other templates that are included as blocks within this templates naturally have access to these template arguments as well.
+
+This will create one flow, named `survey - {survey name} - question - {question ID}`.
 
 ## Survey templates
 
