@@ -36,15 +36,16 @@ def apply_to_all_str(obj, func, inplace=False):
 class SurveyQuestion:
     def __init__(
         self,
+        survey_name,
         data_row,
         template_arguments=None,
         logging_prefix=None,
-        survey_id=None,
     ):
         self.data_row = copy.deepcopy(data_row)
         self.logging_prefix = logging_prefix
         self.template_arguments = template_arguments or []
-        self.survey_id = survey_id
+        self.survey_name = survey_name
+        self.survey_id = name_to_id(survey_name)
 
     @property
     def ID(self):
@@ -126,14 +127,13 @@ class Survey:
         self.logging_prefix = logging_prefix
         self.template_arguments = template_arguments or []
         self.questions = [
-            SurveyQuestion(row, template_arguments, logging_prefix)
+            SurveyQuestion(name, row, template_arguments, logging_prefix)
             for row in question_data_sheet.rows.values()
         ]
 
     def preprocess_data_rows(self):
-        self.initialize_survey_variables()
-
         for question in self.questions:
+            question.initialize_survey_variables(self.survey_id)
             question.apply_shorthand_substitutions(self.survey_id)
             question.set_default_expiration_message(
                 self.survey_config.expiration_message
@@ -153,11 +153,6 @@ class Survey:
         for question in self.questions:
             variables += question.get_rapidpro_variables()
         return list(set(variables))
-
-    def initialize_survey_variables(self):
-        """Initialize empty variable names with defaults."""
-        for question in self.questions:
-            question.initialize_survey_variables(self.survey_id)
 
     def get_question_by_id(self, ID):
         for question in self.questions:
@@ -181,6 +176,8 @@ class SurveyParser:
 
     @classmethod
     def parse_all(cls, definition, container: RapidProContainer):
+        for survey_question in definition.survey_questions:
+            SurveyParser(definition).parse_question(survey_question, container)
         for survey in definition.surveys.values():
             SurveyParser(definition).parse_survey(survey, container)
 
@@ -197,20 +194,20 @@ class SurveyParser:
                     f" | survey {survey.name}"
                     f" | question {question.ID}"
                 ):
-                    self.parse_question(question, survey, container)
+                    self.parse_question(question, container)
 
         return container
 
-    def parse_question(self, question, survey, container: RapidProContainer):
+    def parse_question(self, question, container: RapidProContainer):
         context = map_template_arguments(
             self.question_template,
-            survey.template_arguments,
+            question.template_arguments,
             dict(question.data_row),
             self.definition.data_sheets,
         )
         flow_parser = FlowParser(
             container,
-            f"survey - {survey.name} - question - {question.ID}",
+            f"survey - {question.survey_name} - question - {question.ID}",
             self.question_template.table,
             context=context,
             definition=self.definition,

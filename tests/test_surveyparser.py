@@ -299,7 +299,9 @@ class TestSurveyParser(TestTemplate):
             ContentIndexParser(
                 CompositeSheetReader(
                     [
-                        CSVSheetReader(TESTS_ROOT / "input/survey_templates_using_defaults"),
+                        CSVSheetReader(
+                            TESTS_ROOT / "input/survey_templates_using_defaults"
+                        ),
                         MockSheetReader(ci_sheet, {"survey_data": survey_data}),
                     ],
                 )
@@ -330,6 +332,46 @@ class TestSurveyParser(TestTemplate):
                 ("send_msg", "Survey level message"),
             ],
             Context(inputs=["completed", "completed"]),
+        )
+
+    def test_create_question(self):
+        ci_sheet = csv_join(
+            "type,sheet_name,data_sheet,new_name,data_model,template_arguments,data_row_id",  # noqa: E501
+            "data_sheet,survey_data,,,SurveyQuestionRowModel,,",
+            "survey_question,,survey_data,Survey Name,,survey_defaults,second",
+        )
+        survey_data = csv_join(
+            "ID,type,question,variable,completion_variable",
+            "first,text,First question?,first,",
+            "second,text,Second question?,second,second_complete",
+        )
+
+        output = (
+            ContentIndexParser(
+                CompositeSheetReader(
+                    [
+                        CSVSheetReader(
+                            TESTS_ROOT / "input/survey_templates_using_defaults"
+                        ),
+                        MockSheetReader(ci_sheet, {"survey_data": survey_data}),
+                    ],
+                )
+            )
+            .parse_all()
+            .render()
+        )
+
+        self.assertFlowMessages(
+            output,
+            "survey - Survey Name - question - second",
+            [
+                ("set_run_result", "dummy"),
+                ("send_msg", "Second question?"),
+                ("send_msg", "Question level message"),
+                ("set_contact_field", "second"),
+                ("set_contact_field", "second_complete"),
+            ],
+            Context(inputs=["Second answer"]),
         )
 
 
@@ -444,7 +486,7 @@ class TestSurveyPreprocessing(TestCase):
             ),
         )
 
-        question2_copy = SurveyQuestion(question2)
+        question2_copy = SurveyQuestion("Survey Name (unused)", question2)
         prefix = "pre_"
         question2_copy.apply_shorthand_substitutions("s1")
         question2_copy.apply_prefix_renaming(prefix)

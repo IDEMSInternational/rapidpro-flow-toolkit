@@ -14,7 +14,7 @@ from rpft.parsers.creation.contentindexrowmodel import (
 from rpft.parsers.creation.flowparser import FlowParser
 from rpft.parsers.creation.models import ChatbotDefinition, TemplateSheet
 from rpft.parsers.creation.tagmatcher import TagMatcher
-from rpft.parsers.creation.surveyparser import Survey, SurveyParser
+from rpft.parsers.creation.surveyparser import Survey, SurveyParser, SurveyQuestion
 from rpft.parsers.creation.triggerparser import TriggerParser
 from rpft.parsers.creation.triggerrowmodel import TriggerRowModel
 from rpft.parsers.sheets import Sheet
@@ -59,6 +59,7 @@ class ContentIndexParser:
         self.flow_definition_rows: list[ContentIndexRowModel] = []
         self.campaign_parsers: dict[str, tuple[str, CampaignParser]] = {}
         self.surveys = {}
+        self.survey_questions: list[SurveyQuestion] = []
         self.trigger_parsers = OrderedDict()
         self.user_models_module = (
             importlib.import_module(user_data_model_module_name)
@@ -79,6 +80,7 @@ class ContentIndexParser:
             self.data_sheets,
             self.template_sheets,
             self.surveys,
+            self.survey_questions,
         )
 
     def _process_content_index_table(self, sheet: Sheet):
@@ -97,6 +99,7 @@ class ContentIndexParser:
                 if len(row.sheet_name) != 1 and row.type not in [
                     "data_sheet",
                     ContentIndexType.SURVEY.value,
+                    ContentIndexType.SURVEYQUESTION.value,
                 ]:
                     raise Exception(
                         f"For {row.type} rows, exactly one sheet_name has to be"
@@ -144,6 +147,8 @@ class ContentIndexParser:
                     )
                 elif row.type == ContentIndexType.SURVEY.value:
                     self._add_survey(row, logging_prefix)
+                elif row.type == ContentIndexType.SURVEYQUESTION.value:
+                    self._add_survey_question(row, logging_prefix)
                 elif row.type == "ignore_row":
                     self._process_ignore_row(row.sheet_name[0])
                 else:
@@ -395,6 +400,25 @@ class ContentIndexParser:
             row.template_arguments,
             logging_prefix,
         )
+
+    def _add_survey_question(self, row, logging_prefix):
+        survey_name = row.new_name or row.data_sheet
+        data_row = self.data_sheets[row.data_sheet].rows.get(row.data_row_id)
+        if not data_row:
+            with logging_context(logging_prefix):
+                LOGGER.error(
+                    f"No data_row_id given, or data_row_id '{row.data_row_id}'"
+                    " not present in survey question definition sheet "
+                    f"'{row.data_sheet}'. Omitting survey question."
+                )
+            return
+
+        self.survey_questions.append(SurveyQuestion(
+            survey_name,
+            data_row,
+            row.template_arguments,
+            logging_prefix,
+        ))
 
     def parse_all_campaigns(self, rapidpro_container):
         for logging_prefix, campaign_parser in self.campaign_parsers.values():
