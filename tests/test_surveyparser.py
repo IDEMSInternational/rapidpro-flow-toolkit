@@ -1,4 +1,3 @@
-import copy
 from unittest import TestCase
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser, DataSheet
@@ -12,11 +11,9 @@ from rpft.parsers.creation.models import (
 )
 from rpft.parsers.creation.globalrowmodels import SurveyQuestionRowModel
 from rpft.parsers.creation.surveyparser import (
-    apply_prefix_substitutions,
-    apply_prefix_renaming,
-    apply_shorthand_substitutions,
     apply_to_all_str,
     Survey,
+    SurveyQuestion,
 )
 from rpft.parsers.sheets import CompositeSheetReader, CSVSheetReader
 
@@ -447,12 +444,11 @@ class TestSurveyPreprocessing(TestCase):
             ),
         )
 
-        question2_copy = copy.deepcopy(question2)
+        question2_copy = SurveyQuestion(question2)
         prefix = "pre_"
-        apply_shorthand_substitutions(question2_copy, "s1")
-        apply_prefix_renaming(question2_copy, prefix)
-        apply_prefix_substitutions(
-            question2_copy,
+        question2_copy.apply_shorthand_substitutions("s1")
+        question2_copy.apply_prefix_renaming(prefix)
+        question2_copy.apply_prefix_substitutions(
             [
                 "sq_s1_question1",
                 "sq_s1_question1_complete",
@@ -463,7 +459,7 @@ class TestSurveyPreprocessing(TestCase):
             prefix,
         )
 
-        self.assertEqual(question2_copy, question2_replaced)
+        self.assertEqual(question2_copy.data_row, question2_replaced)
 
         # Use this data in a survey
         question1 = SurveyQuestionRowModel(
@@ -488,8 +484,8 @@ class TestSurveyPreprocessing(TestCase):
         )
         survey.preprocess_data_rows()
         self.assertEqual(
-            survey.question_data_sheet.rows["question1"], question1_replaced
+            survey.get_question_by_id("question1").data_row, question1_replaced
         )
         self.assertEqual(
-            survey.question_data_sheet.rows["question2"], question2_replaced
+            survey.get_question_by_id("question2").data_row, question2_replaced
         )
