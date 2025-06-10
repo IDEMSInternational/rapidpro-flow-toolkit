@@ -1,4 +1,3 @@
-import copy
 from unittest import TestCase
 
 from rpft.parsers.creation.contentindexparser import ContentIndexParser, DataSheet
@@ -12,11 +11,9 @@ from rpft.parsers.creation.models import (
 )
 from rpft.parsers.creation.globalrowmodels import SurveyQuestionRowModel
 from rpft.parsers.creation.surveyparser import (
-    apply_prefix_substitutions,
-    apply_prefix_renaming,
-    apply_shorthand_substitutions,
     apply_to_all_str,
     Survey,
+    SurveyQuestion,
 )
 from rpft.parsers.sheets import CompositeSheetReader, CSVSheetReader
 
@@ -286,6 +283,97 @@ class TestSurveyParser(TestTemplate):
             Context(inputs=["completed", "completed"]),
         )
 
+    def test_template_arguments(self):
+        ci_sheet = csv_join(
+            "type,sheet_name,data_sheet,new_name,data_model,template_arguments",
+            "data_sheet,survey_data,,,SurveyQuestionRowModel,",
+            "survey,,survey_data,Survey Name,,survey_defaults",
+        )
+        survey_data = csv_join(
+            "ID,type,question,variable,completion_variable",
+            "first,text,First question?,first,",
+            "second,text,Second question?,second,second_complete",
+        )
+
+        output = (
+            ContentIndexParser(
+                CompositeSheetReader(
+                    [
+                        CSVSheetReader(
+                            TESTS_ROOT / "input/survey_templates_using_defaults"
+                        ),
+                        MockSheetReader(ci_sheet, {"survey_data": survey_data}),
+                    ],
+                )
+            )
+            .parse_all()
+            .render()
+        )
+
+        self.assertFlowMessages(
+            output,
+            "survey - Survey Name - question - first",
+            [
+                ("set_run_result", "dummy"),
+                ("send_msg", "First question?"),
+                ("send_msg", "Question level message"),
+                ("set_contact_field", "first"),
+                ("set_contact_field", "first_complete"),
+            ],
+            Context(inputs=["First answer"]),
+        )
+
+        self.assertFlowMessages(
+            output,
+            "survey - Survey Name",
+            [
+                ("enter_flow", "survey - Survey Name - question - first"),
+                ("enter_flow", "survey - Survey Name - question - second"),
+                ("send_msg", "Survey level message"),
+            ],
+            Context(inputs=["completed", "completed"]),
+        )
+
+    def test_create_question(self):
+        ci_sheet = csv_join(
+            "type,sheet_name,data_sheet,new_name,data_model,template_arguments,data_row_id",  # noqa: E501
+            "data_sheet,survey_data,,,SurveyQuestionRowModel,,",
+            "survey_question,,survey_data,Survey Name,,survey_defaults,second",
+        )
+        survey_data = csv_join(
+            "ID,type,question,variable,completion_variable",
+            "first,text,First question?,first,",
+            "second,text,Second question?,second,second_complete",
+        )
+
+        output = (
+            ContentIndexParser(
+                CompositeSheetReader(
+                    [
+                        CSVSheetReader(
+                            TESTS_ROOT / "input/survey_templates_using_defaults"
+                        ),
+                        MockSheetReader(ci_sheet, {"survey_data": survey_data}),
+                    ],
+                )
+            )
+            .parse_all()
+            .render()
+        )
+
+        self.assertFlowMessages(
+            output,
+            "survey - Survey Name - question - second",
+            [
+                ("set_run_result", "dummy"),
+                ("send_msg", "Second question?"),
+                ("send_msg", "Question level message"),
+                ("set_contact_field", "second"),
+                ("set_contact_field", "second_complete"),
+            ],
+            Context(inputs=["Second answer"]),
+        )
+
 
 class TestSurveyPreprocessing(TestCase):
     def test_apply_to_all_str(self):
@@ -398,12 +486,11 @@ class TestSurveyPreprocessing(TestCase):
             ),
         )
 
-        question2_copy = copy.deepcopy(question2)
+        question2_copy = SurveyQuestion("Survey Name (unused)", question2)
         prefix = "pre_"
-        apply_shorthand_substitutions(question2_copy, "s1")
-        apply_prefix_renaming(question2_copy, prefix)
-        apply_prefix_substitutions(
-            question2_copy,
+        question2_copy.apply_shorthand_substitutions("s1")
+        question2_copy.apply_prefix_renaming(prefix)
+        question2_copy.apply_prefix_substitutions(
             [
                 "sq_s1_question1",
                 "sq_s1_question1_complete",
@@ -414,7 +501,7 @@ class TestSurveyPreprocessing(TestCase):
             prefix,
         )
 
-        self.assertEqual(question2_copy, question2_replaced)
+        self.assertEqual(question2_copy.data_row, question2_replaced)
 
         # Use this data in a survey
         question1 = SurveyQuestionRowModel(
@@ -439,8 +526,8 @@ class TestSurveyPreprocessing(TestCase):
         )
         survey.preprocess_data_rows()
         self.assertEqual(
-            survey.question_data_sheet.rows["question1"], question1_replaced
+            survey.get_question_by_id("question1").data_row, question1_replaced
         )
         self.assertEqual(
-            survey.question_data_sheet.rows["question2"], question2_replaced
+            survey.get_question_by_id("question2").data_row, question2_replaced
         )

@@ -81,11 +81,13 @@ class ChatbotDefinition:
         data_sheets,
         templates: list[TemplateSheet],
         surveys,
+        survey_questions,
     ):
         self.flow_definitions = flow_definitions
         self.data_sheets = data_sheets
         self.templates = templates
         self.surveys = surveys
+        self.survey_questions = survey_questions
 
     def get_data_sheet_rows(self, sheet_name):
         return self.data_sheets[sheet_name].rows
