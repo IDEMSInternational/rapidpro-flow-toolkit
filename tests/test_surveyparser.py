@@ -338,12 +338,15 @@ class TestSurveyParser(TestTemplate):
         ci_sheet = csv_join(
             "type,sheet_name,data_sheet,new_name,data_model,template_arguments,data_row_id",  # noqa: E501
             "data_sheet,survey_data,,,SurveyQuestionRowModel,,",
-            "survey_question,,survey_data,Survey Name,,survey_defaults,second",
+            "survey_question,,survey_data,Survey Name,,survey_defaults,first1",
+            "survey_question,,survey_data,Survey Name,,survey_defaults,second2",
+            "survey_question,,survey_data,Survey Name,,survey_defaults,third3",
         )
         survey_data = csv_join(
             "ID,type,question,variable,completion_variable",
-            "first,text,First question?,first,",
-            "second,text,Second question?,second,second_complete",
+            "first1,text,First question?,,",
+            "second2,text,Second question?,second,",
+            "third3,text,@answer question?,third,third_complete",
         )
 
         output = (
@@ -363,7 +366,20 @@ class TestSurveyParser(TestTemplate):
 
         self.assertFlowMessages(
             output,
-            "survey - Survey Name - question - second",
+            "survey - Survey Name - question - first1",
+            [
+                ("set_run_result", "dummy"),
+                ("send_msg", "First question?"),
+                ("send_msg", "Question level message"),
+                ("set_contact_field", "sq_surveyname_first1"),
+                ("set_contact_field", "sq_surveyname_first1_complete"),
+            ],
+            Context(inputs=["First answer"]),
+        )
+
+        self.assertFlowMessages(
+            output,
+            "survey - Survey Name - question - second2",
             [
                 ("set_run_result", "dummy"),
                 ("send_msg", "Second question?"),
@@ -372,6 +388,19 @@ class TestSurveyParser(TestTemplate):
                 ("set_contact_field", "second_complete"),
             ],
             Context(inputs=["Second answer"]),
+        )
+
+        self.assertFlowMessages(
+            output,
+            "survey - Survey Name - question - third3",
+            [
+                ("set_run_result", "dummy"),
+                ("send_msg", "@fields.third question?"),
+                ("send_msg", "Question level message"),
+                ("set_contact_field", "third"),
+                ("set_contact_field", "third_complete"),
+            ],
+            Context(inputs=["Third answer"]),
         )
 
 

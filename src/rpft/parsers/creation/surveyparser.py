@@ -18,6 +18,10 @@ def name_to_id(name):
 
 
 def apply_to_all_str(obj, func, inplace=False):
+    """
+    For a nested model, recursively apply the function `func: str -> str`
+    to all strings fields somewhere within the model.
+    """
     if isinstance(obj, str):
         return func(obj)
     elif isinstance(obj, dict):
@@ -111,6 +115,16 @@ class SurveyQuestion:
 
         apply_to_all_str(self.data_row, replace_vars, inplace=True)
 
+    def populate_survey_variables(self, survey_id=None):
+        """
+        Initialize empty variable names with defaults and insert
+        these in place of shorthand placeholders (e.g. @answer).
+        """
+
+        survey_id = survey_id or self.survey_id
+        self.initialize_survey_variables(survey_id)
+        self.apply_shorthand_substitutions(survey_id)
+
 
 class Survey:
     def __init__(
@@ -133,16 +147,15 @@ class Survey:
 
     def preprocess_data_rows(self):
         for question in self.questions:
-            question.initialize_survey_variables(self.survey_id)
-            question.apply_shorthand_substitutions(self.survey_id)
-            question.set_default_expiration_message(
-                self.survey_config.expiration_message
-            )
+            question.populate_survey_variables(self.survey_id)
 
         variables = self.get_rapidpro_variables()
         prefix = self.survey_config.variable_prefix
 
         for question in self.questions:
+            question.set_default_expiration_message(
+                self.survey_config.expiration_message
+            )
             if prefix:
                 question.apply_prefix_renaming(prefix)
             question.apply_prefix_substitutions(variables, prefix)
@@ -199,6 +212,7 @@ class SurveyParser:
         return container
 
     def parse_question(self, question, container: RapidProContainer):
+        question.populate_survey_variables()
         context = map_template_arguments(
             self.question_template,
             question.template_arguments,
