@@ -4,6 +4,8 @@ Surveys can be created by defining a data sheet of questions, indexing it in the
 
 A basic usage example can be found in `TestSurveyParser.test_basic_survey` in `tests/test_surveyparser.py`.
 
+It is also possible to create an individual question by adding a `survey_question` row to the content index.
+
 
 ## The question data sheet
 
@@ -97,13 +99,25 @@ Then, create a row of type `survey`. For this, the following columns are relevan
 
 - `data_sheet`: A data sheet with questions
 - `new_name`: Name of the survey. If not provided, the name of the `data_sheet` is used.
-- `config`: A SurveyConfig object, see `src/rpft/parsers/creation/surveymodels.py`
+- `config`: A SurveyConfig object, see `src/rpft/parsers/creation/surveymodels.py`. May become deprecated in the future.
     - `variable_prefix`: Prefix to apply to all RapidPro variables that are created by the survey. For each `SurveyQuestion`, this is the `variable`, `completion_variable` and `postprocessing.assignments.*.variable`. Ideally, avoid this feature in favor of using auto-generated variable names, `@answer`, `@answerid` and `@prefix`.
-    - `expiration_message`: Message to send when a question flow expires. If a question does not specify an expiration message, this message is used by default.
-- `template arguments`: Template arguments to be passed down to the survey template
+    - `expiration_message`: Message to send when a question flow expires. If a question does not specify an expiration message, this message is used by default. Ideally, avoid this feature in favor of using template_arguments.
+- `template arguments`: Template arguments to be passed down to the survey template `template_survey_wrapper`. These arguments are also passed down to the template `template_survey_question_wrapper`. Other templates that are included as blocks within these two templates naturally have access to these template arguments as well.
 
 This will create one flow for each question, named `survey - {survey name} - question - {question ID}`, as well as a survey flow `survey - {survey name}` that invokes each question via `start_new_flow`. This is achieved via templating. The templates can be customized if needed.
 
+### Individual questions
+
+Individual questions can be created through a row of type `survey_question`. For this, the following columns are relevant:
+
+- `data_sheet`: A data sheet with questions
+- `data_row_id`: The value of the ID column in the row of `data_sheet` that shall be used to create the question (question ID).
+- `new_name`: Name of the survey (survey name). If not provided, the name of the `data_sheet` is used.
+- `template arguments`: Template arguments to be passed down to the template `template_survey_question_wrapper`. Other templates that are included as blocks within this templates naturally have access to these template arguments as well.
+
+This will create one flow, named `survey - {survey name} - question - {question ID}`.
+
+Note: Unlike surveys, the `config` column (SurveyConfig) is ignored.
 
 ## Survey templates
 
