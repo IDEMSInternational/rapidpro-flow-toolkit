@@ -234,13 +234,14 @@ class ContentIndexParser:
             return self._get_new_data_sheet(sheet_name, data_model_name)
 
     def _get_new_data_sheet(self, sheet_name, data_model_name=None):
-        model = getattr(
-            self.user_models_module or globalrowmodels,
-            data_model_name,
-            None,
-        ) if data_model_name else None
+        model = (
+            getattr(self.user_models_module, data_model_name, None)
+            or getattr(globalrowmodels, data_model_name, None)
+            if data_model_name
+            else None
+        )
 
-        if self.user_models_module and not model:
+        if data_model_name and not model:
             raise Exception(
                 f'Undefined data_model_name "{data_model_name}" '
                 f"in {self.user_models_module}."
