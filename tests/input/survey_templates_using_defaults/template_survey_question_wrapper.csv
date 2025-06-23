@@ -1,0 +1,4 @@
+row_id,type,from,loop_variable,condition,condition_var,condition_type,condition_name,include_if,message_text,template_arguments,choices,save_name
+,insert_as_block,start,,,,,,,template_survey_question_type_{{type}},,,
+,save_value,,,,,,,,@results.variable,,,{{variable}}
+,save_value,,,,,,,,yes,,,{{completion_variable}}
