@@ -100,7 +100,7 @@ Once ready:
 1. Upload to PyPI: `twine upload dist/*`
 
 
-[1]: https://packaging.python.org/en/latest/guides/using-testpypi/
+[Using TestPyPI]: https://packaging.python.org/en/latest/guides/using-testpypi/
 [pre-commit]: https://pre-commit.com/
 [black]: https://black.readthedocs.io/en/stable/index.html
 [flake8]: https://flake8.pycqa.org/en/latest/
