@@ -99,7 +99,7 @@ class ContentIndexParser:
                 if len(row.sheet_name) != 1 and row.type not in [
                     "data_sheet",
                     ContentIndexType.SURVEY.value,
-                    ContentIndexType.SURVEYQUESTION.value,
+                    ContentIndexType.SURVEY_QUESTION.value,
                 ]:
                     raise Exception(
                         f"For {row.type} rows, exactly one sheet_name has to be"
@@ -147,7 +147,7 @@ class ContentIndexParser:
                     )
                 elif row.type == ContentIndexType.SURVEY.value:
                     self._add_survey(row, logging_prefix)
-                elif row.type == ContentIndexType.SURVEYQUESTION.value:
+                elif row.type == ContentIndexType.SURVEY_QUESTION.value:
                     self._add_survey_question(row, logging_prefix)
                 elif row.type == "ignore_row":
                     self._process_ignore_row(row.sheet_name[0])
@@ -407,18 +407,20 @@ class ContentIndexParser:
         if not data_row:
             with logging_context(logging_prefix):
                 LOGGER.error(
-                    f"No data_row_id given, or data_row_id '{row.data_row_id}'"
-                    " not present in survey question definition sheet "
-                    f"'{row.data_sheet}'. Omitting survey question."
+                    f"No data_row_id given, or data_row_id '{row.data_row_id}' not"
+                    f" present in survey question definition sheet '{row.data_sheet}'."
+                    " Omitting survey question."
                 )
             return
 
-        self.survey_questions.append(SurveyQuestion(
-            survey_name,
-            data_row,
-            row.template_arguments,
-            logging_prefix,
-        ))
+        self.survey_questions.append(
+            SurveyQuestion(
+                survey_name,
+                data_row,
+                row.template_arguments,
+                logging_prefix,
+            )
+        )
 
     def parse_all_campaigns(self, rapidpro_container):
         for logging_prefix, campaign_parser in self.campaign_parsers.values():

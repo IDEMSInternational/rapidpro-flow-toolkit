@@ -19,8 +19,9 @@ def name_to_id(name):
 
 def apply_to_all_str(obj, func, inplace=False):
     """
-    For a nested model, recursively apply the function `func: str -> str`
-    to all strings fields somewhere within the model.
+    Apply the given function to all string fields within the given nested model.
+
+    `func` should accept a string as argument and return a string.
     """
     if isinstance(obj, str):
         return func(obj)
@@ -75,8 +76,7 @@ class SurveyQuestion:
 
     def apply_prefix_renaming(self, prefix):
         """
-        For all variables which are created in this survey question, apply the prefix to
-        its name.
+        Apply a prefix to the names of all question variables.
         """
         self.data_row.variable = prefix + self.data_row.variable
         self.data_row.completion_variable = prefix + self.data_row.completion_variable
@@ -85,8 +85,10 @@ class SurveyQuestion:
 
     def apply_prefix_substitutions(self, variables, prefix):
         """
-        Wherever any of these variable appears in this survey (in a condition, message
-        text or elsewhere), apply the prefix to it.
+        Apply a prefix to the given question variables.
+
+        Applies wherever any of these variables appear in the survey (condition, message
+        text or elsewhere).
         """
 
         def replace_vars(s):
@@ -102,8 +104,7 @@ class SurveyQuestion:
 
     def apply_shorthand_substitutions(self, survey_id):
         """
-        Wherever @answer appears, replace it with the variable of this survey question
-        where the user answer is stored.
+        Replace placeholders, like '@answer', with actual values.
         """
 
         def replace_vars(s):
@@ -117,8 +118,8 @@ class SurveyQuestion:
 
     def populate_survey_variables(self, survey_id=None):
         """
-        Initialize empty variable names with defaults and insert
-        these in place of shorthand placeholders (e.g. @answer).
+        Initialize empty variable names with defaults and insert these in place of
+        shorthand placeholders (e.g. @answer).
         """
 
         survey_id = survey_id or self.survey_id

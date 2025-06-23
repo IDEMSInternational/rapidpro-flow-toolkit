@@ -6,7 +6,7 @@ from rpft.parsers.creation.models import SurveyConfig
 
 class ContentIndexType(Enum):
     SURVEY = "survey"
-    SURVEYQUESTION = "survey_question"
+    SURVEY_QUESTION = "survey_question"
 
 
 class TemplateArgument(ParserModel):
