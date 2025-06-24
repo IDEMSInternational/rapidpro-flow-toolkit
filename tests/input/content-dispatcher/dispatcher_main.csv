@@ -1,0 +1,3 @@
+"row_id","type","from","condition","condition_var","condition_type","condition_name","save_name","include_if","loop_variable","message_text","template_arguments"
+,"send_message","start",,,,,,,,"Main dispatcher",
+,"insert_as_block",,,,,,,,,"dispatcher_branch","{@[property_names,cycles.values()|list,0]@}"
