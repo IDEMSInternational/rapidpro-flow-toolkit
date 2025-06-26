@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 from collections import defaultdict
@@ -5,8 +6,9 @@ from functools import singledispatch
 from typing import Any
 
 from benedict import benedict
+from tablib import Dataset
 
-from rpft.parsers.sheets import AbstractSheetReader
+from rpft.parsers.sheets import AbstractSheetReader, Sheet
 
 LOGGER = logging.getLogger(__name__)
 
@@ -208,3 +210,24 @@ def parse_cell(s: str, delimiters=DELIMS, depth=0) -> Any:
 
 def is_template(s: str) -> bool:
     return bool(re.search(r"{{.*?}}|{@.*?@}|{%.*?%}|@\(.*?\)", s))
+
+
+class UniJSONReader(AbstractSheetReader):
+    def __init__(self, path):
+        self.name = path
+        self._sheets = {}
+
+        with open(path, "r") as f:
+            data = json.load(f)
+
+        for name, content in data.items():
+            if name == "_idems":
+                continue
+
+            meta = data.get("_idems", {}).get("tabulate", {}).get(name, {})
+            table = tabulate(content, meta)
+            self._sheets[name] = Sheet(
+                reader=self,
+                name=name,
+                table=Dataset(*table[1:], headers=table[0], title=name),
+            )

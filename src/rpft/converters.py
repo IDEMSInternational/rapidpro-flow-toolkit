@@ -7,7 +7,7 @@ from pathlib import Path
 
 from tablib import Databook, Dataset
 
-from rpft.parsers.universal import bookify, parse_tables
+from rpft.parsers.universal import UniJSONReader, bookify, parse_tables
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import (
@@ -125,6 +125,7 @@ def create_sheet_reader(sheet_format, input_file):
         "google_sheets": GoogleSheetReader,
         "json": JSONSheetReader,
         "ods": ODSSheetReader,
+        "uni": UniJSONReader,
         "xlsx": XLSXSheetReader,
     }.get(sheet_format)
 
@@ -140,8 +141,14 @@ def detect_format(fp):
 
     ext = Path(fp).suffix.lower()[1:]
 
-    if ext in ["json", "ods", "xlsx"]:
+    if ext == "json":
+        with open(fp, "r") as f:
+            return "uni" if "content_index" in json.load(f) else ext
+
+    if ext in ["ods", "xlsx"]:
         return ext
+
+    raise Exception("Failed to detect input file format, file={fp}")
 
 
 def sheets_to_csv(path, sheet_ids):
