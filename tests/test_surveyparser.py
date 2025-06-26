@@ -301,7 +301,7 @@ class TestSurveyParser(TestTemplate):
 
         output = (
             ContentIndexParser(
-                CompositeSheetReader(
+                SheetDataSource(
                     [
                         CSVSheetReader(
                             TESTS_ROOT / "input/survey_templates_using_defaults"
@@ -355,7 +355,7 @@ class TestSurveyParser(TestTemplate):
 
         output = (
             ContentIndexParser(
-                CompositeSheetReader(
+                SheetDataSource(
                     [
                         CSVSheetReader(
                             TESTS_ROOT / "input/survey_templates_using_defaults"
