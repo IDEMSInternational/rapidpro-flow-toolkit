@@ -459,6 +459,10 @@ class TestSurveyPreprocessing(TestCase):
                     value="6",
                     variable="@prefix_question0",
                 ),
+                Condition(
+                    value="7",
+                    variable="custom_@surveyid_@questionid",
+                ),
             ],
             postprocessing=PostProcessing(
                 assignments=[
@@ -498,6 +502,10 @@ class TestSurveyPreprocessing(TestCase):
                 Condition(
                     value="6",
                     variable="@fields.sq_s1_question0",
+                ),
+                Condition(
+                    value="7",
+                    variable="custom_s1_question2",
                 ),
             ],
             postprocessing=PostProcessing(

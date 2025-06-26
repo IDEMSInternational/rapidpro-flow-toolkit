@@ -35,8 +35,10 @@ Therefore we have the following shorthands, which can be used within any field o
 
 - `@answer` is short for `@fields.{variable}`. This is useful even without reusing questions, e.g. within confirmation/validation/stop conditions (see below).
 - `@answerid` is short for `{variable}`. This can be used when defining new variables (in postprocessing steps) whose names should depend on the variable in the question.
-- `@prefix` is short for `@fields.sq_{surveyid}`. This is useful when referencing variables from previous questions of the survey, by using e.g. `@prefix_{questionid}`
-- `@prefixid` is short for `sq_{surveyid}`. Similar to above
+- `@prefix` is short for `@fields.sq_{survey_id}`. This is useful when referencing variables from previous questions of the survey, by using e.g. `@prefix_{prev_question_id}`
+- `@prefixid` is short for `sq_{survey_id}`. Similar to above
+- `@surveyid` is short for the survey ID (`{survey-id}`)
+- `@questionid` is short for the question ID (`{question_id}`)
 
 
 ### Special question fields
