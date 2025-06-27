@@ -8,6 +8,11 @@ from google.oauth2.credentials import Credentials
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
 
 
+EXT_MIME_TYPE = {
+    ".ods": "application/vnd.oasis.opendocument.spreadsheet",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
+
 # If modifying these scopes, delete the file token.json.
 SCOPES = [
     "https://www.googleapis.com/auth/drive.readonly",
@@ -57,9 +62,48 @@ class Drive:
         return cls._client
 
     @classmethod
+    def meta(cls, file_id):
+        return (
+            cls.client()
+            .files()
+            .get(
+                fileId=file_id,
+                supportsAllDrives=True,
+            )
+            .execute()
+        )
+
+    @classmethod
     def fetch(cls, file_id):
-        params = {"fileId": file_id, "supportsAllDrives": True}
-        meta = cls.client().files().get(**params).execute()
-        content = cls.client().files().get_media(**params).execute()
+        meta = cls.meta(file_id)
+        content = (
+            cls.client()
+            .files()
+            .get_media(
+                fileId=file_id,
+                supportsAllDrives=True,
+            )
+            .execute()
+        )
+
+        return meta["name"], content
+
+    @classmethod
+    def export(cls, file_id, ext=None, mime_type=None):
+        try:
+            mime = mime_type if mime_type else EXT_MIME_TYPE[ext]
+        except KeyError:
+            raise ValueError("Failed to determine MIME type for export")
+
+        meta = cls.meta(file_id)
+        content = (
+            cls.client()
+            .files()
+            .export(
+                fileId=file_id,
+                mimeType=mime,
+            )
+            .execute()
+        )
 
         return meta["name"], content
