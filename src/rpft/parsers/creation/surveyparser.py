@@ -51,6 +51,7 @@ class SurveyQuestion:
         self.template_arguments = template_arguments or []
         self.survey_name = survey_name
         self.survey_id = name_to_id(survey_name)
+        self.question_id = name_to_id(self.data_row.ID)
 
     @property
     def ID(self):
@@ -59,8 +60,7 @@ class SurveyQuestion:
     def initialize_survey_variables(self, survey_id):
         """Initialize empty variable names with defaults."""
         if not self.data_row.variable:
-            question_id = name_to_id(self.data_row.ID)
-            self.data_row.variable = f"sq_{survey_id}_{question_id}"
+            self.data_row.variable = f"sq_{survey_id}_{self.question_id}"
         if not self.data_row.completion_variable:
             self.data_row.completion_variable = f"{self.data_row.variable}_complete"
 
@@ -112,6 +112,8 @@ class SurveyQuestion:
             s = s.replace("@answer", f"@fields.{self.data_row.variable}")
             s = s.replace("@prefixid", f"sq_{survey_id}")
             s = s.replace("@prefix", f"@fields.sq_{survey_id}")
+            s = s.replace("@surveyid", f"{survey_id}")
+            s = s.replace("@questionid", f"{self.question_id}")
             return s
 
         apply_to_all_str(self.data_row, replace_vars, inplace=True)
