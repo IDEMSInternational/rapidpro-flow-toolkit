@@ -8,7 +8,7 @@ from tablib import Dataset
 from rpft.parsers.universal import tabulate
 from rpft.parsers.common.model_inference import model_from_headers
 from rpft.parsers.common.sheetparser import SheetParser
-from rpft.parsers.sheets import CompositeSheetReader, Sheet
+from rpft.parsers.sheets import Sheet
 
 
 LOGGER = logging.getLogger(__name__)
@@ -104,7 +104,7 @@ class JSONDataSource:
 class SheetDataSource:
 
     def __init__(self, readers):
-        self.reader = CompositeSheetReader(readers)
+        self.readers = readers
 
     def get(self, key, model=None):
         sheet = self._get_sheet_or_die(key)
@@ -122,11 +122,11 @@ class SheetDataSource:
                 sheet.reader.name,
                 sheet.name,
             )
-            for sheet in self.reader.get_sheets_by_name(key)
+            for sheet in self._get_sheets_by_name(key)
         ]
 
     def _get_sheet_or_die(self, sheet_name):
-        candidates = self.reader.get_sheets_by_name(sheet_name)
+        candidates = self._get_sheets_by_name(sheet_name)
 
         if not candidates:
             raise Exception("Sheet not found", {"name": sheet_name})
@@ -147,3 +147,10 @@ class SheetDataSource:
             )
 
         return active
+
+    def _get_sheets_by_name(self, name):
+        return [
+            sheet
+            for reader in self.readers
+            if (sheet := reader.get_sheet(name)) is not None
+        ]

@@ -31,9 +31,6 @@ class AbstractSheetReader(ABC):
     def get_sheet(self, name) -> Sheet:
         return self.sheets.get(name)
 
-    def get_sheets_by_name(self, name) -> list[Sheet]:
-        return [sheet] if (sheet := self.get_sheet(name)) else []
-
     def __repr__(self):
         return f"{type(self).__name__}(name: '{self.name}')"
 
@@ -129,23 +126,6 @@ class GoogleSheetReader(AbstractSheetReader):
             [cell.replace("\r\n", "\n") for cell in row],
             max_cols,
         )
-
-
-class CompositeSheetReader:
-    def __init__(self, readers=None):
-        self.sheetreaders = readers or []
-        self.name = "Multiple files"
-
-    def add_reader(self, reader):
-        self.sheetreaders.append(reader)
-
-    def get_sheets_by_name(self, name):
-        sheets = []
-
-        for reader in self.sheetreaders:
-            sheets += reader.get_sheets_by_name(name)
-
-        return sheets
 
 
 class DatasetSheetReader(AbstractSheetReader):

@@ -71,7 +71,7 @@ def sheets_to_uni(infile) -> list:
 
 
 def get_content_index_parser(input_files, sheet_format, data_models, tags):
-    if sheet_format == "uni":
+    if not sheet_format and not data_models:
         return ContentIndexParser(
             JSONDataSource(input_files), data_models, TagMatcher(tags)
         )
@@ -119,7 +119,7 @@ def flows_to_sheets(
 
 
 def create_sheet_reader(sheet_format, input_file):
-    sheet_format = sheet_format if sheet_format else detect_format(input_file)
+    fmt = sheet_format if sheet_format else detect_format(input_file)
     cls = {
         "csv": CSVSheetReader,
         "google_sheets": GoogleSheetReader,
@@ -127,12 +127,12 @@ def create_sheet_reader(sheet_format, input_file):
         "ods": ODSSheetReader,
         "uni": UniJSONReader,
         "xlsx": XLSXSheetReader,
-    }.get(sheet_format)
+    }.get(fmt)
 
     if cls:
         return cls(input_file)
     else:
-        raise Exception(f"Format {sheet_format} currently unsupported.")
+        raise Exception(f"Format not supported, format={fmt}")
 
 
 def detect_format(fp):
