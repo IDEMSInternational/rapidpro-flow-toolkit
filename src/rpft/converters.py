@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import re
 import shutil
 from pathlib import Path
 
@@ -23,6 +22,14 @@ from rpft.sources import JSONDataSource, SheetDataSource
 
 
 LOGGER = logging.getLogger(__name__)
+FMT_READER_MAP = {
+    "csv": CSVSheetReader,
+    "google_sheets": GoogleSheetReader,
+    "json": JSONSheetReader,
+    "ods": ODSSheetReader,
+    "uni": UniJSONReader,
+    "xlsx": XLSXSheetReader,
+}
 
 
 def create_flows(input_files, output_file, sheet_format, data_models=None, tags=[]):
@@ -119,36 +126,14 @@ def flows_to_sheets(
 
 
 def create_sheet_reader(sheet_format, input_file):
-    fmt = sheet_format if sheet_format else detect_format(input_file)
-    cls = {
-        "csv": CSVSheetReader,
-        "google_sheets": GoogleSheetReader,
-        "json": JSONSheetReader,
-        "ods": ODSSheetReader,
-        "uni": UniJSONReader,
-        "xlsx": XLSXSheetReader,
-    }.get(fmt)
+    cls = FMT_READER_MAP.get(sheet_format) or next(
+        reader for reader in FMT_READER_MAP.values() if reader.can_process(input_file)
+    )
 
     if cls:
         return cls(input_file)
-    else:
-        raise Exception(f"Format not supported, format={fmt}")
 
-
-def detect_format(fp):
-    if bool(re.fullmatch(r"[a-z0-9_-]{44}", fp, re.IGNORECASE)):
-        return "google_sheets"
-
-    ext = Path(fp).suffix.lower()[1:]
-
-    if ext == "json":
-        with open(fp, "r") as f:
-            return "uni" if "content_index" in json.load(f) else ext
-
-    if ext in ["ods", "xlsx"]:
-        return ext
-
-    raise Exception("Failed to detect input file format, file={fp}")
+    raise Exception(f"Format not supported, file={input_file}")
 
 
 def sheets_to_csv(path, sheet_ids):

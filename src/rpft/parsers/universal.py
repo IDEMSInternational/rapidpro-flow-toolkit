@@ -3,6 +3,7 @@ import logging
 import re
 from collections import defaultdict
 from functools import singledispatch
+from pathlib import Path
 from typing import Any
 
 from benedict import benedict
@@ -231,3 +232,11 @@ class UniJSONReader(AbstractSheetReader):
                 name=name,
                 table=Dataset(*table[1:], headers=table[0], title=name),
             )
+
+    @classmethod
+    def can_process(cls, location):
+        if Path(location).suffix.lower() == ".json":
+            with open(location, "r") as f:
+                return "content_index" in json.load(f)
+
+        return False

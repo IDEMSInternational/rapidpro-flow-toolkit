@@ -1,4 +1,5 @@
 import json
+import re
 from abc import ABC
 from collections.abc import Mapping
 from pathlib import Path
@@ -31,6 +32,10 @@ class AbstractSheetReader(ABC):
     def get_sheet(self, name) -> Sheet:
         return self.sheets.get(name)
 
+    @classmethod
+    def can_process(cls, path):
+        return False
+
     def __repr__(self):
         return f"{type(self).__name__}(name: '{self.name}')"
 
@@ -43,6 +48,10 @@ class CSVSheetReader(AbstractSheetReader):
             for f in Path(path).glob("*.csv")
         }
 
+    @classmethod
+    def can_process(cls, location):
+        return Path(location).is_dir()
+
 
 class JSONSheetReader(AbstractSheetReader):
     def __init__(self, filename):
@@ -53,6 +62,14 @@ class JSONSheetReader(AbstractSheetReader):
             table = tablib.Dataset()
             table.dict = content
             self._sheets[name] = Sheet(reader=self, name=name, table=table)
+
+    @classmethod
+    def can_process(cls, location):
+        if Path(location).suffix.lower() == ".json":
+            with open(location, "r") as f:
+                return "sheets" in json.load(f)
+
+        return False
 
 
 class XLSXSheetReader(AbstractSheetReader):
@@ -67,6 +84,10 @@ class XLSXSheetReader(AbstractSheetReader):
                 name=sheet.title,
                 table=sanitize(sheet),
             )
+
+    @classmethod
+    def can_process(cls, location):
+        return Path(location).suffix.lower() == ".xlsx"
 
 
 class GoogleSheetReader(AbstractSheetReader):
@@ -127,6 +148,10 @@ class GoogleSheetReader(AbstractSheetReader):
             max_cols,
         )
 
+    @classmethod
+    def can_process(cls, location):
+        return bool(re.fullmatch(r"[a-z0-9_-]{44}", location, re.IGNORECASE))
+
 
 class DatasetSheetReader(AbstractSheetReader):
     def __init__(self, datasets, name):
@@ -146,6 +171,10 @@ class ODSSheetReader(AbstractSheetReader):
             for sheet in book.sheets()
         }
         self.name = str(path)
+
+    @classmethod
+    def can_process(cls, location):
+        return Path(location).suffix.lower() == ".ods"
 
 
 def sanitize(sheet):
