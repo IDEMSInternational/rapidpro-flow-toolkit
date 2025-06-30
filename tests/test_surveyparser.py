@@ -1,6 +1,9 @@
 from unittest import TestCase
 
-from rpft.parsers.creation.contentindexparser import ContentIndexParser, DataSheet
+from rpft.parsers.creation.contentindexparser import (
+    ContentIndexParser,
+    DataSheet,
+)
 from rpft.parsers.creation.models import (
     Assignment,
     Condition,
@@ -15,7 +18,8 @@ from rpft.parsers.creation.surveyparser import (
     Survey,
     SurveyQuestion,
 )
-from rpft.parsers.sheets import CompositeSheetReader, CSVSheetReader
+from rpft.parsers.sheets import CSVSheetReader
+from rpft.sources import SheetDataSource
 
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
@@ -48,7 +52,7 @@ class TestSurveyParser(TestTemplate):
             "else,text,Enter something else",
         )
         definition = ContentIndexParser(
-            MockSheetReader(ci_sheet, {"survey_data": survey_data})
+            SheetDataSource([MockSheetReader(ci_sheet, {"survey_data": survey_data})])
         ).definition
         datamodelA = definition.get_data_sheet_row("survey_data", "name")
         datamodelB = definition.get_data_sheet_row("survey_data", "else")
@@ -73,7 +77,7 @@ class TestSurveyParser(TestTemplate):
 
         output = (
             ContentIndexParser(
-                CompositeSheetReader(
+                SheetDataSource(
                     [
                         CSVSheetReader(TESTS_ROOT / "input/survey_templates"),
                         MockSheetReader(ci_sheet, {"survey_data": survey_data}),
@@ -155,7 +159,7 @@ class TestSurveyParser(TestTemplate):
 
         output = (
             ContentIndexParser(
-                CompositeSheetReader(
+                SheetDataSource(
                     [
                         CSVSheetReader(TESTS_ROOT / "input/survey_templates"),
                         MockSheetReader(ci_sheet, {"survey_data": survey_data}),
@@ -249,7 +253,7 @@ class TestSurveyParser(TestTemplate):
         }
         output = (
             ContentIndexParser(
-                CompositeSheetReader(
+                SheetDataSource(
                     [
                         CSVSheetReader(TESTS_ROOT / "input/survey_templates"),
                         MockSheetReader(ci_sheet, sheet_dict),
@@ -297,7 +301,7 @@ class TestSurveyParser(TestTemplate):
 
         output = (
             ContentIndexParser(
-                CompositeSheetReader(
+                SheetDataSource(
                     [
                         CSVSheetReader(
                             TESTS_ROOT / "input/survey_templates_using_defaults"
@@ -351,7 +355,7 @@ class TestSurveyParser(TestTemplate):
 
         output = (
             ContentIndexParser(
-                CompositeSheetReader(
+                SheetDataSource(
                     [
                         CSVSheetReader(
                             TESTS_ROOT / "input/survey_templates_using_defaults"

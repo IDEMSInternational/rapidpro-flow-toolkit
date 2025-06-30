@@ -5,7 +5,7 @@ from rpft.parsers.common.rowparser import ParserModel
 
 class TriggerRowModel(ParserModel):
     type: str
-    keywords: list[str] = ""
+    keywords: list[str] = []
     flow: str = ""
     groups: list[str] = []
     exclude_groups: list[str] = []
