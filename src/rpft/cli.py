@@ -104,10 +104,11 @@ def _add_content_index_arguments(parser):
     parser.add_argument(
         "--tags",
         help=(
-            "tags to filter the content index sheet: a sequence of lists, with each "
-            "list starting with an integer (tag position) followed by tags to include "
-            "for this position, e.g. '1 foo bar 2 baz', means only include rows if "
-            "tags:1 is empty, foo or bar, and tags:2 is empty or baz"
+            "tags to filter the content index sheet; a sequence of lists, with each"
+            " list starting with an integer (tag position) followed by tags to include"
+            " or exclude for this position; exclusions are preceded by '!'; for"
+            " example, the value '1 foo bar ! 2 !baz' includes rows where tags.1"
+            " is 'foo', 'bar' or not empty, and tags:2 is not 'baz' or empty"
         ),
         nargs="*",
     )
