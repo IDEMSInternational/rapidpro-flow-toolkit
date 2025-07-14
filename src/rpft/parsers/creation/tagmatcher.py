@@ -18,8 +18,8 @@ class TagMatcher:
             else:
                 if current_index is None:
                     raise ValueError(
-                        "Tags parameter must start with a "
-                        "number indicating the tag position."
+                        "Tags parameter must start with a number indicating the tag"
+                        " position"
                     )
                 if param[0] == "!":
                     self.exclude_patterns[current_index].append(param[1:])
