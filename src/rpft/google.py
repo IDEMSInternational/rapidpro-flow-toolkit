@@ -20,12 +20,14 @@ SCOPES = [
 ]
 
 
-def get_credentials():
+def get_credentials(scopes: list[str] | None = None):
+    scopes = scopes or SCOPES
+
     sa_creds = os.getenv("CREDENTIALS")
 
     if sa_creds:
         return ServiceAccountCredentials.from_service_account_info(
-            json.loads(sa_creds), scopes=SCOPES
+            json.loads(sa_creds), scopes=scopes
         )
 
     creds = None
@@ -34,7 +36,7 @@ def get_credentials():
     if os.path.exists(token_file_name):
         creds = Credentials.from_authorized_user_file(
             token_file_name,
-            scopes=SCOPES,
+            scopes=scopes,
         )
 
     # If there are no (valid) credentials available, let the user log in.
@@ -42,7 +44,7 @@ def get_credentials():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", scopes)
             creds = flow.run_local_server(port=0)
 
         # Save the credentials for the next run
