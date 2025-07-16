@@ -36,6 +36,7 @@ class ConditionWithId(ParserModel):
 class ConditionsWithMessage(ParserModel):
     conditions: list[ConditionWithMessage] = []
     general_message: str = ""
+    external_flow: str = ""
 
 
 class Assignment(ParserModel):
