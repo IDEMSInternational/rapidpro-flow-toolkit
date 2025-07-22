@@ -370,11 +370,16 @@ class SwitchRouterNode(RouterNode):
         elif self.router.operand == "@contact.groups":
             # TODO: What about multiple groups?
             # TODO: groups in cases should be implemented differently.
+            try:
+                groups = self.router.cases[0].arguments[1]
+            except IndexError:
+                groups = ""
+
             super().initiate_row_models(
                 current_row_id,
                 parent_edge,
                 type="split_by_group",
-                mainarg_groups=[self.router.cases[0].arguments[1]],
+                mainarg_groups=[groups],
                 obj_id=self.router.cases[0].arguments[0]
                 or "",  # obj_id is not yet a list.
             )

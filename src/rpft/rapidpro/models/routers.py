@@ -339,16 +339,22 @@ class SwitchRouter(BaseRouter):
             for case_ in self.cases:
                 if case_.category_uuid == category.uuid:
                     covered_category_uuids.add(category.uuid)
-                    arg_idx = 1 if self.operand == "@contact.groups" else 0
+
+                    try:
+                        arg = case_.arguments[
+                            1 if self.operand == "@contact.groups" else 0
+                        ]
+                    except IndexError:
+                        arg = None
 
                     if self.operand in ["@contact.groups", "@child.run.status"]:
                         # For groups and expired/complete, var/type/name are implicit
-                        condition = Condition(value=case_.arguments[arg_idx])
+                        condition = Condition(value=arg or "")
                     else:
                         value = (
-                            case_.arguments[arg_idx]
+                            arg
                             if case_.type not in RouterCase.NO_ARGS_TESTS
-                            and case_.arguments[arg_idx] is not None
+                            and arg is not None
                             else ""
                         )
                         condition = Condition(
