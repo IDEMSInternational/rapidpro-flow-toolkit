@@ -20,7 +20,7 @@ SCOPES = [
 ]
 
 
-def get_credentials(scopes: list[str] | None = None):
+def get_credentials(scopes = None):
     scopes = scopes or SCOPES
 
     sa_creds = os.getenv("CREDENTIALS")
