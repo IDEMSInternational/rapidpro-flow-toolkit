@@ -342,7 +342,7 @@ class SwitchRouter(BaseRouter):
 
                     try:
                         arg = case_.arguments[
-                            1 if self.operand == "@contact.groups" else 0
+                            1 if case_.type == "has_group" else 0
                         ]
                     except IndexError:
                         arg = None

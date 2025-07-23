@@ -367,7 +367,11 @@ class SwitchRouterNode(RouterNode):
                 save_name=self.router.result_name or "",
                 no_response=self.router.wait_timeout or "",
             )
-        elif self.router.operand == "@contact.groups":
+        elif (
+            self.router.operand == "@contact.groups"
+            and self.router.cases
+            and self.router.cases[0].type == "has_group"
+        ):
             # TODO: What about multiple groups?
             # TODO: groups in cases should be implemented differently.
             try:
