@@ -18,7 +18,7 @@ from tests.row_data import (
     get_unconditional_node_from_1,
     get_start_row,
 )
-from tests.utils import (
+from rpft.rapidpro.sim_utils import (
     Context,
     get_dict_from_csv,
     get_table_from_file,
