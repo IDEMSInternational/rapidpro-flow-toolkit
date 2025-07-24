@@ -19,6 +19,12 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets.readonly",
 ]
 
+ALL_SCOPES = SCOPES + [
+    "https://www.googleapis.com/auth/cloud-platform",
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+]
+
 
 def get_credentials(scopes = None):
     scopes = scopes or SCOPES
@@ -44,12 +50,18 @@ def get_credentials(scopes = None):
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", scopes)
+            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", ALL_SCOPES)
             creds = flow.run_local_server(port=0)
 
         # Save the credentials for the next run
         with open(token_file_name, "w") as token:
             token.write(creds.to_json())
+
+        # Load the credentials with only the scopes needed for this task
+        creds = Credentials.from_authorized_user_file(
+            token_file_name,
+            scopes=scopes,
+        )
 
     return creds
 
