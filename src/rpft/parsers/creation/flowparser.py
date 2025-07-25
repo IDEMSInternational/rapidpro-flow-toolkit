@@ -922,6 +922,7 @@ class FlowParser:
                                 row.template_arguments,
                                 rapidpro_container,
                                 row.new_name,
+                                context=definition.global_context,
                                 definition=definition,
                                 flow_type=flow_type,
                             )
@@ -946,6 +947,7 @@ class FlowParser:
                         row.template_arguments,
                         rapidpro_container,
                         row.new_name,
+                        context=definition.global_context,
                         definition=definition,
                         flow_type=flow_type,
                     )

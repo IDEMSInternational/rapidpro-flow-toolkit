@@ -14,6 +14,7 @@ class ContentIndexType(Enum):
     TRIGGERS = "create_triggers"
     DATA_SHEET = "data_sheet"
     IGNORE = "ignore_row"
+    GLOBALS = "globals_dict"
 
 
 class TemplateArgument(ParserModel):

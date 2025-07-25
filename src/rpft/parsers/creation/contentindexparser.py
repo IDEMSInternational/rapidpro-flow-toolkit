@@ -61,6 +61,7 @@ class ContentIndexParser:
         self.surveys = {}
         self.survey_questions: list[SurveyQuestion] = []
         self.trigger_parsers = OrderedDict()
+        self.global_context = {}
         self.user_models_module = (
             importlib.import_module(user_data_model_module_name)
             if user_data_model_module_name
@@ -81,6 +82,7 @@ class ContentIndexParser:
             self.template_sheets,
             self.surveys,
             self.survey_questions,
+            {"globals": self.global_context},
         )
 
     def _process_content_index_table(self, sheet: Sheet):
@@ -149,6 +151,8 @@ class ContentIndexParser:
                     self._add_survey(row, logging_prefix)
                 elif row.type == ContentIndexType.SURVEY_QUESTION.value:
                     self._add_survey_question(row, logging_prefix)
+                elif row.type == ContentIndexType.GLOBALS.value:
+                    self._process_globals_sheet(row)
                 elif row.type == ContentIndexType.IGNORE.value:
                     self._process_ignore_row(row.sheet_name[0])
                 else:
@@ -208,6 +212,15 @@ class ContentIndexParser:
             )
 
         return active
+
+    def _process_globals_sheet(self, row):
+        table = self._get_sheet_or_die(row.sheet_name[0]).table
+        data_rows = SheetParser(table, globalrowmodels.IDValueRowModel).parse_all()
+        context_dict = {r.ID: r.value for r in data_rows}
+        intersection = self.global_context.keys() & context_dict.keys()
+        if intersection:
+            LOGGER.info(f"Overwriting globals {intersection}")
+        self.global_context |= context_dict
 
     def _process_data_sheet(self, row):
         sheet_names = row.sheet_name
