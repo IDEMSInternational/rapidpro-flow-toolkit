@@ -36,6 +36,7 @@ class ConditionWithId(ParserModel):
 class ConditionsWithMessage(ParserModel):
     conditions: list[ConditionWithMessage] = []
     general_message: str = ""
+    external_flow: str = ""
 
 
 class Assignment(ParserModel):
@@ -127,7 +128,10 @@ class MCQChoice(ParserModel):
     Whether to display the choice as a quick reply. A value of "no" won't display the
     choice as quick reply, but will add the case to the WFR node.
     """
-
+    response: str = ""
+    """
+    Response message send to the user if they select that choice before moving to the next question
+    """
 
 class PostProcessing(ParserModel):
     assignments: list[Assignment] = []
