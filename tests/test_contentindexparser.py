@@ -398,6 +398,67 @@ class TestParsing(TestTemplate):
             ["Value2 ARG1 ARG2", "Happy2 and Sad2"],
         )
 
+    def test_global_context(self):
+        ci_sheet = (
+            "type,sheet_name,data_sheet,data_row_id,template_arguments,new_name,data_model,status\n"  # noqa: E501
+            "create_flow,my_basic_flow,,,,,,\n"
+            "globals_dict,globals_sheet1,,,,,,\n"
+            "globals_dict,globals_sheet2,,,,,,\n"
+            "data_sheet,minimaldata,,,,,NameModel,\n"
+            "template_definition,my_template,,,message,,,\n"
+            "create_flow,my_template,minimaldata,,Local message,,,\n"
+        )
+        my_basic_flow = csv_join(
+            "row_id,type,from,message_text",
+            ",send_message,start,{{globals.message}}",
+            ",send_message,,{{globals['spaced id']}}",
+        )
+        globals_sheet1 = (
+            "ID,value\n"
+            "message,Goodbye\n"
+            "spaced id,This is weird\n"
+        )
+        globals_sheet2 = (
+            "ID,value\n"
+            "message,Hello\n"
+        )
+        minimaldata = (
+            "ID,name\n"
+            "row1,Name1\n"
+            "row2,Name2\n"
+        )
+        my_template = (
+            "row_id,type,from,message_text\n"
+            ",send_message,start,{{globals.message}} {{name}}\n"
+            ",send_message,,{{message}}\n"
+        )
+        sheet_dict = {
+            "minimaldata": minimaldata,
+            "my_template": my_template,
+            "my_basic_flow": my_basic_flow,
+            "globals_sheet1": globals_sheet1,
+            "globals_sheet2": globals_sheet2,
+        }
+        render_output = (
+            ContentIndexParser(
+                MockSheetReader(ci_sheet, sheet_dict),
+                "tests.datarowmodels.minimalmodel",
+            )
+            .parse_all()
+            .render()
+        )
+
+        self.assertFlowMessages(
+            render_output,
+            "my_basic_flow",
+            ["Hello", "This is weird"],
+        )
+        self.assertFlowMessages(
+            render_output,
+            "my_template - row1",
+            ["Hello Name1", "Local message"],
+        )
+
     def test_insert_as_block(self):
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"

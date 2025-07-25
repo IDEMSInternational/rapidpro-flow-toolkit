@@ -61,12 +61,13 @@ class ContentIndexParser:
         self.surveys = {}
         self.survey_questions: list[SurveyQuestion] = []
         self.trigger_parsers = OrderedDict()
+        self.global_context = {}
         self.user_models_module = (
             importlib.import_module(user_data_model_module_name)
             if user_data_model_module_name
             else None
         )
-        indices = self.reader.get_sheets_by_name("content_index")
+        indices = self.reader.get_sheets_by_name(ContentIndexType.CONTENT_INDEX.value)
 
         if not indices:
             raise Exception("No content index sheet provided")
@@ -81,6 +82,7 @@ class ContentIndexParser:
             self.template_sheets,
             self.surveys,
             self.survey_questions,
+            {"globals": self.global_context},
         )
 
     def _process_content_index_table(self, sheet: Sheet):
@@ -97,7 +99,7 @@ class ContentIndexParser:
                     continue
 
                 if len(row.sheet_name) != 1 and row.type not in [
-                    "data_sheet",
+                    ContentIndexType.DATA_SHEET.value,
                     ContentIndexType.SURVEY.value,
                     ContentIndexType.SURVEY_QUESTION.value,
                 ]:
@@ -106,12 +108,12 @@ class ContentIndexParser:
                         " specified"
                     )
 
-                if row.type == "content_index":
+                if row.type == ContentIndexType.CONTENT_INDEX.value:
                     sheet = self._get_sheet_or_die(row.sheet_name[0])
 
                     with logging_context(f"{sheet.name}"):
                         self._process_content_index_table(sheet)
-                elif row.type == "data_sheet":
+                elif row.type == ContentIndexType.DATA_SHEET.value:
                     if not len(row.sheet_name) >= 1:
                         raise Exception(
                             "For data_sheet rows, at least one sheet_name has to be"
@@ -119,7 +121,7 @@ class ContentIndexParser:
                         )
 
                     self._process_data_sheet(row)
-                elif row.type == "template_definition":
+                elif row.type == ContentIndexType.TEMPLATE.value:
                     if row.new_name:
                         LOGGER.warning(
                             "template_definition does not support 'new_name'; "
@@ -127,9 +129,9 @@ class ContentIndexParser:
                         )
 
                     self._add_template(row, True)
-                elif row.type == "create_flow":
+                elif row.type == ContentIndexType.FLOW.value:
                     self.flow_definition_rows.append((logging_prefix, row))
-                elif row.type == "create_campaign":
+                elif row.type == ContentIndexType.CAMPAIGN.value:
                     campaign_parser = self.create_campaign_parser(row)
                     name = campaign_parser.campaign.name
 
@@ -140,7 +142,7 @@ class ContentIndexParser:
                         )
 
                     self.campaign_parsers[name] = (logging_prefix, campaign_parser)
-                elif row.type == "create_triggers":
+                elif row.type == ContentIndexType.TRIGGERS.value:
                     self.trigger_parsers[row.sheet_name[0]] = (
                         logging_prefix,
                         self.create_trigger_parser(row),
@@ -149,7 +151,9 @@ class ContentIndexParser:
                     self._add_survey(row, logging_prefix)
                 elif row.type == ContentIndexType.SURVEY_QUESTION.value:
                     self._add_survey_question(row, logging_prefix)
-                elif row.type == "ignore_row":
+                elif row.type == ContentIndexType.GLOBALS.value:
+                    self._process_globals_sheet(row)
+                elif row.type == ContentIndexType.IGNORE.value:
                     self._process_ignore_row(row.sheet_name[0])
                 else:
                     LOGGER.error(f"invalid type: '{row.type}'")
@@ -208,6 +212,15 @@ class ContentIndexParser:
             )
 
         return active
+
+    def _process_globals_sheet(self, row):
+        table = self._get_sheet_or_die(row.sheet_name[0]).table
+        data_rows = SheetParser(table, globalrowmodels.IDValueRowModel).parse_all()
+        context_dict = {r.ID: r.value for r in data_rows}
+        intersection = self.global_context.keys() & context_dict.keys()
+        if intersection:
+            LOGGER.info(f"Overwriting globals {intersection}")
+        self.global_context |= context_dict
 
     def _process_data_sheet(self, row):
         sheet_names = row.sheet_name
