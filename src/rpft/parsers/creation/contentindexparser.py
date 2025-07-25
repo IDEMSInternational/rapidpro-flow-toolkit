@@ -66,7 +66,7 @@ class ContentIndexParser:
             if user_data_model_module_name
             else None
         )
-        indices = self.reader.get_sheets_by_name("content_index")
+        indices = self.reader.get_sheets_by_name(ContentIndexType.CONTENT_INDEX.value)
 
         if not indices:
             raise Exception("No content index sheet provided")
@@ -97,7 +97,7 @@ class ContentIndexParser:
                     continue
 
                 if len(row.sheet_name) != 1 and row.type not in [
-                    "data_sheet",
+                    ContentIndexType.DATA_SHEET.value,
                     ContentIndexType.SURVEY.value,
                     ContentIndexType.SURVEY_QUESTION.value,
                 ]:
@@ -106,12 +106,12 @@ class ContentIndexParser:
                         " specified"
                     )
 
-                if row.type == "content_index":
+                if row.type == ContentIndexType.CONTENT_INDEX.value:
                     sheet = self._get_sheet_or_die(row.sheet_name[0])
 
                     with logging_context(f"{sheet.name}"):
                         self._process_content_index_table(sheet)
-                elif row.type == "data_sheet":
+                elif row.type == ContentIndexType.DATA_SHEET.value:
                     if not len(row.sheet_name) >= 1:
                         raise Exception(
                             "For data_sheet rows, at least one sheet_name has to be"
@@ -119,7 +119,7 @@ class ContentIndexParser:
                         )
 
                     self._process_data_sheet(row)
-                elif row.type == "template_definition":
+                elif row.type == ContentIndexType.TEMPLATE.value:
                     if row.new_name:
                         LOGGER.warning(
                             "template_definition does not support 'new_name'; "
@@ -127,9 +127,9 @@ class ContentIndexParser:
                         )
 
                     self._add_template(row, True)
-                elif row.type == "create_flow":
+                elif row.type == ContentIndexType.FLOW.value:
                     self.flow_definition_rows.append((logging_prefix, row))
-                elif row.type == "create_campaign":
+                elif row.type == ContentIndexType.CAMPAIGN.value:
                     campaign_parser = self.create_campaign_parser(row)
                     name = campaign_parser.campaign.name
 
@@ -140,7 +140,7 @@ class ContentIndexParser:
                         )
 
                     self.campaign_parsers[name] = (logging_prefix, campaign_parser)
-                elif row.type == "create_triggers":
+                elif row.type == ContentIndexType.TRIGGERS.value:
                     self.trigger_parsers[row.sheet_name[0]] = (
                         logging_prefix,
                         self.create_trigger_parser(row),
@@ -149,7 +149,7 @@ class ContentIndexParser:
                     self._add_survey(row, logging_prefix)
                 elif row.type == ContentIndexType.SURVEY_QUESTION.value:
                     self._add_survey_question(row, logging_prefix)
-                elif row.type == "ignore_row":
+                elif row.type == ContentIndexType.IGNORE.value:
                     self._process_ignore_row(row.sheet_name[0])
                 else:
                     LOGGER.error(f"invalid type: '{row.type}'")
