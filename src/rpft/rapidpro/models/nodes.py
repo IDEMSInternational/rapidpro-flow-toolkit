@@ -372,8 +372,6 @@ class SwitchRouterNode(RouterNode):
             and self.router.cases
             and self.router.cases[0].type == "has_group"
         ):
-            # TODO: What about multiple groups?
-            # TODO: groups in cases should be implemented differently.
             try:
                 groups = self.router.cases[0].arguments[1]
             except IndexError:
@@ -384,8 +382,7 @@ class SwitchRouterNode(RouterNode):
                 parent_edge,
                 type="split_by_group",
                 mainarg_groups=[groups],
-                obj_id=self.router.cases[0].arguments[0]
-                or "",  # obj_id is not yet a list.
+                obj_id=self.router.cases[0].arguments[0] or "",
             )
         else:
             super().initiate_row_models(
