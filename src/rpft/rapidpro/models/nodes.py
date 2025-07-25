@@ -367,16 +367,22 @@ class SwitchRouterNode(RouterNode):
                 save_name=self.router.result_name or "",
                 no_response=self.router.wait_timeout or "",
             )
-        elif self.router.operand == "@contact.groups":
-            # TODO: What about multiple groups?
-            # TODO: groups in cases should be implemented differently.
+        elif (
+            self.router.operand == "@contact.groups"
+            and self.router.cases
+            and self.router.cases[0].type == "has_group"
+        ):
+            try:
+                groups = self.router.cases[0].arguments[1]
+            except IndexError:
+                groups = ""
+
             super().initiate_row_models(
                 current_row_id,
                 parent_edge,
                 type="split_by_group",
-                mainarg_groups=[self.router.cases[0].arguments[1]],
-                obj_id=self.router.cases[0].arguments[0]
-                or "",  # obj_id is not yet a list.
+                mainarg_groups=[groups],
+                obj_id=self.router.cases[0].arguments[0] or "",
             )
         else:
             super().initiate_row_models(
