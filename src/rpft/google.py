@@ -21,8 +21,6 @@ SCOPES = [
 
 ALL_SCOPES = SCOPES + [
     "https://www.googleapis.com/auth/cloud-platform",
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
 ]
 
 
