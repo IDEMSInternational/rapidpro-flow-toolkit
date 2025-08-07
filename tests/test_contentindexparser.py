@@ -13,7 +13,7 @@ from rpft.sources import SheetDataSource
 from tablib import Dataset
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
-from tests.utils import Context, csv_join, traverse_flow
+from rpft.rapidpro.sim_utils import Context, csv_join, traverse_flow
 
 
 class TestTemplate(TestCase):
