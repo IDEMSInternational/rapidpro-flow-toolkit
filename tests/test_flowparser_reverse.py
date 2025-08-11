@@ -2,7 +2,8 @@ import unittest
 
 from rpft.parsers.creation.flowparser import FlowParser
 from rpft.rapidpro.models.containers import RapidProContainer
-from rpft.rapidpro.sim_utils import get_table_from_file
+
+from tests.utils import get_table_from_file
 
 
 class TestFlowParserReverse(unittest.TestCase):
