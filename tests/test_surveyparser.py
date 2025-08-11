@@ -19,11 +19,12 @@ from rpft.parsers.creation.surveyparser import (
     SurveyQuestion,
 )
 from rpft.parsers.sheets import CSVSheetReader
+from rpft.rapidpro.simulation import Context, traverse_flow
 from rpft.sources import SheetDataSource
 
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
-from tests.utils import Context, csv_join, traverse_flow
+from tests.utils import csv_join
 
 
 class TestTemplate(TestCase):
