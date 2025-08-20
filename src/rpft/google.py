@@ -19,13 +19,19 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets.readonly",
 ]
 
+ALL_SCOPES = SCOPES + [
+    "https://www.googleapis.com/auth/devstorage.read_write",
+]
 
-def get_credentials():
+
+def get_credentials(scopes = None):
+    scopes = scopes or SCOPES
+
     sa_creds = os.getenv("CREDENTIALS")
 
     if sa_creds:
         return ServiceAccountCredentials.from_service_account_info(
-            json.loads(sa_creds), scopes=SCOPES
+            json.loads(sa_creds), scopes=scopes
         )
 
     creds = None
@@ -34,7 +40,7 @@ def get_credentials():
     if os.path.exists(token_file_name):
         creds = Credentials.from_authorized_user_file(
             token_file_name,
-            scopes=SCOPES,
+            scopes=scopes,
         )
 
     # If there are no (valid) credentials available, let the user log in.
@@ -42,12 +48,18 @@ def get_credentials():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", ALL_SCOPES)
             creds = flow.run_local_server(port=0)
 
         # Save the credentials for the next run
         with open(token_file_name, "w") as token:
             token.write(creds.to_json())
+
+        # Load the credentials with only the scopes needed for this task
+        creds = Credentials.from_authorized_user_file(
+            token_file_name,
+            scopes=scopes,
+        )
 
     return creds
 

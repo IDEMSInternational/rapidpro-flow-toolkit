@@ -10,6 +10,13 @@ from rpft.parsers.creation.flowparser import FlowParser
 from rpft.rapidpro.models.actions import Group, AddContactGroupAction
 from rpft.rapidpro.models.containers import RapidProContainer, FlowContainer
 from rpft.rapidpro.models.nodes import BasicNode
+from rpft.rapidpro.simulation import (
+    Context,
+    find_destination_uuid,
+    find_node_by_uuid,
+    traverse_flow,
+)
+
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetParser
 from tests.row_data import (
@@ -18,14 +25,7 @@ from tests.row_data import (
     get_unconditional_node_from_1,
     get_start_row,
 )
-from tests.utils import (
-    Context,
-    get_dict_from_csv,
-    get_table_from_file,
-    find_destination_uuid,
-    find_node_by_uuid,
-    traverse_flow,
-)
+from tests.utils import get_dict_from_csv, get_table_from_file
 
 
 class TestParsing(TestCase):

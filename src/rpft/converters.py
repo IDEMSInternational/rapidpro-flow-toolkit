@@ -4,20 +4,32 @@ import os
 import shutil
 from pathlib import Path
 
+from tablib import Databook, Dataset
+
+from rpft.parsers.universal import UniJSONReader, bookify, parse_tables
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import (
     AbstractSheetReader,
-    CompositeSheetReader,
     CSVSheetReader,
     GoogleSheetReader,
     JSONSheetReader,
+    ODSSheetReader,
     XLSXSheetReader,
 )
 from rpft.rapidpro.models.containers import RapidProContainer
+from rpft.sources import JSONDataSource, SheetDataSource
 
 
 LOGGER = logging.getLogger(__name__)
+FMT_READER_MAP = {
+    "csv": CSVSheetReader,
+    "google_sheets": GoogleSheetReader,
+    "json": JSONSheetReader,
+    "ods": ODSSheetReader,
+    "uni": UniJSONReader,
+    "xlsx": XLSXSheetReader,
+}
 
 
 def create_flows(input_files, output_file, sheet_format, data_models=None, tags=[]):
@@ -49,39 +61,33 @@ def create_flows(input_files, output_file, sheet_format, data_models=None, tags=
     return flows
 
 
-def save_data_sheets(input_files, output_file, sheet_format, data_models=None, tags=[]):
-    """
-    Save data sheets as JSON.
+def uni_to_sheets(infile) -> bytes:
+    with open(infile, "r") as handle:
+        data = json.load(handle)
 
-    Collect the data sheets referenced in the source content index spreadsheet(s) and
-    save this collection in a single JSON file. Returns the output as a dict.
+    sheets = bookify(data)
+    book = Databook(
+        [Dataset(*table[1:], headers=table[0], title=name) for name, table in sheets]
+    )
 
-    :param sources: list of source spreadsheets
-    :param output_files: (deprecated) path of file to export output to as JSON
-    :param sheet_format: format of the spreadsheets
-    :param data_models: name of module containing supporting Python data classes
-    :param tags: names of tags to be used to filter the source spreadsheets
-    :returns: dict representing the collection of data sheets.
-    """
+    return book.export("ods")
 
-    parser = get_content_index_parser(input_files, sheet_format, data_models, tags)
 
-    output = parser.data_sheets_to_dict()
-
-    if output_file:
-        with open(output_file, "w") as export:
-            json.dump(output, export, indent=4)
-
-    return output
+def sheets_to_uni(infile) -> list:
+    return parse_tables(create_sheet_reader(None, infile))
 
 
 def get_content_index_parser(input_files, sheet_format, data_models, tags):
-    reader = CompositeSheetReader()
+    if not sheet_format and not data_models:
+        return ContentIndexParser(
+            JSONDataSource(input_files), data_models, TagMatcher(tags)
+        )
 
-    for input_file in input_files:
-        reader.add_reader(create_sheet_reader(sheet_format, input_file))
+    readers = [
+        create_sheet_reader(sheet_format, input_file) for input_file in input_files
+    ]
 
-    return ContentIndexParser(reader, data_models, TagMatcher(tags))
+    return ContentIndexParser(SheetDataSource(readers), data_models, TagMatcher(tags))
 
 
 def convert_to_json(input_file, sheet_format):
@@ -120,18 +126,14 @@ def flows_to_sheets(
 
 
 def create_sheet_reader(sheet_format, input_file):
-    if sheet_format == "csv":
-        sheet_reader = CSVSheetReader(input_file)
-    elif sheet_format == "xlsx":
-        sheet_reader = XLSXSheetReader(input_file)
-    elif sheet_format == "json":
-        sheet_reader = JSONSheetReader(input_file)
-    elif sheet_format == "google_sheets":
-        sheet_reader = GoogleSheetReader(input_file)
-    else:
-        raise Exception(f"Format {sheet_format} currently unsupported.")
+    cls = FMT_READER_MAP.get(sheet_format) or next(
+        reader for reader in FMT_READER_MAP.values() if reader.can_process(input_file)
+    )
 
-    return sheet_reader
+    if cls:
+        return cls(input_file)
+
+    raise Exception(f"Format not supported, file={input_file}")
 
 
 def sheets_to_csv(path, sheet_ids):

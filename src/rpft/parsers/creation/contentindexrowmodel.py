@@ -1,5 +1,7 @@
 from enum import Enum
 
+from pydantic import model_validator
+
 from rpft.parsers.common.rowparser import ParserModel
 from rpft.parsers.creation.models import SurveyConfig
 
@@ -58,3 +60,13 @@ class ContentIndexRowModel(ParserModel):
             return "survey_config"
         else:
             return header
+
+    @model_validator(mode="before")
+    def from_list(cls, data):
+        try:
+            if data["type"] == "template_definition":
+                data["template_argument_definitions"] = data.pop("template_arguments")
+        except Exception:
+            pass
+
+        return data

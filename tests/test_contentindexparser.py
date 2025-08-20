@@ -4,16 +4,18 @@ from unittest import TestCase
 from rpft.parsers.creation.contentindexparser import ContentIndexParser
 from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.sheets import (
-    CompositeSheetReader,
     CSVSheetReader,
     DatasetSheetReader,
     XLSXSheetReader,
 )
 from rpft.rapidpro.models.triggers import RapidProTriggerError
+from rpft.rapidpro.simulation import Context, traverse_flow
+from rpft.sources import SheetDataSource
+
 from tablib import Dataset
 from tests import TESTS_ROOT
 from tests.mocks import MockSheetReader
-from tests.utils import Context, csv_join, traverse_flow
+from tests.utils import csv_join
 
 
 class TestTemplate(TestCase):
@@ -49,9 +51,13 @@ class TestTemplateDefinition(TestCase):
             "template_definition,my_template2,,,,,draft\n"
         )
         self.parser = ContentIndexParser(
-            MockSheetReader(
-                ci_sheet,
-                self.sheet_data_dict,
+            SheetDataSource(
+                [
+                    MockSheetReader(
+                        ci_sheet,
+                        self.sheet_data_dict,
+                    )
+                ]
             )
         )
 
@@ -67,9 +73,13 @@ class TestTemplateDefinition(TestCase):
             "ignore_row,my_template,,,,,\n"
         )
         self.parser = ContentIndexParser(
-            MockSheetReader(
-                ci_sheet,
-                self.sheet_data_dict,
+            SheetDataSource(
+                [
+                    MockSheetReader(
+                        ci_sheet,
+                        self.sheet_data_dict,
+                    )
+                ]
             )
         )
 
@@ -108,7 +118,9 @@ class TestParsing(TestTemplate):
             "my_template": my_template,
             "my_template2": my_template2,
         }
-        ci_parser = ContentIndexParser(MockSheetReader(ci_sheet, sheet_dict))
+        ci_parser = ContentIndexParser(
+            SheetDataSource([MockSheetReader(ci_sheet, sheet_dict)])
+        )
 
         self.assertEqual(
             ci_parser.template_sheets["my_template"].table[0][3],
@@ -130,7 +142,7 @@ class TestParsing(TestTemplate):
             "rowB,1B,2B",
         )
         definition = ContentIndexParser(
-            MockSheetReader(ci_sheet, {"simpledata": simpledata}),
+            SheetDataSource([MockSheetReader(ci_sheet, {"simpledata": simpledata})]),
             "tests.datarowmodels.simplemodel",
         ).definition
         datamodelA = definition.get_data_sheet_row("simpledata", "rowA")
@@ -156,7 +168,7 @@ class TestParsing(TestTemplate):
         }
         render_output = (
             ContentIndexParser(
-                MockSheetReader(ci_sheet, sheet_dict),
+                SheetDataSource([MockSheetReader(ci_sheet, sheet_dict)]),
                 "tests.datarowmodels.nestedmodel",
             )
             .parse_all()
@@ -187,7 +199,7 @@ class TestParsing(TestTemplate):
         }
         render_output = (
             ContentIndexParser(
-                MockSheetReader(ci_sheet, sheet_dict),
+                SheetDataSource([MockSheetReader(ci_sheet, sheet_dict)]),
                 "tests.datarowmodels.nestedmodel",
             )
             .parse_all()
@@ -225,7 +237,7 @@ class TestParsing(TestTemplate):
         }
         render_output = (
             ContentIndexParser(
-                MockSheetReader(ci_sheet, sheet_dict),
+                SheetDataSource([MockSheetReader(ci_sheet, sheet_dict)]),
                 "tests.datarowmodels.nestedmodel",
             )
             .parse_all()
@@ -278,7 +290,8 @@ class TestParsing(TestTemplate):
         }
         render_output = (
             ContentIndexParser(
-                MockSheetReader(ci_sheet, sheet_dict), "tests.datarowmodels.nestedmodel"
+                SheetDataSource([MockSheetReader(ci_sheet, sheet_dict)]),
+                "tests.datarowmodels.nestedmodel",
             )
             .parse_all()
             .render()
@@ -302,7 +315,7 @@ class TestParsing(TestTemplate):
 
         render_output = (
             ContentIndexParser(
-                MockSheetReader(ci_sheet_alt, sheet_dict),
+                SheetDataSource([MockSheetReader(ci_sheet_alt, sheet_dict)]),
                 "tests.datarowmodels.nestedmodel",
             )
             .parse_all()
@@ -350,7 +363,7 @@ class TestParsing(TestTemplate):
             "my_template2": my_template2,
         }
         render_output = (
-            ContentIndexParser(MockSheetReader(ci_sheet, sheet_dict))
+            ContentIndexParser(SheetDataSource([MockSheetReader(ci_sheet, sheet_dict)]))
             .parse_all()
             .render()
         )
@@ -380,7 +393,7 @@ class TestParsing(TestTemplate):
         }
         render_output = (
             ContentIndexParser(
-                MockSheetReader(ci_sheet, sheet_dict),
+                SheetDataSource([MockSheetReader(ci_sheet, sheet_dict)]),
                 "tests.datarowmodels.nestedmodel",
             )
             .parse_all()
@@ -507,7 +520,7 @@ class TestParsing(TestTemplate):
         ]
         render_output = (
             ContentIndexParser(
-                MockSheetReader(ci_sheet, sheet_dict),
+                SheetDataSource([MockSheetReader(ci_sheet, sheet_dict)]),
                 "tests.datarowmodels.nestedmodel",
             )
             .parse_all()
@@ -564,7 +577,7 @@ class TestParsing(TestTemplate):
         }
         render_output = (
             ContentIndexParser(
-                MockSheetReader(ci_sheet, sheet_dict),
+                SheetDataSource([MockSheetReader(ci_sheet, sheet_dict)]),
                 "tests.datarowmodels.listmodel",
             )
             .parse_all()
@@ -627,7 +640,7 @@ class TestParsing(TestTemplate):
         }
         render_output = (
             ContentIndexParser(
-                MockSheetReader(ci_sheet, sheet_dict),
+                SheetDataSource([MockSheetReader(ci_sheet, sheet_dict)]),
                 "tests.datarowmodels.listmodel",
             )
             .parse_all()
@@ -674,7 +687,7 @@ class TestParsing(TestTemplate):
         }
         render_output = (
             ContentIndexParser(
-                MockSheetReader(ci_sheet, sheet_dict),
+                SheetDataSource([MockSheetReader(ci_sheet, sheet_dict)]),
                 "tests.datarowmodels.evalmodels",
             )
             .parse_all()
@@ -706,7 +719,9 @@ class TestParsing(TestTemplate):
         }
         sheet_reader = MockSheetReader(ci_sheet, sheet_dict)
         render_output = (
-            ContentIndexParser(sheet_reader, "tests.datarowmodels.evalmodels")
+            ContentIndexParser(
+                SheetDataSource([sheet_reader]), "tests.datarowmodels.evalmodels"
+            )
             .parse_all()
             .render()
         )
@@ -735,7 +750,7 @@ class TestParsing(TestTemplate):
 
         self.assertFlowNamesEqual(
             ContentIndexParser(
-                sheet_reader,
+                SheetDataSource([sheet_reader]),
                 "tests.datarowmodels.evalmodels",
                 TagMatcher(["1", "tag1"]),
             )
@@ -753,7 +768,7 @@ class TestParsing(TestTemplate):
 
         self.assertFlowNamesEqual(
             ContentIndexParser(
-                sheet_reader,
+                SheetDataSource([sheet_reader]),
                 "tests.datarowmodels.evalmodels",
                 TagMatcher(["1", "tag1", "bag1"]),
             )
@@ -773,7 +788,7 @@ class TestParsing(TestTemplate):
 
         self.assertFlowNamesEqual(
             ContentIndexParser(
-                sheet_reader,
+                SheetDataSource([sheet_reader]),
                 "tests.datarowmodels.evalmodels",
                 TagMatcher(["1", "tag1", "2", "tag2"]),
             )
@@ -789,7 +804,7 @@ class TestParsing(TestTemplate):
 
         self.assertFlowNamesEqual(
             ContentIndexParser(
-                sheet_reader,
+                SheetDataSource([sheet_reader]),
                 "tests.datarowmodels.evalmodels",
                 TagMatcher(["5", "tag1", "bag1"]),
             )
@@ -872,7 +887,7 @@ class TestOverrideBehaviour(TestCase):
             "deployment",
         )
         definition = ContentIndexParser(
-            CompositeSheetReader([base, filter_, deployment]),
+            SheetDataSource([base, filter_, deployment]),
             "tests.datarowmodels.simplemodel",
         ).definition
         keys = list(definition.get_data_sheet_rows("data").keys())
@@ -928,7 +943,7 @@ class TestConcatOperation(TestCase):
 
     def check_concat(self):
         definition = ContentIndexParser(
-            MockSheetReader(self.ci_sheet, self.sheet_dict),
+            SheetDataSource([MockSheetReader(self.ci_sheet, self.sheet_dict)]),
             "tests.datarowmodels.simplemodel",
         ).definition
         datamodelA = definition.get_data_sheet_row("simpledata", "rowA")
@@ -1047,7 +1062,7 @@ class TestOperation(TestCase):
 
     def create_parser(self):
         self.ci_parser = ContentIndexParser(
-            MockSheetReader(self.ci_sheet, {"simpleA": self.simple}),
+            SheetDataSource([MockSheetReader(self.ci_sheet, {"simpleA": self.simple})]),
             "tests.datarowmodels.simplemodel",
         )
 
@@ -1115,7 +1130,9 @@ class TestModelInference(TestTemplate):
         }
 
         return (
-            ContentIndexParser(MockSheetReader(self.ci_sheet, sheet_dict))
+            ContentIndexParser(
+                SheetDataSource([MockSheetReader(self.ci_sheet, sheet_dict)])
+            )
             .parse_all()
             .render()
         )
@@ -1156,7 +1173,9 @@ class TestParseCampaigns(TestCase):
             },
         )
 
-        render_output = ContentIndexParser(sheet_reader).parse_all().render()
+        render_output = (
+            ContentIndexParser(SheetDataSource([sheet_reader])).parse_all().render()
+        )
 
         self.assertEqual(render_output["campaigns"][0]["name"], "renamed_campaign")
         self.assertEqual(render_output["campaigns"][0]["group"]["name"], "My Group")
@@ -1186,7 +1205,11 @@ class TestParseCampaigns(TestCase):
         )
 
         render_output = (
-            ContentIndexParser(MockSheetReader(ci_sheet, {"my_campaign": my_campaign}))
+            ContentIndexParser(
+                SheetDataSource(
+                    [MockSheetReader(ci_sheet, {"my_campaign": my_campaign})]
+                )
+            )
             .parse_all()
             .render()
         )
@@ -1218,7 +1241,7 @@ class TestParseCampaigns(TestCase):
         }
 
         render_output = (
-            ContentIndexParser(MockSheetReader(ci_sheet, sheet_dict))
+            ContentIndexParser(SheetDataSource([MockSheetReader(ci_sheet, sheet_dict)]))
             .parse_all()
             .render()
         )
@@ -1242,7 +1265,7 @@ class TestParseCampaigns(TestCase):
         }
 
         render_output = (
-            ContentIndexParser(MockSheetReader(ci_sheet, sheet_dict))
+            ContentIndexParser(SheetDataSource([MockSheetReader(ci_sheet, sheet_dict)]))
             .parse_all()
             .render()
         )
@@ -1272,12 +1295,16 @@ class TestParseTriggers(TestCase):
 
         render_output = (
             ContentIndexParser(
-                MockSheetReader(
-                    ci_sheet,
-                    {
-                        "my_triggers": my_triggers,
-                        "my_basic_flow": my_basic_flow,
-                    },
+                SheetDataSource(
+                    [
+                        MockSheetReader(
+                            ci_sheet,
+                            {
+                                "my_triggers": my_triggers,
+                                "my_basic_flow": my_basic_flow,
+                            },
+                        )
+                    ]
                 )
             )
             .parse_all()
@@ -1329,7 +1356,9 @@ class TestParseTriggers(TestCase):
 
         with self.assertRaises(RapidProTriggerError):
             ContentIndexParser(
-                MockSheetReader(ci_sheet, {"my_triggers": my_triggers})
+                SheetDataSource(
+                    [MockSheetReader(ci_sheet, {"my_triggers": my_triggers})]
+                )
             ).parse_all().render()
 
     def test_ignore_triggers(self):
@@ -1349,9 +1378,16 @@ class TestParseTriggers(TestCase):
 
         render_output = (
             ContentIndexParser(
-                MockSheetReader(
-                    ci_sheet,
-                    {"my_triggers": my_triggers, "my_basic_flow": my_basic_flow},
+                SheetDataSource(
+                    [
+                        MockSheetReader(
+                            ci_sheet,
+                            {
+                                "my_triggers": my_triggers,
+                                "my_basic_flow": my_basic_flow,
+                            },
+                        )
+                    ]
                 )
             )
             .parse_all()
@@ -1368,7 +1404,7 @@ class TestParseFromFile(TestTemplate):
     def test_example1_csv(self):
         flows = (
             ContentIndexParser(
-                CSVSheetReader(self.input_dir / "csv_workbook"),
+                SheetDataSource([CSVSheetReader(self.input_dir / "csv_workbook")]),
                 "tests.input.example1.nestedmodel",
             )
             .parse_all()
@@ -1380,7 +1416,7 @@ class TestParseFromFile(TestTemplate):
     def test_example1_csv_composite(self):
         flows = (
             ContentIndexParser(
-                CompositeSheetReader([CSVSheetReader(self.input_dir / "csv_workbook")]),
+                SheetDataSource([CSVSheetReader(self.input_dir / "csv_workbook")]),
                 "tests.input.example1.nestedmodel",
             )
             .parse_all()
@@ -1392,7 +1428,9 @@ class TestParseFromFile(TestTemplate):
     def test_example1_xlsx(self):
         flows = (
             ContentIndexParser(
-                XLSXSheetReader(self.input_dir / "content_index.xlsx"),
+                SheetDataSource(
+                    [XLSXSheetReader(self.input_dir / "content_index.xlsx")]
+                ),
                 "tests.input.example1.nestedmodel",
             )
             .parse_all()
@@ -1404,7 +1442,7 @@ class TestParseFromFile(TestTemplate):
     def test_example1_xlsx_composite(self):
         flows = (
             ContentIndexParser(
-                CompositeSheetReader(
+                SheetDataSource(
                     [XLSXSheetReader(self.input_dir / "content_index.xlsx")]
                 ),
                 "tests.input.example1.nestedmodel",
@@ -1476,14 +1514,16 @@ class TestMultiFile(TestTemplate):
         sheet_reader2 = MockSheetReader(ci_sheet, sheet_dict2, name="mock_2")
 
         self.assertFlowMessages(
-            ContentIndexParser(CompositeSheetReader([sheet_reader1, sheet_reader2]))
+            ContentIndexParser(
+                SheetDataSource([sheet_reader1, sheet_reader2])
+            )
             .parse_all()
             .render(),
             "template",
             ["Hello!"],
         )
         self.assertFlowMessages(
-            ContentIndexParser(CompositeSheetReader([sheet_reader2, sheet_reader1]))
+            ContentIndexParser(SheetDataSource([sheet_reader2, sheet_reader1]))
             .parse_all()
             .render(),
             "template",
@@ -1529,7 +1569,7 @@ class TestMultiFile(TestTemplate):
 
         flows = (
             ContentIndexParser(
-                sheet_reader=CompositeSheetReader([sheet_reader1, sheet_reader2]),
+                SheetDataSource([sheet_reader1, sheet_reader2]),
                 user_data_model_module_name="tests.datarowmodels.minimalmodel",
             )
             .parse_all()
@@ -1541,7 +1581,7 @@ class TestMultiFile(TestTemplate):
 
         flows = (
             ContentIndexParser(
-                sheet_reader=CompositeSheetReader([sheet_reader2, sheet_reader1]),
+                SheetDataSource([sheet_reader2, sheet_reader1]),
                 user_data_model_module_name="tests.datarowmodels.minimalmodel",
             )
             .parse_all()
@@ -1550,77 +1590,3 @@ class TestMultiFile(TestTemplate):
 
         self.assertFlowMessages(flows, "template - a", ["hello georg"])
         self.assertFlowMessages(flows, "template - b", ["hello chiara"])
-
-
-class TestSaveAsDict(TestCase):
-    def test_save_as_dict(self):
-        self.maxDiff = None
-        ci_sheet = (
-            "type,sheet_name,data_sheet,data_row_id,new_name,data_model,status\n"
-            "data_sheet,simpledata,,,simpledata_renamed,ListRowModel,\n"
-            "create_flow,my_basic_flow,,,,,\n"
-            "data_sheet,nesteddata,,,,NestedRowModel,\n"
-        )
-        simpledata = csv_join(
-            "ID,list_value.1,list_value.2",
-            "rowID,val1,val2",
-        )
-        nesteddata = (
-            "ID,value1,custom_field.happy,custom_field.sad\n"
-            "row1,Value1,Happy1,Sad1\n"
-            "row2,Value2,Happy2,Sad2\n"
-        )
-        my_basic_flow = csv_join(
-            "row_id,type,from,message_text",
-            ",send_message,start,Some text",
-        )
-        sheet_dict = {
-            "simpledata": simpledata,
-            "my_basic_flow": my_basic_flow,
-            "nesteddata": nesteddata,
-        }
-
-        output = ContentIndexParser(
-            MockSheetReader(ci_sheet, sheet_dict),
-            "tests.datarowmodels.nestedmodel",
-        ).data_sheets_to_dict()
-
-        output["meta"].pop("version")
-        exp = {
-            "meta": {
-                "user_models_module": "tests.datarowmodels.nestedmodel",
-            },
-            "sheets": {
-                "simpledata_renamed": {
-                    "model": "ListRowModel",
-                    "rows": [
-                        {
-                            "ID": "rowID",
-                            "list_value": ["val1", "val2"],
-                        }
-                    ],
-                },
-                "nesteddata": {
-                    "model": "NestedRowModel",
-                    "rows": [
-                        {
-                            "ID": "row1",
-                            "value1": "Value1",
-                            "custom_field": {
-                                "happy": "Happy1",
-                                "sad": "Sad1",
-                            },
-                        },
-                        {
-                            "ID": "row2",
-                            "value1": "Value2",
-                            "custom_field": {
-                                "happy": "Happy2",
-                                "sad": "Sad2",
-                            },
-                        },
-                    ],
-                },
-            },
-        }
-        self.assertEqual(output, exp)

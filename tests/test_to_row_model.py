@@ -113,7 +113,7 @@ class TestNodes(TestToRowModels):
             }
         )
         node = BasicNode(
-            uuid=row_data.node_uuid, ui_pos=(int(p) for p in row_data.ui_position)
+            uuid=row_data.node_uuid, ui_pos=[int(p) for p in row_data.ui_position]
         )
         action = AddContactGroupAction(
             [Group(row_data.mainarg_groups[0], row_data.obj_id)]

@@ -1,4 +1,5 @@
 import json
+import re
 from abc import ABC
 from collections.abc import Mapping
 from pathlib import Path
@@ -19,6 +20,9 @@ class Sheet:
         self.name = name
         self.table = table
 
+    def __repr__(self):
+        return f"Sheet(name: '{self.name}')"
+
 
 class AbstractSheetReader(ABC):
     @property
@@ -28,8 +32,12 @@ class AbstractSheetReader(ABC):
     def get_sheet(self, name) -> Sheet:
         return self.sheets.get(name)
 
-    def get_sheets_by_name(self, name) -> list[Sheet]:
-        return [sheet] if (sheet := self.get_sheet(name)) else []
+    @classmethod
+    def can_process(cls, path):
+        return False
+
+    def __repr__(self):
+        return f"{type(self).__name__}(name: '{self.name}')"
 
 
 class CSVSheetReader(AbstractSheetReader):
@@ -39,6 +47,10 @@ class CSVSheetReader(AbstractSheetReader):
             f.stem: Sheet(reader=self, name=f.stem, table=load_csv(f))
             for f in Path(path).glob("*.csv")
         }
+
+    @classmethod
+    def can_process(cls, location):
+        return Path(location).is_dir()
 
 
 class JSONSheetReader(AbstractSheetReader):
@@ -51,6 +63,14 @@ class JSONSheetReader(AbstractSheetReader):
             table.dict = content
             self._sheets[name] = Sheet(reader=self, name=name, table=table)
 
+    @classmethod
+    def can_process(cls, location):
+        if Path(location).suffix.lower() == ".json":
+            with open(location, "r") as f:
+                return "sheets" in json.load(f)
+
+        return False
+
 
 class XLSXSheetReader(AbstractSheetReader):
     def __init__(self, filename):
@@ -62,22 +82,12 @@ class XLSXSheetReader(AbstractSheetReader):
             self.sheets[sheet.title] = Sheet(
                 reader=self,
                 name=sheet.title,
-                table=self._sanitize(sheet),
+                table=sanitize(sheet),
             )
 
-    def _sanitize(self, sheet):
-        data = tablib.Dataset()
-        data.headers = sheet.headers
-        # remove trailing Nones
-        while data.headers[-1] is None:
-            data.headers.pop()
-        for row in sheet:
-            vals = tuple(str(e) if e is not None else "" for e in row)
-            new_row = vals[: len(data.headers)]
-            if any(new_row):
-                # omit empty rows
-                data.append(new_row)
-        return data
+    @classmethod
+    def can_process(cls, location):
+        return Path(location).suffix.lower() == ".xlsx"
 
 
 class GoogleSheetReader(AbstractSheetReader):
@@ -138,28 +148,48 @@ class GoogleSheetReader(AbstractSheetReader):
             max_cols,
         )
 
-
-class CompositeSheetReader:
-    def __init__(self, readers=None):
-        self.sheetreaders = readers or []
-        self.name = "Multiple files"
-
-    def add_reader(self, reader):
-        self.sheetreaders.append(reader)
-
-    def get_sheets_by_name(self, name):
-        sheets = []
-
-        for reader in self.sheetreaders:
-            sheets += reader.get_sheets_by_name(name)
-
-        return sheets
+    @classmethod
+    def can_process(cls, location):
+        return bool(re.fullmatch(r"[a-z0-9_-]{44}", location, re.IGNORECASE))
 
 
 class DatasetSheetReader(AbstractSheetReader):
     def __init__(self, datasets, name):
         self._sheets = {d.title: Sheet(self, d.title, d) for d in datasets}
-        self.name = name
+        self.name = "[datasets]"
+
+
+class ODSSheetReader(AbstractSheetReader):
+    def __init__(self, path):
+        book = tablib.Databook()
+
+        with open(path, "rb") as f:
+            book.load(f, format="ods")
+
+        self._sheets = {
+            sheet.title: Sheet(self, sheet.title, sanitize(sheet))
+            for sheet in book.sheets()
+        }
+        self.name = str(path)
+
+    @classmethod
+    def can_process(cls, location):
+        return Path(location).suffix.lower() == ".ods"
+
+
+def sanitize(sheet):
+    data = tablib.Dataset()
+    data.headers = sheet.headers
+    # remove trailing Nones
+    while data.headers and data.headers[-1] is None:
+        data.headers.pop()
+    for row in sheet:
+        vals = tuple(str(e) if e is not None else "" for e in row)
+        new_row = vals[: len(data.headers)]
+        if any(new_row):
+            # omit empty rows
+            data.append(new_row)
+    return data
 
 
 def load_csv(path):
