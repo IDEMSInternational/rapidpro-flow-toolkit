@@ -16,6 +16,7 @@ from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.creation.surveyparser import Survey, SurveyParser, SurveyQuestion
 from rpft.parsers.creation.triggerparser import TriggerParser
 from rpft.parsers.creation.triggerrowmodel import TriggerRowModel
+from rpft.parsers.common.sheetparser import SheetParser
 from rpft.rapidpro.models.containers import RapidProContainer
 
 
@@ -65,7 +66,7 @@ class ContentIndexParser:
             if user_data_model_module_name
             else None
         )
-        indices = self.reader.get_sheets_by_name(ContentIndexType.CONTENT_INDEX.value)
+        indices = self.data_source.get_all("content_index", ContentIndexRowModel)
 
         if not indices:
             raise Exception("No content index found")
@@ -188,31 +189,8 @@ class ContentIndexParser:
             with logging_context(f"{logging_prefix} | {row.sheet_name[0]}"):
                 self._add_template(row)
 
-    def _get_sheet_or_die(self, sheet_name):
-        candidates = self.reader.get_sheets_by_name(sheet_name)
-
-        if not candidates:
-            raise ParserError("Sheet not found", {"name": sheet_name})
-
-        active = candidates[-1]
-
-        if len(candidates) > 1:
-            readers = [c.reader.name for c in candidates]
-            LOGGER.debug(
-                "Duplicate sheets found, "
-                + str(
-                    {
-                        "name": sheet_name,
-                        "readers": readers,
-                        "active": active.reader.name,
-                    }
-                ),
-            )
-
-        return active
-
     def _process_globals_sheet(self, row):
-        table = self._get_sheet_or_die(row.sheet_name[0]).table
+        table = self.data_source._get_sheet_or_die(row.sheet_name[0]).table
         data_rows = SheetParser(table, globalrowmodels.IDValueRowModel).parse_all()
         context_dict = {r.ID: r.value for r in data_rows}
         intersection = self.global_context.keys() & context_dict.keys()

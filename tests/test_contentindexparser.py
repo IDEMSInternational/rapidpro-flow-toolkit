@@ -454,7 +454,9 @@ class TestParsing(TestTemplate):
         }
         render_output = (
             ContentIndexParser(
-                MockSheetReader(ci_sheet, sheet_dict),
+                SheetDataSource(
+                    [MockSheetReader(ci_sheet, sheet_dict)]
+                ),
                 "tests.datarowmodels.minimalmodel",
             )
             .parse_all()
