@@ -402,8 +402,8 @@ class TestParsing(TestTemplate):
         ci_sheet = (
             "type,sheet_name,data_sheet,data_row_id,template_arguments,new_name,data_model,status\n"  # noqa: E501
             "create_flow,my_basic_flow,,,,,,\n"
-            "globals_dict,globals_sheet1,,,,,,\n"
-            "globals_dict,globals_sheet2,,,,,,\n"
+            "globals,globals_sheet1,,,,,,\n"
+            "globals,globals_sheet2,,,,,,\n"
             "data_sheet,minimaldata,,,,,NameModel,\n"
             "template_definition,my_template,,,message,,,\n"
             "create_flow,my_template,minimaldata,,Local message,,,\n"
