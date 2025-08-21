@@ -9,6 +9,14 @@ from rpft.parsers.creation.models import SurveyConfig
 class ContentIndexType(Enum):
     SURVEY = "survey"
     SURVEY_QUESTION = "survey_question"
+    CONTENT_INDEX = "content_index"
+    FLOW = "create_flow"
+    TEMPLATE = "template_definition"
+    CAMPAIGN = "create_campaign"
+    TRIGGERS = "create_triggers"
+    DATA_SHEET = "data_sheet"
+    IGNORE = "ignore_row"
+    GLOBALS = "globals"
 
 
 class TemplateArgument(ParserModel):
@@ -46,7 +54,7 @@ class ContentIndexRowModel(ParserModel):
             return "config"
 
     def header_name_to_field_name_with_context(header, row):
-        if row["type"] == "template_definition" and header == "template_arguments":
+        if row["type"] == ContentIndexType.TEMPLATE.value and header == "template_arguments":
             return "template_argument_definitions"
         if row["type"] == ContentIndexType.SURVEY.value and header == "config":
             return "survey_config"
