@@ -16,7 +16,6 @@ from rpft.parsers.creation.tagmatcher import TagMatcher
 from rpft.parsers.creation.surveyparser import Survey, SurveyParser, SurveyQuestion
 from rpft.parsers.creation.triggerparser import TriggerParser
 from rpft.parsers.creation.triggerrowmodel import TriggerRowModel
-from rpft.parsers.common.sheetparser import SheetParser
 from rpft.rapidpro.models.containers import RapidProContainer
 
 
@@ -190,9 +189,11 @@ class ContentIndexParser:
                 self._add_template(row)
 
     def _process_globals_sheet(self, row):
-        table = self.data_source._get_sheet_or_die(row.sheet_name[0]).table
-        data_rows = SheetParser(table, globalrowmodels.IDValueRowModel).parse_all()
-        context_dict = {r.ID: r.value for r in data_rows}
+        properties, *_ = self.data_source.get(
+            row.sheet_name[0],
+            globalrowmodels.IDValueRowModel,
+        )
+        context_dict = {r.ID: r.value for r in properties}
         intersection = self.global_context.keys() & context_dict.keys()
         if intersection:
             LOGGER.info(f"Overwriting globals {intersection}")
