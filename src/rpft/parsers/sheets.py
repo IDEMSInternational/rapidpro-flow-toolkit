@@ -66,8 +66,7 @@ class JSONSheetReader(AbstractSheetReader):
     @classmethod
     def can_process(cls, location):
         if Path(location).suffix.lower() == ".json":
-            with open(location, "r") as f:
-                return "sheets" in json.load(f)
+            return "sheets" in load_json(location)
 
         return False
 
