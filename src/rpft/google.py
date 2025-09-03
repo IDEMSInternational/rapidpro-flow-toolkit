@@ -6,6 +6,7 @@ from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
+from datetime import datetime
 
 
 EXT_MIME_TYPE = {
@@ -119,3 +120,17 @@ class Drive:
         )
 
         return meta["name"], content
+
+    @classmethod
+    def get_modified_time(cls, file_id):
+        try:
+            file_meta = cls.client().files().get(
+                fileId=file_id, fields="modifiedTime", supportsAllDrives=True
+            ).execute()
+            modified_time_str = file_meta["modifiedTime"]
+            if modified_time_str.endswith("Z"):
+                modified_time_str = modified_time_str[:-1] + "+00:00"
+            return datetime.fromisoformat(modified_time_str)
+        except Exception as e:
+            print(f"Could not get modified time for sheet {file_id}: {e}")
+            return None
