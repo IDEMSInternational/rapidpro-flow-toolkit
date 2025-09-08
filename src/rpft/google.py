@@ -122,15 +122,28 @@ class Drive:
         return meta["name"], content
 
     @classmethod
-    def get_modified_time(cls, file_id):
-        try:
-            file_meta = cls.client().files().get(
-                fileId=file_id, fields="modifiedTime", supportsAllDrives=True
-            ).execute()
-            modified_time_str = file_meta["modifiedTime"]
-            if modified_time_str.endswith("Z"):
-                modified_time_str = modified_time_str[:-1] + "+00:00"
-            return datetime.fromisoformat(modified_time_str)
-        except Exception as e:
-            print(f"Could not get modified time for sheet {file_id}: {e}")
-            return None
+    def get_modified_time(cls, file_id_ls):
+        if type(file_id_ls) is not list:
+            file_id_ls = [file_id_ls]
+        batch = cls.client.new_batch_http_request()
+
+        for file_id in file_ids:
+            batch.add(cls.client.files().get(fileId=file_id, 
+                fields='modifiedTime', supportsAllDrives=True)
+            )
+
+        responses = batch.execute()
+        modified_time_dict = {}
+        for request_id, (response_data, http_response) in responses.items():
+            if http_response.status == 200:
+                file_id = request_id.split('_')[-1]
+                modified_time_str = response_data.get('modifiedTime')
+                if modified_time_str.endswith("Z"):
+                    modified_time_str = modified_time_str[:-1] + "+00:00"
+                modified_time_dict[file_id] = datetime.fromisoformat(modified_time_str)
+
+            else:
+                raise Exception(f"Error for modified time request {request_id}: {http_response.status} - {response_data}")
+
+        return modified_time_dict
+        
