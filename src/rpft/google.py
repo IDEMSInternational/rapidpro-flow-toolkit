@@ -123,27 +123,29 @@ class Drive:
 
     @classmethod
     def get_modified_time(cls, file_id_ls):
-        if type(file_id_ls) is not list:
+        if type(file_id_ls) is str:
             file_id_ls = [file_id_ls]
-        batch = cls.client.new_batch_http_request()
 
-        for file_id in file_ids:
-            batch.add(cls.client.files().get(fileId=file_id, 
-                fields='modifiedTime', supportsAllDrives=True)
-            )
-
-        responses = batch.execute()
         modified_time_dict = {}
-        for request_id, (response_data, http_response) in responses.items():
-            if http_response.status == 200:
-                file_id = request_id.split('_')[-1]
-                modified_time_str = response_data.get('modifiedTime')
+
+        def modified_time_callback(request_id, response, exception):
+            if exception is None:
+                file_id = response.get('id')
+                modified_time_str = response.get('modifiedTime')
                 if modified_time_str.endswith("Z"):
                     modified_time_str = modified_time_str[:-1] + "+00:00"
                 modified_time_dict[file_id] = datetime.fromisoformat(modified_time_str)
-
             else:
-                raise Exception(f"Error for modified time request {request_id}: {http_response.status} - {response_data}")
+                raise exception
+            
+        batch = cls.client().new_batch_http_request(callback=modified_time_callback)
+
+        for file_id in file_id_ls:
+            batch.add(cls.client().files().get(fileId=file_id, 
+                fields='id,modifiedTime', supportsAllDrives=True)
+            )
+
+        batch.execute()
 
         return modified_time_dict
         
