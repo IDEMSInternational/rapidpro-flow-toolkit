@@ -6,6 +6,7 @@ from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
+from datetime import datetime
 
 
 EXT_MIME_TYPE = {
@@ -119,3 +120,32 @@ class Drive:
         )
 
         return meta["name"], content
+
+    @classmethod
+    def get_modified_time(cls, file_id_ls):
+        if type(file_id_ls) is str:
+            file_id_ls = [file_id_ls]
+
+        modified_time_dict = {}
+
+        def modified_time_callback(request_id, response, exception):
+            if exception is None:
+                file_id = response.get('id')
+                modified_time_str = response.get('modifiedTime')
+                if modified_time_str.endswith("Z"):
+                    modified_time_str = modified_time_str[:-1] + "+00:00"
+                modified_time_dict[file_id] = datetime.fromisoformat(modified_time_str)
+            else:
+                raise exception
+            
+        batch = cls.client().new_batch_http_request(callback=modified_time_callback)
+
+        for file_id in file_id_ls:
+            batch.add(cls.client().files().get(fileId=file_id, 
+                fields='id,modifiedTime', supportsAllDrives=True)
+            )
+
+        batch.execute()
+
+        return modified_time_dict
+        
