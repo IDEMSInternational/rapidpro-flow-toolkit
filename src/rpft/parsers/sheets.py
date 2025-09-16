@@ -1,13 +1,19 @@
 import json
 import re
+import logging
 from abc import ABC
 from collections.abc import Mapping
 from pathlib import Path
 
 import tablib
+import formulas
+from formulas.functions import Array
+from numpy.dtypes import StringDType
 from googleapiclient.discovery import build
 
 from rpft.google import get_credentials
+
+LOGGER = logging.getLogger(__name__)
 
 
 class SheetReaderError(Exception):
@@ -90,7 +96,6 @@ class XLSXSheetReader(AbstractSheetReader):
 
 
 class GoogleSheetReader(AbstractSheetReader):
-
     def __init__(self, spreadsheet_id):
         """
         Args:
@@ -113,7 +118,9 @@ class GoogleSheetReader(AbstractSheetReader):
         result = (
             service.spreadsheets()
             .values()
-            .batchGet(spreadsheetId=spreadsheet_id, ranges=titles)
+            .batchGet(
+                spreadsheetId=spreadsheet_id, ranges=titles, valueRenderOption="FORMULA"
+            )
             .execute()
         )
 
@@ -123,6 +130,11 @@ class GoogleSheetReader(AbstractSheetReader):
             if name.startswith("'") and name.endswith("'"):
                 name = name[1:-1]
             content = sheet.get("values", [])
+            if any(len(content[0]) < len(c) for c in content):
+                LOGGER.warning(
+                    f"Fewer headers than columns: Skipping {spreadsheet_id}:{name}"
+                )
+                continue
             if name in self._sheets:
                 raise ValueError(f"Warning: Duplicate sheet name: {name}")
             else:
@@ -143,7 +155,7 @@ class GoogleSheetReader(AbstractSheetReader):
 
     def _prepare_row(self, row, max_cols):
         return pad(
-            [cell.replace("\r\n", "\n") for cell in row],
+            [cell.replace("\r\n", "\n") for cell in row if type(cell) is str],
             max_cols,
         )
 
@@ -204,3 +216,66 @@ def load_json(path):
 
 def pad(row, n):
     return row + ([""] * (n - len(row)))
+
+
+def get_formula_inputs(inputs, reader: AbstractSheetReader, table):
+    data = []
+    for key, value in inputs.items():
+        for r in value.ranges:
+            if "sheet" in r.keys():
+                sheet_index = [k.lower() for k in reader.sheets.keys()].index(
+                    r["sheet"].lower()
+                )
+                table = list(reader.sheets.values())[sheet_index].table
+            table[int(r["r1"]) - 1 : int(r["r2"])]
+            # rows -2 because skip header and zero index
+            data += [
+                t[int(r["n1"]) - 1 : int(r["n2"])]
+                for t in table[int(r["r1"]) - 2 : int(r["r2"]) - 1]
+            ]
+    return data
+
+
+def to_formula_array(table):
+    array = Array((table.height + 1, table.width), dtype=StringDType)
+    array[0] = table.headers
+    for i in range(table.height):
+        array[i + 1] = table[i]
+    return array
+
+
+def from_formula_array(array):
+    table = tablib.Dataset()
+    table.headers = list(array[0])
+    for i in range(array.shape[0] - 1):
+        table.append(list(array[i + 1]))
+    return array
+
+
+def load_formulas(reader: AbstractSheetReader):
+    for sheet in reader.sheets.values():
+        print(sheet.table)
+        if "=" not in str(sheet.table.dict):
+            continue
+
+        array = to_formula_array(sheet.table)
+        for row, row_data in enumerate(sheet.table):
+            for col, cell_data in enumerate(row_data):
+                if cell_data.startswith("="):
+                    func = formulas.Parser().ast(cell_data)[1].compile()
+                    inputs = get_formula_inputs(func.inputs, reader, sheet.table)
+                    output = func(inputs)
+                    while type(output) in [list, tuple]:  # Flatten
+                        if len(output) != 1:
+                            raise NotImplementedError
+                        output = output[0]
+                    array[row + 1][col] = str(output)
+        sheet.table = from_formula_array(array)
+        print(sheet.table)
+    return reader
+
+
+if __name__ == "__main__":
+    g = GoogleSheetReader("15EzCls09HMvfSZ9Cs7Tva9SObGRqao9gbzd-7LaeQIw")
+    load_formulas(g)
+    print(g)
