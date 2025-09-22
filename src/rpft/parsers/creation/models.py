@@ -119,6 +119,10 @@ class MCQChoice(ParserModel):
     """
     Text rendered to user.
     """
+    aliases: list[str] = []
+    """
+    Variations of "text" also accepted as valid answers.
+    """
 
     value: str
     """
