@@ -21,7 +21,7 @@ SCOPES = [
 ]
 
 ALL_SCOPES = SCOPES + [
-    "https://www.googleapis.com/auth/devstorage.read_write",
+    "https://www.googleapis.com/auth/cloud-platform",
 ]
 
 
