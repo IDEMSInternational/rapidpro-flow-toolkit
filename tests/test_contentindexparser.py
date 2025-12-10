@@ -559,7 +559,7 @@ class TestParsing(TestTemplate):
         )
         my_template = (
             "row_id,type,from,condition,message_text\n"
-            "1,split_by_value,,,@field.mood\n"
+            "1,split_by_value,,,@fields.mood\n"
             ",send_message,1,happy,{% for msg in messages %}{{lookup[msg].happy}}{% endfor %}\n"  # noqa: E501
             ",send_message,1,sad,{% for msg in messages %}{{lookup[msg].sad}}{% endfor %}\n"  # noqa: E501
             ",send_message,1,,{% for msg in messages %}{{lookup[msg].neutral}}{% endfor %}\n"  # noqa: E501
@@ -595,7 +595,7 @@ class TestParsing(TestTemplate):
                 "Intermission",
                 "Nice to see you :)Bye :)",
             ],
-            Context(variables={"@field.mood": "happy"}),
+            Context(variables={"@fields.mood": "happy"}),
         )
         self.assertFlowMessages(
             render_output,
@@ -606,7 +606,7 @@ class TestParsing(TestTemplate):
                 "Intermission",
                 "Not nice to see you :(Bye :(",
             ],
-            Context(variables={"@field.mood": "sad"}),
+            Context(variables={"@fields.mood": "sad"}),
         )
         self.assertFlowMessages(
             render_output,
@@ -617,13 +617,13 @@ class TestParsing(TestTemplate):
                 "Intermission",
                 "Nice to see youBye",
             ],
-            Context(variables={"@field.mood": "something else"}),
+            Context(variables={"@fields.mood": "something else"}),
         )
         self.assertFlowMessages(
             render_output,
             "my_template - row3",
             ["Hello :)Bye :)"],
-            Context(variables={"@field.mood": "happy"}),
+            Context(variables={"@fields.mood": "happy"}),
         )
 
     def test_insert_as_block_with_arguments(self):

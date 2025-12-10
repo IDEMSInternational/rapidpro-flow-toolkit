@@ -1,4 +1,8 @@
 import re
+import subprocess
+import os
+import tempfile
+import json
 
 
 class Context(object):
@@ -274,6 +278,7 @@ def traverse_flow(flow, context):
 
     outputs = []
     current_node = flow["nodes"][0]
+    context_dict = json.dumps(context.__dict__)
     while current_node is not None:
         outputs += process_actions(current_node, context)
 
@@ -283,7 +288,152 @@ def traverse_flow(flow, context):
         current_node = find_node_by_uuid(flow, destination_uuid)
         if current_node is None:
             raise ValueError("Destination_uuid {} is invalid.".format(destination_uuid))
+    context = Context(**json.loads(context_dict))
+    fr = Flowrunner.from_flow(flow, context)
+    assert(fr.get_messages(context.inputs) == outputs)
+    outputs = fr.get_messages(context.inputs)
     return outputs
+
+
+class Flowrunner():
+    prefix = 'temp_flow_'
+    goflow_messages = [
+        "↪️ entered flow ",
+        "💬 message created ",
+        "↪️ exited flow ",
+    ]
+    def __init__(self, file, uuid, contact=None):
+        self.command = [os.path.join(os.environ.get("GOPATH"), "bin", "flowrunner")]
+        if contact is not None:
+            self.command.append("-contact")
+            self.command.append(contact)
+        self.command.append(file)
+        self.command.append(uuid)
+
+        self.file_name = file
+        self.contact = contact
+
+    def readlines(self, inputs=None):
+        if inputs is not None:
+            inputs = [i+'\n' for i in inputs if not i.endswith('\n')]
+        if inputs is None:
+            inputs = []
+
+        lines = []
+        with subprocess.Popen(
+            self.command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding='utf-8',
+        ) as process:
+            while len(lines) < 1000:
+                line = process.stdout.readline()
+
+                if line == '':
+                    break
+                elif line.startswith('⏳ waiting for message'):
+                    try:
+                        process.stdin.write(inputs.pop(0))
+                    except IndexError:
+                        process.stdin.write("\n")
+                        print("Warning, tests should specify input when expecting wait_for_response, in future this will be treated as an error")
+                    process.stdin.flush()
+                elif line.startswith("↪️"):
+                    pass
+                elif line.startswith("💬"):
+                    pass
+                elif line.startswith("📥"):
+                    pass
+                elif line.startswith(">"):
+                    pass
+                else:
+                    print(line)
+                    
+                lines.append(line)
+        return lines
+
+    def get_messages(self, inputs=None):
+        outputs = []
+        for line in self.readlines(inputs):
+            if line.startswith("💬 message created "):
+                outputs.append(('send_msg', line[19:-2]))
+        return outputs
+
+    @classmethod
+    def from_flow(cls, flow, context: Context):
+        """
+        flowrunner requires json file as input, this creates a temp json file
+        """
+        uuid = flow['uuid']
+
+        new_dict = {
+            "version": "13",
+            "site": "https://rapidpro.idems.international",
+            "flows": [flow],
+        }
+        tmp_file = tempfile.NamedTemporaryFile(
+            mode='w+t', 
+            delete=False,
+            suffix='.json', 
+            prefix=cls.prefix
+        )
+
+
+        # If there's no context, use default contact
+        if sum(len(val) for val in context.__dict__.values()) == 0:
+            tmp_file.write(json.dumps(new_dict))
+            tmp_file.flush()
+            tmp_file.close()
+            return cls(tmp_file.name, uuid)
+
+        fields = {key[8:]: {"text": val} for key, val in context.variables.items() if key.startswith("@fields.")}
+        if context.random_choices != []:
+            print("random_choices not supported consistently")
+            raise NotImplementedError()
+
+        new_dict['fields'] = [{"key": key, "name": key, "type": list(val.keys())[0]} for key, val in fields.items()]
+        contact = {
+            "uuid": "ba96bf7f-bc2a-4873-a7c7-254d1927c4e3",
+            "id": 1234567,
+            "name": "Ben Haggerty",
+            "status": "active",
+            "created_on": "2018-01-01T12:00:00.000000000-00:00",
+            "fields": fields,
+            "timezone": "America/Guayaquil",
+            "urns": [
+                "tel:+12065551212",
+                "facebook:1122334455667788",
+                "mailto:ben@macklemore"
+            ],
+            "groups": context.group_names,
+        }
+        contact_file = tempfile.NamedTemporaryFile(
+            mode='w+t', 
+            delete=False,
+            suffix='.json', 
+            prefix=cls.prefix
+        )
+        contact_file.write(json.dumps(contact))
+        contact_file.flush()
+        contact_file.close()
+        tmp_file.write(json.dumps(new_dict))
+        tmp_file.flush()
+        tmp_file.close()
+        return cls(tmp_file.name, uuid, contact_file.name)
+
+    def __del__(self):
+        """
+        Destructor called when the instance is garbage collected.
+        Ensures the temporary file is closed and deleted if it exists.
+        """
+        if self.prefix in self.file_name:
+            os.unlink(self.file_name)
+        if self.contact is not None:
+            if self.prefix in self.contact:
+                os.unlink(self.contact)
+
 
 
 def find_final_destination(flow, node, context):
