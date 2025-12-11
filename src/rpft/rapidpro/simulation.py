@@ -356,18 +356,6 @@ class Flowrunner():
                         process.stdin.write("\n")
                         print("Warning, tests should specify input when expecting wait_for_response, in future this will be treated as an error")
                     process.stdin.flush()
-                elif line.startswith("↪️"):
-                    pass
-                elif line.startswith("💬"):
-                    pass
-                elif line.startswith("📥"):
-                    pass
-                elif line.startswith(">"):
-                    pass
-                elif line.startswith("✏️"):
-                    pass
-                else:
-                    print(line)
                     
                 self.lines.append(line)
         return self.lines
@@ -398,6 +386,14 @@ class Flowrunner():
                     "set_contact_name",
                      re.findall(r"📛 name changed to '(.*?)'", line)[0]
                 ))
+            elif line.startswith("↪️"):
+                pass
+            elif line.startswith(">"):
+                pass
+            elif line.startswith("⏳ waiting for message"):
+                pass
+            else:
+                print(line)
         return outputs
 
     @classmethod
