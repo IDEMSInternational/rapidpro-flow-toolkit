@@ -386,6 +386,15 @@ class Flowrunner():
                     "set_contact_name",
                      re.findall(r"📛 name changed to '(.*?)'", line)[0]
                 ))
+            elif line.startswith("📈 run result "):
+                result = re.findall(r"📈 run result '(.*?)'", line)[0]
+                if result != 'dummy':
+                    print(line)
+                else:
+                    outputs.append((
+                        "set_run_result",
+                        re.findall(r"📈 run result '(.*?)'", line)[0]
+                    ))
             elif line.startswith("↪️"):
                 pass
             elif line.startswith(">"):
@@ -398,9 +407,6 @@ class Flowrunner():
 
     @classmethod
     def from_flow(cls, flow, context: Context):
-        """
-        flowrunner requires json file as input, this creates a temp json file
-        """
         uuid = flow['uuid']
 
         new_dict = {
@@ -408,6 +414,14 @@ class Flowrunner():
             "site": "https://rapidpro.idems.international",
             "flows": [flow],
         }
+        return cls.from_dict(new_dict, uuid, context)
+
+    @classmethod
+    def from_dict(cls, render_output, uuid, context):
+        """
+        flowrunner requires json file as input, this creates a temp json file
+        """
+        new_dict = render_output.copy()
         tmp_file = tempfile.NamedTemporaryFile(
             mode='w+t', 
             delete=False,
@@ -429,7 +443,7 @@ class Flowrunner():
             elif isinstance(obj, list):
                 for item in obj:
                     yield from find_fields(item)
-        fields = list(find_fields(flow))
+        fields = list(find_fields(new_dict['flows']))
         if len(fields) != 0:
             print("Warning: in future fields should be populated during rendering")
             for f in fields:
@@ -453,9 +467,9 @@ class Flowrunner():
             elif isinstance(obj, list):
                 for item in obj:
                     yield from find_groups(item)
-        if len(list(find_groups(flow))) != 0:
+        if len(list(find_groups(new_dict['flows']))) != 0:
             print("Warning: in future groups should be populated during rendering")
-            unique_group_set = set(frozenset(d.items()) for d in find_groups(flow))
+            unique_group_set = set(frozenset(d.items()) for d in find_groups(new_dict['flows']))
             groups = [dict(f) for f in unique_group_set]
             new_dict["groups"] = groups
 
@@ -469,7 +483,7 @@ class Flowrunner():
         fields = {key[8:]: {"text": val} for key, val in context.variables.items() if key.startswith("@fields.")}
 
 
-        new_dict['fields'] = [{"key": key, "name": key, "type": list(val.keys())[0]} for key, val in fields.items()]
+        new_dict['fields'] += [{"key": key, "name": key, "type": list(val.keys())[0]} for key, val in fields.items()]
         contact = {
             "uuid": "ba96bf7f-bc2a-4873-a7c7-254d1927c4e3",
             "id": 1234567,
