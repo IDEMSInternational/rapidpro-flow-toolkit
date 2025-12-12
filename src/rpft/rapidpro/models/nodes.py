@@ -469,19 +469,19 @@ class EnterFlowNode(RouterNode):
             self.router = router
         else:
             self.router = SwitchRouter(
-                operand="@child.run.status", result_name=None, wait_timeout=None
+                operand="@child.status", result_name=None, wait_timeout=None
             )
             self.router.default_category.update_name("Expired")
 
             self.add_choice(
-                comparison_variable="@child.run.status",
+                comparison_variable="@child.status",
                 comparison_type="has_only_text",
                 comparison_arguments=["completed"],
                 category_name="Complete",
                 destination_uuid=complete_destination_uuid,
             )
             self.add_choice(
-                comparison_variable="@child.run.status",
+                comparison_variable="@child.status",
                 comparison_type="has_only_text",
                 comparison_arguments=["expired"],
                 category_name="Expired",

@@ -1,4 +1,8 @@
 import re
+import subprocess
+import os
+import tempfile
+import json
 
 
 class Context(object):
@@ -274,6 +278,7 @@ def traverse_flow(flow, context):
 
     outputs = []
     current_node = flow["nodes"][0]
+    context_dict = json.dumps(context.__dict__)
     while current_node is not None:
         outputs += process_actions(current_node, context)
 
@@ -283,7 +288,228 @@ def traverse_flow(flow, context):
         current_node = find_node_by_uuid(flow, destination_uuid)
         if current_node is None:
             raise ValueError("Destination_uuid {} is invalid.".format(destination_uuid))
+    context = Context(**json.loads(context_dict))
+    fr = Flowrunner.from_flow(flow, context)
+
+    # deal with random_choices
+    fr_outputs = fr.get_messages(context.inputs)
+    if context.random_choices != []:
+        for i in range(50):
+            if fr_outputs == outputs:
+                continue
+            fr_outputs = fr.get_messages(context.inputs)
+
+    # Debugging specifically for the switch to using flowrunner cli
+    error_msg = f"{fr_outputs} not equal to {outputs}"
+    if context.random_choices != []:
+        error_msg += "\nrandom_choice may be the issue"
+    error_msg += "\n" + "\n".join(fr.lines)
+    assert fr_outputs == outputs, error_msg
+
+    outputs = fr_outputs
     return outputs
+
+
+class Flowrunner():
+    prefix = 'temp_flow_'
+    goflow_messages = [
+        "↪️ entered flow ",
+        "💬 message created ",
+        "↪️ exited flow ",
+    ]
+    def __init__(self, file, uuid, contact=None):
+        self.command = [os.path.join(os.environ.get("GOPATH"), "bin", "flowrunner")]
+        if contact is not None:
+            self.command.append("-contact")
+            self.command.append(contact)
+        self.command.append(file)
+        self.command.append(uuid)
+
+        self.file_name = file
+        self.contact = contact
+        self.lines = []
+
+    def readlines(self, inputs=None):
+        if inputs is not None:
+            inputs = [(i+'\n' if i is not None else "/timeout\n") for i in inputs]
+        if inputs is None:
+            inputs = []
+
+        self.lines = []
+        with subprocess.Popen(
+            self.command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding='utf-8',
+        ) as process:
+            while len(self.lines) < 1000:
+                line = process.stdout.readline()
+
+                if line == '':
+                    break
+                elif line.startswith('⏳ waiting for message'):
+                    try:
+                        process.stdin.write(inputs.pop(0))
+                    except IndexError:
+                        process.stdin.write("\n")
+                        print("Warning, tests should specify input when expecting wait_for_response, in future this will be treated as an error")
+                    process.stdin.flush()
+                    
+                self.lines.append(line)
+        return self.lines
+
+    def get_messages(self, inputs=None):
+        outputs = []
+        for line in self.readlines(inputs):
+            
+            if line.startswith("💬 message created "):
+                outputs.append(("send_msg", line[19:-2]))
+            elif line.startswith("✏️ field "):
+                outputs.append((
+                    "set_contact_field",
+                     re.findall(r"✏️ field '(.*?)' changed to", line)[0]
+                ))
+            elif line.startswith("👪 added to "):
+                outputs.append((
+                    "add_contact_groups",
+                     re.findall(r"👪 added to '(.*?)'", line)[0]
+                ))
+            elif line.startswith("👪 removed from "):
+                outputs.append((
+                    "remove_contact_groups",
+                     re.findall(r"👪 removed from '(.*?)'", line)[0]
+                ))
+            elif line.startswith("📛 name changed to "):
+                outputs.append((
+                    "set_contact_name",
+                     re.findall(r"📛 name changed to '(.*?)'", line)[0]
+                ))
+            elif line.startswith("↪️"):
+                pass
+            elif line.startswith(">"):
+                pass
+            elif line.startswith("⏳ waiting for message"):
+                pass
+            else:
+                print(line)
+        return outputs
+
+    @classmethod
+    def from_flow(cls, flow, context: Context):
+        """
+        flowrunner requires json file as input, this creates a temp json file
+        """
+        uuid = flow['uuid']
+
+        new_dict = {
+            "version": "13",
+            "site": "https://rapidpro.idems.international",
+            "flows": [flow],
+        }
+        tmp_file = tempfile.NamedTemporaryFile(
+            mode='w+t', 
+            delete=False,
+            suffix='.json', 
+            prefix=cls.prefix
+        )
+
+        # Patch issue with flowrunner needing fields to be set
+        def find_fields(obj):
+            """
+            Recursively finds all fields referrenced in the flow.
+            """
+            if isinstance(obj, dict):
+                if (list(obj.keys()) == ["key", "name"]) or (list(obj.keys()) == ["key", "name", "type"]):
+                    yield obj
+                else:
+                    for value in obj.values():
+                        yield from find_fields(value)
+            elif isinstance(obj, list):
+                for item in obj:
+                    yield from find_fields(item)
+        fields = list(find_fields(flow))
+        if len(fields) != 0:
+            print("Warning: in future fields should be populated during rendering")
+            for f in fields:
+                if "type" not in f.keys():
+                    f["type"] = "string"
+            new_dict["fields"] = fields
+
+        def find_groups(obj):
+            """
+            Recursively finds all fields referrenced in the flow.
+            """
+            if isinstance(obj, dict):
+                if "groups" in obj.keys():
+                    if type(obj["groups"]) is list:
+                        if len(obj["groups"]) > 0:
+                            if set(["uuid", "name"]).issubset(obj["groups"][0].keys()):
+                                yield from obj["groups"]
+                else:
+                    for value in obj.values():
+                        yield from find_groups(value)
+            elif isinstance(obj, list):
+                for item in obj:
+                    yield from find_groups(item)
+        if len(list(find_groups(flow))) != 0:
+            print("Warning: in future groups should be populated during rendering")
+            unique_group_set = set(frozenset(d.items()) for d in find_groups(flow))
+            groups = [dict(f) for f in unique_group_set]
+            new_dict["groups"] = groups
+
+        # If there's no variables or groups, use default contact
+        if sum(len(context.__dict__[key]) for key in ["group_names", "variables"]) == 0:
+            tmp_file.write(json.dumps(new_dict))
+            tmp_file.flush()
+            tmp_file.close()
+            return cls(tmp_file.name, uuid)
+
+        fields = {key[8:]: {"text": val} for key, val in context.variables.items() if key.startswith("@fields.")}
+
+
+        new_dict['fields'] = [{"key": key, "name": key, "type": list(val.keys())[0]} for key, val in fields.items()]
+        contact = {
+            "uuid": "ba96bf7f-bc2a-4873-a7c7-254d1927c4e3",
+            "id": 1234567,
+            "name": "Ben Haggerty",
+            "status": "active",
+            "created_on": "2018-01-01T12:00:00.000000000-00:00",
+            "fields": fields,
+            "timezone": "America/Guayaquil",
+            "urns": [
+                "tel:+12065551212",
+                "facebook:1122334455667788",
+                "mailto:ben@macklemore"
+            ],
+            "groups": context.group_names,
+        }
+        contact_file = tempfile.NamedTemporaryFile(
+            mode='w+t', 
+            delete=False,
+            suffix='.json', 
+            prefix=cls.prefix
+        )
+        contact_file.write(json.dumps(contact))
+        contact_file.flush()
+        contact_file.close()
+        tmp_file.write(json.dumps(new_dict))
+        tmp_file.flush()
+        tmp_file.close()
+        return cls(tmp_file.name, uuid, contact_file.name)
+
+    def __del__(self):
+        """
+        Destructor called when the instance is garbage collected.
+        Ensures the temporary file is closed and deleted if it exists.
+        """
+        if self.prefix in self.file_name:
+            os.unlink(self.file_name)
+        if self.contact is not None:
+            if self.prefix in self.contact:
+                os.unlink(self.contact)
+
 
 
 def find_final_destination(flow, node, context):
