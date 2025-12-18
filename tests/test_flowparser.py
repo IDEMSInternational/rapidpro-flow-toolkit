@@ -15,6 +15,7 @@ from rpft.rapidpro.simulation import (
     find_destination_uuid,
     find_node_by_uuid,
     traverse_flow,
+    traverse_flowrunner,
 )
 
 from tests import TESTS_ROOT
@@ -411,14 +412,26 @@ class TestBlocks(TestCase):
         )
 
     def assert_messages(self, output, expected, context=None):
+        actions = traverse_flow(output, copy.deepcopy(context) or Context())
+
+        traverse_flowrunner(output, copy.deepcopy(context) or Context(),
+                            expected_outputs=actions,
+                            testcls=self)
+
         self.assertEqual(
-            traverse_flow(output, context or Context()),
+            actions,
             list(zip(["send_msg"] * len(expected), expected)),
         )
 
     def assert_actions(self, output, expected, context=None):
+        actions = traverse_flow(output, copy.deepcopy(context) or Context())
+
+        traverse_flowrunner(output, copy.deepcopy(context) or Context(),
+                            expected_outputs=actions,
+                            testcls=self)
+
         self.assertEqual(
-            traverse_flow(output, context or Context()),
+            actions,
             expected,
         )
 
@@ -1226,11 +1239,17 @@ class TestFlowParser(TestCase):
 
         # Ensure the generated flow and expected flow are functionally equivalent
         expected_actions = traverse_flow(expected_flow, copy.deepcopy(context))
+        traverse_flowrunner(expected_flow, copy.deepcopy(context) or Context(),
+                            expected_outputs=expected_actions, testcls=self, 
+                            test_name=f"Flowrunner Equivalence {flow_name}: expected")
         self.assertEqual(
             traverse_flow(output_1, copy.deepcopy(context)),
             expected_actions,
         )
 
+        traverse_flowrunner(output_1, copy.deepcopy(context) or Context(),
+                    expected_outputs=expected_actions, testcls=self, 
+                    test_name=f"Flowrunner Equivalence {flow_name}: output_1")
         # Convert the expected output into a flow and then into a sheet
         new_rows = FlowContainer.from_dict(expected_flow).to_rows()
 
@@ -1250,6 +1269,9 @@ class TestFlowParser(TestCase):
             traverse_flow(output_2, copy.deepcopy(context)),
             expected_actions,
         )
+        traverse_flowrunner(output_2, copy.deepcopy(context) or Context(),
+                    expected_outputs=expected_actions, testcls=self, 
+                    test_name=f"Flowrunner Equivalence {flow_name}: output_2")
 
     def test_no_switch_nodes(self):
         self.assert_flow(
