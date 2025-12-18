@@ -1,3 +1,4 @@
+import copy
 from typing import Set
 from unittest import TestCase
 
@@ -9,7 +10,7 @@ from rpft.parsers.sheets import (
     XLSXSheetReader,
 )
 from rpft.rapidpro.models.triggers import RapidProTriggerError
-from rpft.rapidpro.simulation import Context, traverse_flow
+from rpft.rapidpro.simulation import Context, traverse_flow, traverse_flowrunner
 from rpft.sources import SheetDataSource
 
 from tablib import Dataset
@@ -27,8 +28,11 @@ class TestTemplate(TestCase):
             msg=f'Flow with name "{flow_name}" does not exist in output.',
         )
 
-        actions = traverse_flow(flows[0], context or Context())
+        actions = traverse_flow(flows[0], copy.deepcopy(context) or Context())
         actions_exp = list(zip(["send_msg"] * len(messages_exp), messages_exp))
+
+        traverse_flowrunner(render_output, copy.deepcopy(context) or Context(),
+                            flow_name=flow_name, expected_outputs=actions, testcls=self)
 
         self.assertEqual(actions, actions_exp)
 

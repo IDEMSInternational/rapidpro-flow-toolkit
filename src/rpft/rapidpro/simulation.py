@@ -289,25 +289,48 @@ def traverse_flow(flow, context):
         if current_node is None:
             raise ValueError("Destination_uuid {} is invalid.".format(destination_uuid))
     context = Context(**json.loads(context_dict))
-    fr = Flowrunner.from_flow(flow, context)
+    return outputs
+
+
+def traverse_flowrunner(flow, context, uuid=None, flow_name=None, expected_outputs=None,
+                         testcls=None, test_name=None):
+    if uuid is None and flow_name is None:
+        fr = Flowrunner.from_flow(flow, context)
+    else:
+        if uuid is None:
+            uuid = [f for f in flow["flows"] if f["name"] == flow_name][0]['uuid']
+        fr = Flowrunner.from_dict(flow, uuid, context)
 
     # deal with random_choices
     fr_outputs = fr.get_messages(context.inputs)
-    if context.random_choices != []:
+    if context.random_choices != [] and expected_outputs is not None:
         for i in range(50):
-            if fr_outputs == outputs:
+            if fr_outputs == expected_outputs:
                 continue
             fr_outputs = fr.get_messages(context.inputs)
 
-    # Debugging specifically for the switch to using flowrunner cli
-    error_msg = f"{fr_outputs} not equal to {outputs}"
+    error_msg = f"Flowrunner not equal to traverse_flows"
     if context.random_choices != []:
         error_msg += "\nrandom_choice may be the issue"
-    error_msg += "\n" + "\n".join(fr.lines)
-    assert fr_outputs == outputs, error_msg
 
-    outputs = fr_outputs
-    return outputs
+    if test_name is None:
+        # get flow_name for more decriptive test naming
+        tmp_flow = flow
+        if "flows" in tmp_flow.keys():
+            tmp_flow = tmp_flow["flows"]
+        if type(tmp_flow) is not list:
+            tmp_flow = [tmp_flow]
+        if uuid is not None:
+            flow_name = [f for f in tmp_flow if f["uuid"] == uuid][0]["name"]
+        else:
+            flow_name = tmp_flow[0]["name"]
+        test_name = f"New Test Equivalence: {flow_name}"
+
+    if testcls:
+        with testcls.subTest(f"New Test Equivalence: {flow_name}"):
+            testcls.assertEqual(fr_outputs, expected_outputs, error_msg)
+
+    return fr_outputs
 
 
 class Flowrunner():

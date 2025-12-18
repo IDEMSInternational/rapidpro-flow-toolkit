@@ -1,3 +1,4 @@
+import copy
 from unittest import TestCase
 
 from rpft.parsers.creation.contentindexparser import (
@@ -19,7 +20,7 @@ from rpft.parsers.creation.surveyparser import (
     SurveyQuestion,
 )
 from rpft.parsers.sheets import CSVSheetReader
-from rpft.rapidpro.simulation import Context, traverse_flow
+from rpft.rapidpro.simulation import Context, traverse_flow, traverse_flowrunner
 from rpft.sources import SheetDataSource
 
 from tests import TESTS_ROOT
@@ -36,7 +37,11 @@ class TestTemplate(TestCase):
             msg=f'Flow with name "{flow_name}" does not exist in output.',
         )
 
-        actions = traverse_flow(flows[0], context or Context())
+        actions = traverse_flow(flows[0], copy.deepcopy(context) or Context())
+
+        traverse_flowrunner(render_output, copy.deepcopy(context) or Context(),
+                            flow_name=flow_name, expected_outputs=actions,
+                            testcls=self)
 
         self.assertEqual(actions, actions_exp)
 
@@ -405,7 +410,7 @@ class TestSurveyParser(TestTemplate):
                 ("set_contact_field", "third"),
                 ("set_contact_field", "third_complete"),
             ],
-            Context(inputs=["Third answer"]),
+            Context(inputs=["Third answer"], variables={"@fields.third": "@fields.third"}), # TODO: note field was set like this for back compatibility with old simulation that couldn't do replacements - change check and variable to 'Third' or something
         )
 
 
