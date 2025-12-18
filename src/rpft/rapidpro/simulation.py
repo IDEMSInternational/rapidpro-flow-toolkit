@@ -1,4 +1,5 @@
 import re
+import copy
 import subprocess
 import os
 import tempfile
@@ -313,6 +314,13 @@ def traverse_flowrunner(flow, context, uuid=None, flow_name=None, expected_outpu
     if context.random_choices != []:
         error_msg += "\nrandom_choice may be the issue"
 
+    # Heavy debug: don't delete the files
+    if fr_outputs != expected_outputs:
+        error_msg += "\n" + " ".join(fr.command) + f"\ninputs: {context.inputs}"
+        # disable file deletion
+        fr.file_name = ""
+        fr.contact = None
+
     if test_name is None:
         # get flow_name for more decriptive test naming
         tmp_flow = flow
@@ -327,7 +335,7 @@ def traverse_flowrunner(flow, context, uuid=None, flow_name=None, expected_outpu
         test_name = f"New Test Equivalence: {flow_name}"
 
     if testcls:
-        with testcls.subTest(f"New Test Equivalence: {flow_name}"):
+        with testcls.subTest(test_name):
             testcls.assertEqual(fr_outputs, expected_outputs, error_msg)
 
     return fr_outputs
@@ -372,6 +380,8 @@ class Flowrunner():
 
                 if line == '':
                     break
+                elif line.startswith("unable to read"):
+                    raise Exception(f"Flow is malformed, likely has `uuid: null`: {line}\n{' '.join(self.command)}")
                 elif line.startswith('⏳ waiting for message'):
                     try:
                         process.stdin.write(inputs.pop(0))
@@ -444,7 +454,7 @@ class Flowrunner():
         """
         flowrunner requires json file as input, this creates a temp json file
         """
-        new_dict = render_output.copy()
+        new_dict = copy.deepcopy(render_output)
         tmp_file = tempfile.NamedTemporaryFile(
             mode='w+t', 
             delete=False,
@@ -505,7 +515,8 @@ class Flowrunner():
 
         fields = {key[8:]: {"text": val} for key, val in context.variables.items() if key.startswith("@fields.")}
 
-
+        if "fields" not in new_dict.keys():
+            new_dict["fields"] = []
         new_dict['fields'] += [{"key": key, "name": key, "type": list(val.keys())[0]} for key, val in fields.items()]
         contact = {
             "uuid": "ba96bf7f-bc2a-4873-a7c7-254d1927c4e3",
