@@ -15,6 +15,8 @@ Allows access to data in a row by the headers/column IDs.
 
 The parser can also do more complex pythonic things, like `{{name_column.format(val=val)}}`, see the [Example on formatting strings](content_index.md#example:-passing-formatting-strings).
 
+`{@value@}` returns an object, `{{value}}` always returns a string.
+
 # Open Questions:
 
 ## Parsing debug
