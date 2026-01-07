@@ -6,6 +6,10 @@ import tempfile
 import json
 
 
+GOPATH = os.environ.get("GOPATH") 
+if GOPATH is None:
+    GOPATH = "/root/go" # for CI
+
 class Context(object):
     def __init__(
         self, group_names=None, inputs=None, random_choices=None, variables=None
@@ -345,7 +349,7 @@ class Flowrunner():
     prefix = 'temp_flow_'
 
     def __init__(self, file, uuid, contact=None):
-        self.command = [os.path.join(os.environ.get("GOPATH"), "bin", "flowrunner")]
+        self.command = [os.path.join(GOPATH, "bin", "flowrunner")]
         if contact is not None:
             self.command.append("-contact")
             self.command.append(contact)
