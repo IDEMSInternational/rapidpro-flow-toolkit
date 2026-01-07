@@ -8,7 +8,7 @@ import json
 
 GOPATH = os.environ.get("GOPATH") 
 if GOPATH is None:
-    GOPATH = "/root/go" # for CI
+    GOPATH = "/home/runner/go" # for GH CI
 
 class Context(object):
     def __init__(
