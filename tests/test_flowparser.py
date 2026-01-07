@@ -15,6 +15,7 @@ from rpft.rapidpro.simulation import (
     find_destination_uuid,
     find_node_by_uuid,
     traverse_flow,
+    traverse_flowrunner,
 )
 
 from tests import TESTS_ROOT
@@ -411,14 +412,26 @@ class TestBlocks(TestCase):
         )
 
     def assert_messages(self, output, expected, context=None):
+        actions = traverse_flow(output, copy.deepcopy(context) or Context())
+
+        traverse_flowrunner(output, copy.deepcopy(context) or Context(),
+                            expected_outputs=actions,
+                            testcls=self)
+
         self.assertEqual(
-            traverse_flow(output, context or Context()),
+            actions,
             list(zip(["send_msg"] * len(expected), expected)),
         )
 
     def assert_actions(self, output, expected, context=None):
+        actions = traverse_flow(output, copy.deepcopy(context) or Context())
+
+        traverse_flowrunner(output, copy.deepcopy(context) or Context(),
+                            expected_outputs=actions,
+                            testcls=self)
+
         self.assertEqual(
-            traverse_flow(output, context or Context()),
+            actions,
             expected,
         )
 
@@ -841,7 +854,7 @@ class TestMultiExitBlocks(TestBlocks):
         table = (
             "row_id,type,from,condition,message_text\n"
             "X,begin_block,,,\n"
-            "1,split_by_value,,,@my_field\n"
+            "1,split_by_value,,,@fields.my_field\n"
             ",send_message,1,Value,It has the value\n"
             ",end_block,,,\n"
             ",send_message,X,,Following text\n"
@@ -850,19 +863,19 @@ class TestMultiExitBlocks(TestBlocks):
         self.assert_messages(
             self.render_output(table),
             ["It has the value", "Following text"],
-            Context(variables={"@my_field": "Value"}),
+            Context(variables={"@fields.my_field": "Value"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Following text"],
-            Context(variables={"@my_field": "Other"}),
+            Context(variables={"@fields.my_field": "Other"}),
         )
 
     def test_split_by_value_hard_loose_exit(self):
         table = (
             "row_id,type,from,condition,message_text\n"
             "X,begin_block,,,\n"
-            "1,split_by_value,,,@my_field\n"
+            "1,split_by_value,,,@fields.my_field\n"
             ",send_message,1,Value,It has the value\n"
             ",hard_exit,1,Value2,\n"
             ",loose_exit,1,Value3,\n"
@@ -873,22 +886,22 @@ class TestMultiExitBlocks(TestBlocks):
         self.assert_messages(
             self.render_output(table),
             ["It has the value", "Following text"],
-            Context(variables={"@my_field": "Value"}),
+            Context(variables={"@fields.my_field": "Value"}),
         )
         self.assert_messages(
             self.render_output(table),
             [],
-            Context(variables={"@my_field": "Value2"}),
+            Context(variables={"@fields.my_field": "Value2"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Following text"],
-            Context(variables={"@my_field": "Value3"}),
+            Context(variables={"@fields.my_field": "Value3"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Following text"],
-            Context(variables={"@my_field": "Other"}),
+            Context(variables={"@fields.my_field": "Other"}),
         )
 
     def test_wait_for_response(self):
@@ -1021,25 +1034,25 @@ class TestNoOpRow(TestBlocks):
             "row_id,type,from,condition_value,condition_variable,message_text\n"
             ",send_message,,,,Start message\n"
             "1,no_op,,,,\n"
-            ",send_message,1,A,@field,Text A\n"
-            ",send_message,1,,@field,Other\n"
-            ",send_message,1,B,@field,Text B\n"
+            ",send_message,1,A,@fields.my_field,Text A\n"
+            ",send_message,1,,@fields.my_field,Other\n"
+            ",send_message,1,B,@fields.my_field,Text B\n"
         )
 
         self.assert_messages(
             self.render_output(table),
             ["Start message", "Text A"],
-            context=Context(variables={"@field": "A"}),
+            context=Context(variables={"@fields.my_field": "A"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Start message", "Text B"],
-            context=Context(variables={"@field": "B"}),
+            context=Context(variables={"@fields.my_field": "B"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Start message", "Other"],
-            context=Context(variables={"@field": "something"}),
+            context=Context(variables={"@fields.my_field": "something"}),
         )
 
     def test_multiexit_noop2(self):
@@ -1048,25 +1061,25 @@ class TestNoOpRow(TestBlocks):
             "row_id,type,from,condition_value,condition_variable,message_text\n"
             ",send_message,,,,Start message\n"
             "1,no_op,,,,\n"
-            ",send_message,1,,@field,Other\n"
-            ",send_message,1,A,@field,Text A\n"
-            ",send_message,1,B,@field,Text B\n"
+            ",send_message,1,,@fields.my_field,Other\n"
+            ",send_message,1,A,@fields.my_field,Text A\n"
+            ",send_message,1,B,@fields.my_field,Text B\n"
         )
 
         self.assert_messages(
             self.render_output(table),
             ["Start message", "Text A"],
-            context=Context(variables={"@field": "A"}),
+            context=Context(variables={"@fields.my_field": "A"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Start message", "Text B"],
-            context=Context(variables={"@field": "B"}),
+            context=Context(variables={"@fields.my_field": "B"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Start message", "Other"],
-            context=Context(variables={"@field": "something"}),
+            context=Context(variables={"@fields.my_field": "something"}),
         )
 
     def test_multientryexit_noop(self):
@@ -1077,40 +1090,40 @@ class TestNoOpRow(TestBlocks):
             "2,send_message,1,A,,Text 1A\n"
             "3,send_message,1,,,Other\n"
             "4,no_op,2;3,,,\n"
-            ",send_message,4,A,@field,Text 2A\n"
-            ",send_message,4,,@field,Other\n"
-            ",send_message,4,B,@field,Text 2B\n"
+            ",send_message,4,A,@fields.my_field,Text 2A\n"
+            ",send_message,4,,@fields.my_field,Other\n"
+            ",send_message,4,B,@fields.my_field,Text 2B\n"
         )
 
         self.assert_messages(
             self.render_output(table),
             ["Text 1A", "Text 2A"],
-            context=Context(inputs=["A"], variables={"@field": "A"}),
+            context=Context(inputs=["A"], variables={"@fields.my_field": "A"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Text 1A", "Text 2B"],
-            context=Context(inputs=["A"], variables={"@field": "B"}),
+            context=Context(inputs=["A"], variables={"@fields.my_field": "B"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Text 1A", "Other"],
-            context=Context(inputs=["A"], variables={"@field": "something"}),
+            context=Context(inputs=["A"], variables={"@fields.my_field": "something"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Other", "Text 2A"],
-            context=Context(inputs=["something"], variables={"@field": "A"}),
+            context=Context(inputs=["something"], variables={"@fields.my_field": "A"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Other", "Text 2B"],
-            context=Context(inputs=["something"], variables={"@field": "B"}),
+            context=Context(inputs=["something"], variables={"@fields.my_field": "B"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Other", "Other"],
-            context=Context(inputs=["something"], variables={"@field": "something"}),
+            context=Context(inputs=["something"], variables={"@fields.my_field": "something"}),
         )
 
     def test_noop_in_block_loose(self):
@@ -1153,9 +1166,9 @@ class TestNoOpRow(TestBlocks):
             "X,begin_block,,,,\n"
             ",send_message,,,,Start message\n"
             "1,no_op,,,,\n"
-            ",loose_exit,1,,@field,\n"
-            ",hard_exit,1,A,@field,\n"
-            ",loose_exit,1,B,@field,\n"
+            ",loose_exit,1,,@fields.my_field,\n"
+            ",hard_exit,1,A,@fields.my_field,\n"
+            ",loose_exit,1,B,@fields.my_field,\n"
             ",end_block,,,,\n"
             ",send_message,,,,End Message\n"
         )
@@ -1163,17 +1176,17 @@ class TestNoOpRow(TestBlocks):
         self.assert_messages(
             self.render_output(table),
             ["Start message"],
-            context=Context(variables={"@field": "A"}),
+            context=Context(variables={"@fields.my_field": "A"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Start message", "End Message"],
-            context=Context(variables={"@field": "B"}),
+            context=Context(variables={"@fields.my_field": "B"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Start message", "End Message"],
-            context=Context(variables={"@field": "something"}),
+            context=Context(variables={"@fields.my_field": "something"}),
         )
 
     def test_multientry_block(self):
@@ -1226,11 +1239,17 @@ class TestFlowParser(TestCase):
 
         # Ensure the generated flow and expected flow are functionally equivalent
         expected_actions = traverse_flow(expected_flow, copy.deepcopy(context))
+        traverse_flowrunner(expected_flow, copy.deepcopy(context) or Context(),
+                            expected_outputs=expected_actions, testcls=self, 
+                            test_name=f"Flowrunner Equivalence {flow_name}: expected")
         self.assertEqual(
             traverse_flow(output_1, copy.deepcopy(context)),
             expected_actions,
         )
 
+        traverse_flowrunner(output_1, copy.deepcopy(context) or Context(),
+                    expected_outputs=expected_actions, testcls=self, 
+                    test_name=f"Flowrunner Equivalence {flow_name}: output_1")
         # Convert the expected output into a flow and then into a sheet
         new_rows = FlowContainer.from_dict(expected_flow).to_rows()
 
@@ -1250,6 +1269,9 @@ class TestFlowParser(TestCase):
             traverse_flow(output_2, copy.deepcopy(context)),
             expected_actions,
         )
+        traverse_flowrunner(output_2, copy.deepcopy(context) or Context(),
+                    expected_outputs=expected_actions, testcls=self, 
+                    test_name=f"Flowrunner Equivalence {flow_name}: output_2")
 
     def test_no_switch_nodes(self):
         self.assert_flow(
