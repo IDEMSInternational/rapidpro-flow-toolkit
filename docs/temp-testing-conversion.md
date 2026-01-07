@@ -106,11 +106,12 @@ Inconsistent recording of events
 
 ## tests.test_flowparser.TestMultiExitBlocks
 
-There is one case where the flows are unable to be read, the rest of the test cases fail because the field named `@my_field` should be renamed to be a valid variable like `@fields.my_field`
+<!-- Completed
+There is one case where the flows are unable to be read, the rest of the test cases fail because the field named `@my_field` should be renamed to be a valid variable like `@fields.my_field` -->
 
 ### test_enter_flow (tests.test_flowparser.TestMultiExitBlocks.test_enter_flow)
 
-unable to read
+unable to read - specifically because there is a `start_new_flow` row which directs to a flow called `Some flow`, which is not defined. This results in there being a null UUID which causes a failure
 
 ## tests.test_flowparser.TestWebhook
 

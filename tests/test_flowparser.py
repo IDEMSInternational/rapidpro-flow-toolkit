@@ -854,7 +854,7 @@ class TestMultiExitBlocks(TestBlocks):
         table = (
             "row_id,type,from,condition,message_text\n"
             "X,begin_block,,,\n"
-            "1,split_by_value,,,@my_field\n"
+            "1,split_by_value,,,@fields.my_field\n"
             ",send_message,1,Value,It has the value\n"
             ",end_block,,,\n"
             ",send_message,X,,Following text\n"
@@ -863,19 +863,19 @@ class TestMultiExitBlocks(TestBlocks):
         self.assert_messages(
             self.render_output(table),
             ["It has the value", "Following text"],
-            Context(variables={"@my_field": "Value"}),
+            Context(variables={"@fields.my_field": "Value"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Following text"],
-            Context(variables={"@my_field": "Other"}),
+            Context(variables={"@fields.my_field": "Other"}),
         )
 
     def test_split_by_value_hard_loose_exit(self):
         table = (
             "row_id,type,from,condition,message_text\n"
             "X,begin_block,,,\n"
-            "1,split_by_value,,,@my_field\n"
+            "1,split_by_value,,,@fields.my_field\n"
             ",send_message,1,Value,It has the value\n"
             ",hard_exit,1,Value2,\n"
             ",loose_exit,1,Value3,\n"
@@ -886,22 +886,22 @@ class TestMultiExitBlocks(TestBlocks):
         self.assert_messages(
             self.render_output(table),
             ["It has the value", "Following text"],
-            Context(variables={"@my_field": "Value"}),
+            Context(variables={"@fields.my_field": "Value"}),
         )
         self.assert_messages(
             self.render_output(table),
             [],
-            Context(variables={"@my_field": "Value2"}),
+            Context(variables={"@fields.my_field": "Value2"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Following text"],
-            Context(variables={"@my_field": "Value3"}),
+            Context(variables={"@fields.my_field": "Value3"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Following text"],
-            Context(variables={"@my_field": "Other"}),
+            Context(variables={"@fields.my_field": "Other"}),
         )
 
     def test_wait_for_response(self):
