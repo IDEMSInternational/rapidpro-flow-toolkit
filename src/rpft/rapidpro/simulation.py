@@ -343,11 +343,7 @@ def traverse_flowrunner(flow, context, uuid=None, flow_name=None, expected_outpu
 
 class Flowrunner():
     prefix = 'temp_flow_'
-    goflow_messages = [
-        "↪️ entered flow ",
-        "💬 message created ",
-        "↪️ exited flow ",
-    ]
+
     def __init__(self, file, uuid, contact=None):
         self.command = [os.path.join(os.environ.get("GOPATH"), "bin", "flowrunner")]
         if contact is not None:
@@ -399,6 +395,8 @@ class Flowrunner():
             
             if line.startswith("💬 message created "):
                 outputs.append(("send_msg", line[19:-2]))
+            elif line.startswith("> 💬 message created "):
+                outputs.append(("send_msg", line[21:-2]))
             elif line.startswith("✏️ field "):
                 outputs.append((
                     "set_contact_field",
