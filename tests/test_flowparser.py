@@ -1034,25 +1034,25 @@ class TestNoOpRow(TestBlocks):
             "row_id,type,from,condition_value,condition_variable,message_text\n"
             ",send_message,,,,Start message\n"
             "1,no_op,,,,\n"
-            ",send_message,1,A,@field,Text A\n"
-            ",send_message,1,,@field,Other\n"
-            ",send_message,1,B,@field,Text B\n"
+            ",send_message,1,A,@fields.my_field,Text A\n"
+            ",send_message,1,,@fields.my_field,Other\n"
+            ",send_message,1,B,@fields.my_field,Text B\n"
         )
 
         self.assert_messages(
             self.render_output(table),
             ["Start message", "Text A"],
-            context=Context(variables={"@field": "A"}),
+            context=Context(variables={"@fields.my_field": "A"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Start message", "Text B"],
-            context=Context(variables={"@field": "B"}),
+            context=Context(variables={"@fields.my_field": "B"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Start message", "Other"],
-            context=Context(variables={"@field": "something"}),
+            context=Context(variables={"@fields.my_field": "something"}),
         )
 
     def test_multiexit_noop2(self):
@@ -1061,25 +1061,25 @@ class TestNoOpRow(TestBlocks):
             "row_id,type,from,condition_value,condition_variable,message_text\n"
             ",send_message,,,,Start message\n"
             "1,no_op,,,,\n"
-            ",send_message,1,,@field,Other\n"
-            ",send_message,1,A,@field,Text A\n"
-            ",send_message,1,B,@field,Text B\n"
+            ",send_message,1,,@fields.my_field,Other\n"
+            ",send_message,1,A,@fields.my_field,Text A\n"
+            ",send_message,1,B,@fields.my_field,Text B\n"
         )
 
         self.assert_messages(
             self.render_output(table),
             ["Start message", "Text A"],
-            context=Context(variables={"@field": "A"}),
+            context=Context(variables={"@fields.my_field": "A"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Start message", "Text B"],
-            context=Context(variables={"@field": "B"}),
+            context=Context(variables={"@fields.my_field": "B"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Start message", "Other"],
-            context=Context(variables={"@field": "something"}),
+            context=Context(variables={"@fields.my_field": "something"}),
         )
 
     def test_multientryexit_noop(self):
@@ -1090,40 +1090,40 @@ class TestNoOpRow(TestBlocks):
             "2,send_message,1,A,,Text 1A\n"
             "3,send_message,1,,,Other\n"
             "4,no_op,2;3,,,\n"
-            ",send_message,4,A,@field,Text 2A\n"
-            ",send_message,4,,@field,Other\n"
-            ",send_message,4,B,@field,Text 2B\n"
+            ",send_message,4,A,@fields.my_field,Text 2A\n"
+            ",send_message,4,,@fields.my_field,Other\n"
+            ",send_message,4,B,@fields.my_field,Text 2B\n"
         )
 
         self.assert_messages(
             self.render_output(table),
             ["Text 1A", "Text 2A"],
-            context=Context(inputs=["A"], variables={"@field": "A"}),
+            context=Context(inputs=["A"], variables={"@fields.my_field": "A"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Text 1A", "Text 2B"],
-            context=Context(inputs=["A"], variables={"@field": "B"}),
+            context=Context(inputs=["A"], variables={"@fields.my_field": "B"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Text 1A", "Other"],
-            context=Context(inputs=["A"], variables={"@field": "something"}),
+            context=Context(inputs=["A"], variables={"@fields.my_field": "something"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Other", "Text 2A"],
-            context=Context(inputs=["something"], variables={"@field": "A"}),
+            context=Context(inputs=["something"], variables={"@fields.my_field": "A"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Other", "Text 2B"],
-            context=Context(inputs=["something"], variables={"@field": "B"}),
+            context=Context(inputs=["something"], variables={"@fields.my_field": "B"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Other", "Other"],
-            context=Context(inputs=["something"], variables={"@field": "something"}),
+            context=Context(inputs=["something"], variables={"@fields.my_field": "something"}),
         )
 
     def test_noop_in_block_loose(self):
@@ -1166,9 +1166,9 @@ class TestNoOpRow(TestBlocks):
             "X,begin_block,,,,\n"
             ",send_message,,,,Start message\n"
             "1,no_op,,,,\n"
-            ",loose_exit,1,,@field,\n"
-            ",hard_exit,1,A,@field,\n"
-            ",loose_exit,1,B,@field,\n"
+            ",loose_exit,1,,@fields.my_field,\n"
+            ",hard_exit,1,A,@fields.my_field,\n"
+            ",loose_exit,1,B,@fields.my_field,\n"
             ",end_block,,,,\n"
             ",send_message,,,,End Message\n"
         )
@@ -1176,17 +1176,17 @@ class TestNoOpRow(TestBlocks):
         self.assert_messages(
             self.render_output(table),
             ["Start message"],
-            context=Context(variables={"@field": "A"}),
+            context=Context(variables={"@fields.my_field": "A"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Start message", "End Message"],
-            context=Context(variables={"@field": "B"}),
+            context=Context(variables={"@fields.my_field": "B"}),
         )
         self.assert_messages(
             self.render_output(table),
             ["Start message", "End Message"],
-            context=Context(variables={"@field": "something"}),
+            context=Context(variables={"@fields.my_field": "something"}),
         )
 
     def test_multientry_block(self):
