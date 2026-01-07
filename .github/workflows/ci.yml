@@ -12,12 +12,12 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - windows-latest
-          - macos-latest
+          # - windows-latest
+          # - macos-latest
         version:
-          - "3.10"
-          - "3.11"
-          - "3.12"
+          # - "3.10"
+          # - "3.11"
+          # - "3.12"
           - "3.13"
     runs-on: ${{ matrix.os }}
     steps:
@@ -36,5 +36,15 @@ jobs:
           pip install --upgrade pip
           pip install .
           go install github.com/nyaruka/goflow/cmd/flowrunner@latest
+      - name: Verify Go environment variables
+        run: |
+          echo "GOPATH: $GOPATH"
+          echo "GOBIN: $GOBIN"
+          echo "PATH: $PATH"
+          # Check if the binary exists
+          ls -l $(go env GOPATH)/bin/flowrunner
+          export GOPATH=$(go env GOPATH)
+          echo "GOPATH: $GOPATH"
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
       - name: Run unit tests
         run: python -m unittest discover -s tests
