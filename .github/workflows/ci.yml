@@ -36,14 +36,14 @@ jobs:
           pip install --upgrade pip
           pip install .
           go install github.com/nyaruka/goflow/cmd/flowrunner@6b877f0
-      - name: Linux Verify Go environment variables
-        if: runner.os == 'Linux'
+      - name: Linux/macOS Setup Go environment variables
+        if: runner.os == 'Linux' || runner.os == 'macOS'
         run: |      
           # Check if the binary exists
           ls -l "$(go env GOPATH)/bin/flowrunner"
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
 
-      - name: Windows Verify Go environment variables
+      - name: Windows Setup Go environment variables
         if: runner.os == 'Windows'
         run: |
           # Check if the binary exists
