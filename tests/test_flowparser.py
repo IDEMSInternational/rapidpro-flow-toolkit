@@ -226,7 +226,7 @@ class TestParsing(TestCase):
         self.assertEqual(node_3["exits"][0]["destination_uuid"], node_4["uuid"])
         self.assertEqual(len(node_4["actions"]), 1)
         self.assertEqual("set_run_result", node_4["actions"][0]["type"])
-        self.assertEqual("result name", node_4["actions"][0]["name"])
+        self.assertEqual("result_name", node_4["actions"][0]["name"])
         self.assertEqual("result value", node_4["actions"][0]["value"])
         self.assertEqual("my_result_cat", node_4["actions"][0]["category"])
 
@@ -423,12 +423,13 @@ class TestBlocks(TestCase):
             list(zip(["send_msg"] * len(expected), expected)),
         )
 
-    def assert_actions(self, output, expected, context=None):
+    def assert_actions(self, output, expected, context=None, do_flowrunner=True):
         actions = traverse_flow(output, copy.deepcopy(context) or Context())
 
-        traverse_flowrunner(output, copy.deepcopy(context) or Context(),
-                            expected_outputs=actions,
-                            testcls=self)
+        if do_flowrunner:
+            traverse_flowrunner(output, copy.deepcopy(context) or Context(),
+                                expected_outputs=actions,
+                                testcls=self)
 
         self.assertEqual(
             actions,
@@ -491,6 +492,7 @@ class TestWebhook(TestBlocks):
                 ("send_msg", "Webhook Success"),
             ],
             context=Context(inputs=["Success"]),
+            do_flowrunner=False, # FlowRunner can't pretend to succed/fail webhooks
         )
         self.assert_actions(
             self.render_output(table),
@@ -499,6 +501,7 @@ class TestWebhook(TestBlocks):
                 ("send_msg", "Webhook Failure"),
             ],
             context=Context(inputs=["Failure"]),
+            do_flowrunner=False, # FlowRunner can't pretend to succed/fail webhooks
         )
 
 
@@ -981,6 +984,8 @@ class TestMultiExitBlocks(TestBlocks):
                 ("send_msg", "Following text"),
             ],
             Context(inputs=["completed"]),
+            # FlowRunner can't pretend to enter non-existant flow
+            do_flowrunner=False, 
         )
         self.assert_actions(
             self.render_output(table),
@@ -990,6 +995,8 @@ class TestMultiExitBlocks(TestBlocks):
                 ("send_msg", "Following text"),
             ],
             Context(inputs=["expired"]),
+            # FlowRunner can't pretend to enter non-existant flow
+            do_flowrunner=False, 
         )
 
 
@@ -1215,7 +1222,7 @@ class TestNoOpRow(TestBlocks):
 
 class TestFlowParser(TestCase):
 
-    def assert_flow(self, filename, flow_name, context):
+    def assert_flow(self, filename, flow_name, context, do_flowrunner=True):
         # Generate a flow from sheet
         output_1 = (
             FlowParser(
@@ -1239,17 +1246,19 @@ class TestFlowParser(TestCase):
 
         # Ensure the generated flow and expected flow are functionally equivalent
         expected_actions = traverse_flow(expected_flow, copy.deepcopy(context))
-        traverse_flowrunner(expected_flow, copy.deepcopy(context) or Context(),
-                            expected_outputs=expected_actions, testcls=self, 
-                            test_name=f"Flowrunner Equivalence {flow_name}: expected")
+        if do_flowrunner:
+            traverse_flowrunner(expected_flow, copy.deepcopy(context) or Context(),
+                                expected_outputs=expected_actions, testcls=self, 
+                                test_name=f"Flowrunner Equivalence {flow_name}: expected")
         self.assertEqual(
             traverse_flow(output_1, copy.deepcopy(context)),
             expected_actions,
         )
 
-        traverse_flowrunner(output_1, copy.deepcopy(context) or Context(),
-                    expected_outputs=expected_actions, testcls=self, 
-                    test_name=f"Flowrunner Equivalence {flow_name}: output_1")
+        if do_flowrunner:
+            traverse_flowrunner(output_1, copy.deepcopy(context) or Context(),
+                        expected_outputs=expected_actions, testcls=self, 
+                        test_name=f"Flowrunner Equivalence {flow_name}: output_1")
         # Convert the expected output into a flow and then into a sheet
         new_rows = FlowContainer.from_dict(expected_flow).to_rows()
 
@@ -1269,15 +1278,18 @@ class TestFlowParser(TestCase):
             traverse_flow(output_2, copy.deepcopy(context)),
             expected_actions,
         )
-        traverse_flowrunner(output_2, copy.deepcopy(context) or Context(),
-                    expected_outputs=expected_actions, testcls=self, 
-                    test_name=f"Flowrunner Equivalence {flow_name}: output_2")
+        if do_flowrunner:
+            traverse_flowrunner(output_2, copy.deepcopy(context) or Context(),
+                        expected_outputs=expected_actions, testcls=self, 
+                        test_name=f"Flowrunner Equivalence {flow_name}: output_2")
 
     def test_no_switch_nodes(self):
         self.assert_flow(
             "input/no_switch_nodes.csv",
             "no_switch_nodes",
             Context(),
+            # FlowRunner doesn't show: set_contact_language, remove_contact_groups
+            do_flowrunner=False, 
         )
 
     def test_no_switch_nodes_without_row_ids(self):
@@ -1285,6 +1297,8 @@ class TestFlowParser(TestCase):
             "input/no_switch_nodes_without_row_ids.csv",
             "no_switch_nodes",
             Context(),
+            # FlowRunner doesn't show: set_contact_language, remove_contact_groups
+            do_flowrunner=False, 
         )
 
     def test_switch_nodes(self):
@@ -1292,16 +1306,22 @@ class TestFlowParser(TestCase):
             "input/switch_nodes.csv",
             "switch_nodes",
             Context(inputs=["b", "expired", "Success"]),
+            # Flow is malformed, likely has `uuid: null`: 'uuid' must be a valid UUID
+            do_flowrunner=False,
         )
         self.assert_flow(
             "input/switch_nodes.csv",
             "switch_nodes",
             Context(inputs=["b", "expired", "Failure", "Success"]),
+            # Flow is malformed, likely has `uuid: null`: 'uuid' must be a valid UUID
+            do_flowrunner=False,
         )
         self.assert_flow(
             "input/switch_nodes.csv",
             "switch_nodes",
             Context(inputs=["a", "completed"], variables={"expression": "not a"}),
+            # Flow is malformed, likely has `uuid: null`: 'uuid' must be a valid UUID
+            do_flowrunner=False,
         )
         self.assert_flow(
             "input/switch_nodes.csv",
@@ -1315,6 +1335,8 @@ class TestFlowParser(TestCase):
                     "@results.result_wfr": "a",
                 },
             ),
+            # Flow is malformed, likely has `uuid: null`: 'uuid' must be a valid UUID
+            do_flowrunner=False,
         )
         self.assert_flow(
             "input/switch_nodes.csv",
@@ -1328,6 +1350,8 @@ class TestFlowParser(TestCase):
                     "@results.result_wfr": "a",
                 },
             ),
+            # Flow is malformed, likely has `uuid: null`: 'uuid' must be a valid UUID
+            do_flowrunner=False,
         )
         self.assert_flow(
             "input/switch_nodes.csv",
@@ -1342,6 +1366,8 @@ class TestFlowParser(TestCase):
                     "@results.result_wfr": "a",
                 },
             ),
+            # Flow is malformed, likely has `uuid: null`: 'uuid' must be a valid UUID
+            do_flowrunner=False,
         )
         self.assert_flow(
             "input/switch_nodes.csv",
@@ -1356,6 +1382,8 @@ class TestFlowParser(TestCase):
                     "@results.result_wfr": "a",
                 },
             ),
+            # Flow is malformed, likely has `uuid: null`: 'uuid' must be a valid UUID
+            do_flowrunner=False,
         )
         self.assert_flow(
             "input/switch_nodes.csv",
@@ -1369,6 +1397,8 @@ class TestFlowParser(TestCase):
                     "@results.result_wfr": "a",
                 },
             ),
+            # Flow is malformed, likely has `uuid: null`: 'uuid' must be a valid UUID
+            do_flowrunner=False,
         )
 
     def test_loop_from_start(self):
@@ -1382,6 +1412,8 @@ class TestFlowParser(TestCase):
             "input/loop_from_start.csv",
             "loop_from_start",
             Context(inputs=["a", "b"]),
+            # FlowRunner doesn't make set_contact_field events if value doesn't change
+            do_flowrunner=False, 
         )
 
     def test_rejoin(self):

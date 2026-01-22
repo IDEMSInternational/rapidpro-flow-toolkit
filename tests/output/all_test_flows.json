@@ -125,7 +125,7 @@
           "actions": [
             {
               "type": "set_run_result",
-              "name": "result name",
+              "name": "result_name",
               "value": "result value",
               "category": "my_result_cat",
               "uuid": "37a7ce3d-c258-4a09-9396-bd8bdc9a11bb"
@@ -166,7 +166,7 @@
                 "type": "add_contact_urn",
                 "uuid": "5ae58ed1-e130-4841-a459-0cc7aa76b5be",
                 "scheme": "tel",
-                "path": "@results.internation_phone_number"
+                "path": "event"
             }
           ],
           "exits": [

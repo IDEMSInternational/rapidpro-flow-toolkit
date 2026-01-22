@@ -419,13 +419,20 @@ class Flowrunner():
                 ))
             elif line.startswith("📈 run result "):
                 result = re.findall(r"📈 run result '(.*?)'", line)[0]
-                if result != 'dummy':
+                if 'Result' in result:
+                    print(line)
+                elif 'input' in result:
                     print(line)
                 else:
                     outputs.append((
                         "set_run_result",
                         re.findall(r"📈 run result '(.*?)'", line)[0]
                     ))
+            elif line.startswith("❓ contact_urns_changed "):
+                outputs.append((
+                    "add_contact_urn",
+                    re.findall(r"❓ contact_urns_changed (.*)", line)[0]
+                ))
             elif line.startswith("↪️"):
                 pass
             elif line.startswith(">"):

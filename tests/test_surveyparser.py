@@ -29,7 +29,7 @@ from tests.utils import csv_join
 
 
 class TestTemplate(TestCase):
-    def assertFlowMessages(self, render_output, flow_name, actions_exp, context=None):
+    def assertFlowMessages(self, render_output, flow_name, actions_exp, context=None, do_flowrunner=True):
         flows = [flow for flow in render_output["flows"] if flow["name"] == flow_name]
 
         self.assertTrue(
@@ -39,9 +39,10 @@ class TestTemplate(TestCase):
 
         actions = traverse_flow(flows[0], copy.deepcopy(context) or Context())
 
-        traverse_flowrunner(render_output, copy.deepcopy(context) or Context(),
-                            flow_name=flow_name, expected_outputs=actions,
-                            testcls=self)
+        if do_flowrunner:
+            traverse_flowrunner(render_output, copy.deepcopy(context) or Context(),
+                                flow_name=flow_name, expected_outputs=actions,
+                                testcls=self)
 
         self.assertEqual(actions, actions_exp)
 
@@ -128,6 +129,7 @@ class TestSurveyParser(TestTemplate):
                 ("set_run_result", "expired"),
             ],
             Context(inputs=["completed", "expired"]),
+            do_flowrunner=False, # Sim can't enter flows
         )
 
         self.assertFlowMessages(
@@ -140,6 +142,7 @@ class TestSurveyParser(TestTemplate):
                 ("set_run_result", "proceed"),
             ],
             Context(inputs=["completed", "completed", "completed"]),
+            do_flowrunner=False, # Sim can't enter flows
         )
 
         self.assertFlowMessages(
@@ -149,6 +152,7 @@ class TestSurveyParser(TestTemplate):
                 ("enter_flow", "survey - Survey Name - question - first"),
             ],
             Context(inputs=["completed"], variables={"@child.results.stop": "yes"}),
+            do_flowrunner=False, # Sim can't enter flows
         )
 
     def test_stop_condition(self):
@@ -291,6 +295,7 @@ class TestSurveyParser(TestTemplate):
                 ("enter_flow", "my_end_flow"),
             ],
             Context(inputs=["completed", "completed"]),
+            do_flowrunner=False, # Sim can't enter flows
         )
 
     def test_template_arguments(self):
@@ -342,6 +347,7 @@ class TestSurveyParser(TestTemplate):
                 ("send_msg", "Survey level message"),
             ],
             Context(inputs=["completed", "completed"]),
+            do_flowrunner=False, # Sim can't enter flows
         )
 
     def test_create_question(self):
