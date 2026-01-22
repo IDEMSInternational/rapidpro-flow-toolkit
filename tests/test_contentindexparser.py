@@ -1,3 +1,4 @@
+import copy
 from typing import Set
 from unittest import TestCase
 
@@ -9,7 +10,7 @@ from rpft.parsers.sheets import (
     XLSXSheetReader,
 )
 from rpft.rapidpro.models.triggers import RapidProTriggerError
-from rpft.rapidpro.simulation import Context, traverse_flow
+from rpft.rapidpro.simulation import Context, traverse_flow, traverse_flowrunner
 from rpft.sources import SheetDataSource
 
 from tablib import Dataset
@@ -27,8 +28,11 @@ class TestTemplate(TestCase):
             msg=f'Flow with name "{flow_name}" does not exist in output.',
         )
 
-        actions = traverse_flow(flows[0], context or Context())
+        actions = traverse_flow(flows[0], copy.deepcopy(context) or Context())
         actions_exp = list(zip(["send_msg"] * len(messages_exp), messages_exp))
+
+        traverse_flowrunner(render_output, copy.deepcopy(context) or Context(),
+                            flow_name=flow_name, expected_outputs=actions, testcls=self)
 
         self.assertEqual(actions, actions_exp)
 
@@ -559,7 +563,7 @@ class TestParsing(TestTemplate):
         )
         my_template = (
             "row_id,type,from,condition,message_text\n"
-            "1,split_by_value,,,@field.mood\n"
+            "1,split_by_value,,,@fields.mood\n"
             ",send_message,1,happy,{% for msg in messages %}{{lookup[msg].happy}}{% endfor %}\n"  # noqa: E501
             ",send_message,1,sad,{% for msg in messages %}{{lookup[msg].sad}}{% endfor %}\n"  # noqa: E501
             ",send_message,1,,{% for msg in messages %}{{lookup[msg].neutral}}{% endfor %}\n"  # noqa: E501
@@ -595,7 +599,7 @@ class TestParsing(TestTemplate):
                 "Intermission",
                 "Nice to see you :)Bye :)",
             ],
-            Context(variables={"@field.mood": "happy"}),
+            Context(variables={"@fields.mood": "happy"}),
         )
         self.assertFlowMessages(
             render_output,
@@ -606,7 +610,7 @@ class TestParsing(TestTemplate):
                 "Intermission",
                 "Not nice to see you :(Bye :(",
             ],
-            Context(variables={"@field.mood": "sad"}),
+            Context(variables={"@fields.mood": "sad"}),
         )
         self.assertFlowMessages(
             render_output,
@@ -617,13 +621,13 @@ class TestParsing(TestTemplate):
                 "Intermission",
                 "Nice to see youBye",
             ],
-            Context(variables={"@field.mood": "something else"}),
+            Context(variables={"@fields.mood": "something else"}),
         )
         self.assertFlowMessages(
             render_output,
             "my_template - row3",
             ["Hello :)Bye :)"],
-            Context(variables={"@field.mood": "happy"}),
+            Context(variables={"@fields.mood": "happy"}),
         )
 
     def test_insert_as_block_with_arguments(self):

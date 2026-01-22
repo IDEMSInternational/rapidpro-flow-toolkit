@@ -271,6 +271,13 @@ class RowParser:
                 if value == "":
                     # Interpret an empty cell as [] rather than ['']
                     value = []
+                # When parsed, lists (e.g. '{{messages.attachments}}') end up as '[]'
+                # if we parse it to ['[]'], issues occur
+                elif value.startswith('[') and value.endswith(']'):
+                    value = value[1:-1].split(',')
+                    value = [v.rstrip('\'" ').lstrip('\'" ') for v in value]
+                    if value == ['']:
+                        value = []
                 else:
                     value = [value]
             for entry in value:

@@ -27,9 +27,28 @@ jobs:
         with:
           python-version: ${{ matrix.version }}
           cache: pip
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
       - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install .
+          go install github.com/nyaruka/goflow/cmd/flowrunner@6b877f0
+      - name: Linux/macOS Setup Go environment variables
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        run: |      
+          # Check if the binary exists
+          ls -l "$(go env GOPATH)/bin/flowrunner"
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+
+      - name: Windows Setup Go environment variables
+        if: runner.os == 'Windows'
+        run: |
+          # Check if the binary exists
+          ls -l "$(go env GOPATH)/bin/flowrunner.exe"
+          $goPath = (go env GOPATH)
+          Add-Content -Path $env:GITHUB_ENV -Value "GOPATH=$goPath"
       - name: Run unit tests
         run: python -m unittest discover -s tests
