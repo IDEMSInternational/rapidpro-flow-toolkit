@@ -389,7 +389,7 @@ class Flowrunner():
                 self.lines.append(line)
         return self.lines
 
-    def get_messages(self, inputs=None):
+    def get_messages(self, inputs=None, do_print_fallback=False):
         outputs = []
         for line in self.readlines(inputs):
             
@@ -420,9 +420,9 @@ class Flowrunner():
             elif line.startswith("📈 run result "):
                 result = re.findall(r"📈 run result '(.*?)'", line)[0]
                 if 'Result' in result:
-                    print(line)
+                    if do_print_fallback: print(line)
                 elif 'input' in result:
-                    print(line)
+                    if do_print_fallback: print(line)
                 else:
                     outputs.append((
                         "set_run_result",
@@ -440,7 +440,7 @@ class Flowrunner():
             elif line.startswith("⏳ waiting for message"):
                 pass
             else:
-                print(line)
+                if do_print_fallback: print(line)
         return outputs
 
     @classmethod
