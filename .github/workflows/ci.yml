@@ -38,13 +38,12 @@ jobs:
           go install github.com/nyaruka/goflow/cmd/flowrunner@6b877f0
       - name: Verify Go environment variables
         run: |
-          echo "GOPATH: $GOPATH"
-          echo "GOBIN: $GOBIN"
-          echo "PATH: $PATH"
           # Check if the binary exists
-          ls -l $(go env GOPATH)/bin/flowrunner
-          export GOPATH=$(go env GOPATH)
-          echo "GOPATH: $GOPATH"
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            ls -l "$(go env GOPATH)/bin/flowrunner"
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            ls -l "$(go env GOPATH)/bin/flowrunner.exe"
+          fi
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
       - name: Run unit tests
         run: python -m unittest discover -s tests
