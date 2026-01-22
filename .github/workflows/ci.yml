@@ -48,6 +48,7 @@ jobs:
         run: |
           # Check if the binary exists
           ls -l "$(go env GOPATH)/bin/flowrunner.exe"
-          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          $goPath = (go env GOPATH)
+          Add-Content -Path $env:GITHUB_ENV -Value "GOPATH=$goPath"
       - name: Run unit tests
         run: python -m unittest discover -s tests
