@@ -1,3 +1,4 @@
+import copy
 from unittest import TestCase
 
 from rpft.parsers.creation.contentindexparser import (
@@ -19,7 +20,7 @@ from rpft.parsers.creation.surveyparser import (
     SurveyQuestion,
 )
 from rpft.parsers.sheets import CSVSheetReader
-from rpft.rapidpro.simulation import Context, traverse_flow
+from rpft.rapidpro.simulation import Context, traverse_flow, traverse_flowrunner
 from rpft.sources import SheetDataSource
 
 from tests import TESTS_ROOT
@@ -28,7 +29,7 @@ from tests.utils import csv_join
 
 
 class TestTemplate(TestCase):
-    def assertFlowMessages(self, render_output, flow_name, actions_exp, context=None):
+    def assertFlowMessages(self, render_output, flow_name, actions_exp, context=None, do_flowrunner=True):
         flows = [flow for flow in render_output["flows"] if flow["name"] == flow_name]
 
         self.assertTrue(
@@ -36,7 +37,12 @@ class TestTemplate(TestCase):
             msg=f'Flow with name "{flow_name}" does not exist in output.',
         )
 
-        actions = traverse_flow(flows[0], context or Context())
+        actions = traverse_flow(flows[0], copy.deepcopy(context) or Context())
+
+        if do_flowrunner:
+            traverse_flowrunner(render_output, copy.deepcopy(context) or Context(),
+                                flow_name=flow_name, expected_outputs=actions,
+                                testcls=self)
 
         self.assertEqual(actions, actions_exp)
 
@@ -123,6 +129,7 @@ class TestSurveyParser(TestTemplate):
                 ("set_run_result", "expired"),
             ],
             Context(inputs=["completed", "expired"]),
+            do_flowrunner=False, # Sim can't enter flows
         )
 
         self.assertFlowMessages(
@@ -135,6 +142,7 @@ class TestSurveyParser(TestTemplate):
                 ("set_run_result", "proceed"),
             ],
             Context(inputs=["completed", "completed", "completed"]),
+            do_flowrunner=False, # Sim can't enter flows
         )
 
         self.assertFlowMessages(
@@ -144,6 +152,7 @@ class TestSurveyParser(TestTemplate):
                 ("enter_flow", "survey - Survey Name - question - first"),
             ],
             Context(inputs=["completed"], variables={"@child.results.stop": "yes"}),
+            do_flowrunner=False, # Sim can't enter flows
         )
 
     def test_stop_condition(self):
@@ -286,6 +295,7 @@ class TestSurveyParser(TestTemplate):
                 ("enter_flow", "my_end_flow"),
             ],
             Context(inputs=["completed", "completed"]),
+            do_flowrunner=False, # Sim can't enter flows
         )
 
     def test_template_arguments(self):
@@ -337,6 +347,7 @@ class TestSurveyParser(TestTemplate):
                 ("send_msg", "Survey level message"),
             ],
             Context(inputs=["completed", "completed"]),
+            do_flowrunner=False, # Sim can't enter flows
         )
 
     def test_create_question(self):
@@ -405,7 +416,7 @@ class TestSurveyParser(TestTemplate):
                 ("set_contact_field", "third"),
                 ("set_contact_field", "third_complete"),
             ],
-            Context(inputs=["Third answer"]),
+            Context(inputs=["Third answer"], variables={"@fields.third": "@fields.third"}), # TODO: note field was set like this for back compatibility with old simulation that couldn't do replacements - change check and variable to 'Third' or something
         )
 
 
