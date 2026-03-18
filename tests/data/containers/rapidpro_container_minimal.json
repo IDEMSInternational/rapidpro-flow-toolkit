@@ -29,6 +29,17 @@
         }
       ],
       "revision": 63,
+      "_ui": {
+        "nodes": {
+          "ee74eaef-e8dd-42bb-965a-03e34cb5ef13": {
+            "position": {
+              "left": 100,
+              "top": 0
+            },
+            "type": "execute_actions"
+          }
+        }
+      },
       "expire_after_minutes": 10080,
       "metadata": {
         "revision": 62
