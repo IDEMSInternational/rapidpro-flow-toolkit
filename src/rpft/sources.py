@@ -108,7 +108,7 @@ class SheetDataSource:
 
     def get(self, key, model=None):
         sheet = self._get_sheet_or_die(key)
-        if sheet.table.headers is None:
+        if sheet.table.headers is None and sheet.table.json != "[]":
             raise ValueError(
                 f"Error: No headers in sheet {sheet.name} in file {sheet.reader.name}"
             )
