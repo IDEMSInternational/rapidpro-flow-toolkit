@@ -173,14 +173,62 @@ class FlowContainer:
 
     def render(self):
 
-        # HOTFIX: Dummy positions
-        current_top = 0
-        for node in self.nodes:
-            if not node.ui_pos:
-                # Place nodes in a simple vertical column
-                # X = 100, Y = increments by 250px per node
-                node.ui_pos = [100, current_top]
-                current_top += 250
+        # Only attempt layout if we have nodes and they lack positions
+        if self.nodes and not any(node.ui_pos for node in self.nodes):
+            node_dict = {node.uuid: node for node in self.nodes}
+            in_degrees = {node.uuid: 0 for node in self.nodes}
+            
+            # Calculate in-degrees to find the starting root(s)
+            for node in self.nodes:
+                for ext in node.get_exits():
+                    dest = ext.destination_uuid
+                    if dest in in_degrees:
+                        in_degrees[dest] += 1
+                        
+            # Identify roots (in-degree 0) or fallback to the first node
+            roots = [uid for uid, deg in in_degrees.items() if deg == 0]
+            if not roots:
+                roots = [self.nodes[0].uuid]
+                
+            levels = {}
+            queue = [(root, 0) for root in roots]
+            
+            # BFS to assign Y-levels (prevents infinite loops on cycles)
+            while queue:
+                curr_uuid, lvl = queue.pop(0)
+                if curr_uuid in levels:  
+                    continue
+                levels[curr_uuid] = lvl
+                
+                node = node_dict.get(curr_uuid)
+                if node:
+                    for ext in node.get_exits():
+                        dest = ext.destination_uuid
+                        # Only queue if it exists and hasn't been placed yet
+                        if dest and dest not in levels:
+                            queue.append((dest, lvl + 1))
+                            
+            # Handle disconnected/orphan nodes
+            for node in self.nodes:
+                if node.uuid not in levels:
+                    levels[node.uuid] = 0
+                    
+            # Group by level to assign X-coordinates
+            level_groups = {}
+            for uid, lvl in levels.items():
+                level_groups.setdefault(lvl, []).append(uid)
+                
+            # Assign final positions
+            X_SPACING, Y_SPACING = 350, 250
+            for node in self.nodes:
+                lvl = levels[node.uuid]
+                idx = level_groups[lvl].index(node.uuid)
+                total_in_lvl = len(level_groups[lvl])
+                
+                # Center the nodes horizontally within their level
+                x_offset = int((idx - (total_in_lvl - 1) / 2.0) * X_SPACING)
+                # X starts at 1000 to allow room for left-ward expansion
+                node.ui_pos = [1000 + x_offset, 100 + lvl * Y_SPACING]
 
         render_dict = {
             "uuid": self.uuid,
