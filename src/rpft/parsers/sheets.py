@@ -135,6 +135,7 @@ class GoogleSheetReader(AbstractSheetReader):
     def _table_from_content(self, content):
         table = tablib.Dataset()
         if content == []:
+            table.headers = []
             return table
         table.headers = content[0]
 
