@@ -172,6 +172,16 @@ class FlowContainer:
             node.assign_global_uuids(uuid_dict)
 
     def render(self):
+
+        # HOTFIX: Dummy positions
+        current_top = 0
+        for node in self.nodes:
+            if not node.ui_pos:
+                # Place nodes in a simple vertical column
+                # X = 100, Y = increments by 250px per node
+                node.ui_pos = [100, current_top]
+                current_top += 250
+
         render_dict = {
             "uuid": self.uuid,
             "name": self.name,
