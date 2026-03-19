@@ -185,10 +185,8 @@ class FlowContainer:
                     if dest in in_degrees:
                         in_degrees[dest] += 1
                         
-            # Identify roots (in-degree 0) or fallback to the first node
-            roots = [uid for uid, deg in in_degrees.items() if deg == 0]
-            if not roots:
-                roots = [self.nodes[0].uuid]
+            # Always use first node as the sole root
+            roots = [self.nodes[0].uuid]
                 
             levels = {}
             queue = [(root, 0) for root in roots]
@@ -211,7 +209,7 @@ class FlowContainer:
             # Handle disconnected/orphan nodes
             for node in self.nodes:
                 if node.uuid not in levels:
-                    levels[node.uuid] = 0
+                    levels[node.uuid] = max(levels.values())+1
                     
             # Group by level to assign X-coordinates
             level_groups = {}
