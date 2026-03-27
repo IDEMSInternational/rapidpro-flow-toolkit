@@ -1,0 +1,10 @@
+"row_id","type","from","condition","condition_var","condition_type","condition_name","save_name","include_if","loop_variable","message_text","template_arguments"
+,"send_message","start",,,,,,,,"Field depth: {{pidx}}",
+,"send_message",,,,,,,FALSE,,"{{cycles|groupby(""properties.""+pidx|string)}}",
+,"begin_block",,,,,,,"{@pidx<property_names|length@}",,,
+"1","split_by_value",,,,,,,,,"{{property_names[pidx]}}",
+,"begin_for",,,,,,,,"group","{@cycles|groupby(""properties.""+pidx|string)@}",
+,"insert_as_block",1,"{{group.0}}",,,,,,,"dispatcher_branch","{@property_names,group.1,pidx+1@}"
+,"end_for",,,,,,,,,,
+,"end_block",,,,,,,,,,
+,"send_message",,,,,,,"{@pidx>=property_names|length@}",,"Content cycle: {{cycles.0.content}}",
