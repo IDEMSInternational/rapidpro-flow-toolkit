@@ -3,6 +3,7 @@ import os
 
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
@@ -47,7 +48,18 @@ def get_credentials(scopes = None):
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            try:
+                creds.refresh(Request())
+            except RefreshError as e:
+                raise RefreshError(
+                    f"{e.args[0]}\n"
+                    f"The saved Google login in '{os.path.abspath(token_file_name)}'"
+                    " is no longer valid. This usually happens when it has not"
+                    " been used for a while (Google revokes refresh tokens after"
+                    " ~6 months of inactivity) or the account's access changed.\n"
+                    f"To fix it, delete {token_file_name} and re-run the command;"
+                    " a browser window will open so you can log in again."
+                ) from e
         else:
             flow = InstalledAppFlow.from_client_secrets_file("credentials.json", ALL_SCOPES)
             creds = flow.run_local_server(port=0)
